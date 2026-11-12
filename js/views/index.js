@@ -1,0 +1,28 @@
+/* سجل الأقسام: كل قسم = دالة ترجع HTML + دالة اختيارية بعد الرسم */
+import { vHome, afterHome } from './home.js';
+import { vTeam, afterTeam } from './team.js';
+import { vPlayers, afterPlayers, vCompare, afterCompare } from './players.js';
+import { vLive, afterLive } from './live.js';
+import { vLeagues } from './leagues.js';
+import { vMarket, afterMarket } from './market.js';
+import { vChips } from './chips.js';
+import { vStats, vAchievements } from './stats.js';
+import { vSearch, afterSearch } from './search.js';
+import { vSeason, afterSeason } from './season.js';
+import { vLab } from './lab.js';
+import { vPrices } from './prices.js';
+import { vCaptains, afterCaptains } from './captains.js';
+import { vNotifs, vSettings, vMore } from './notifs.js';
+import { vAdmin } from './admin.js';
+import { vDefcon } from './defcon.js';
+import { vNews, afterNews } from './news.js';
+import { vCheck } from './check.js';
+import { vRivals } from './rivals.js';
+import { vSetpieces } from './setpieces.js';
+import { vElite, vWatch, vPlanner } from './extra.js';
+import { vPulse } from './pulse.js';
+import { vJourney, afterJourney } from './journey.js';
+import './common.js';
+export const VIEWS = { journey: vJourney, pulse: vPulse, elite: vElite, watch: vWatch, planner: vPlanner, home: vHome, team: vTeam, players: vPlayers, market: vMarket, compare: vCompare, live: vLive, leagues: vLeagues, chips: vChips, stats: vStats, search: vSearch, season: vSeason, lab: vLab, prices: vPrices, captains: vCaptains, achievements: vAchievements, notifs: vNotifs, settings: vSettings, admin: vAdmin, more: vMore, defcon: vDefcon, news: vNews, check: vCheck, rivals: vRivals, setpieces: vSetpieces };
+export const AFTER = { team: afterTeam, journey: afterJourney, home: afterHome, players: afterPlayers, compare: afterCompare, market: afterMarket, captains: afterCaptains, live: afterLive, search: afterSearch, season: afterSeason, news: afterNews };
+export { startLivePolling, freshness } from './live.js';

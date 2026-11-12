@@ -1,0 +1,84 @@
+/* المساعد الذكي — التصميم الجديد (معتمد للجميع) */
+@property --ab{syntax:'<angle>';inherits:false;initial-value:0deg}
+html.ai2 .ai2v{gap:16px}
+
+/* الترحيب + الكرة الحيّة */
+html.ai2 .ai-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 8px 2px}
+html.ai2 .ai-orb{position:relative;width:96px;height:96px;margin-bottom:14px;isolation:isolate}
+html.ai2 .ai-orb i{position:absolute;inset:0;border-radius:42% 58% 55% 45%/48% 42% 58% 52%;mix-blend-mode:screen;filter:blur(1px);animation:aiBlob 7s ease-in-out infinite}
+html.ai2 .ai-orb i:nth-child(1){background:radial-gradient(circle at 35% 30%,#6EE7B7,#10B981 60%,transparent 72%)}
+html.ai2 .ai-orb i:nth-child(2){background:radial-gradient(circle at 65% 40%,#60A5FA,#2563EB 58%,transparent 72%);animation-duration:9s;animation-direction:reverse}
+html.ai2 .ai-orb i:nth-child(3){background:radial-gradient(circle at 50% 70%,#C084FC,#7C3AED 55%,transparent 72%);animation-duration:11s;opacity:.85}
+html.ai2 .ai-orb::before{content:"";position:absolute;inset:-26px;z-index:-1;border-radius:50%;background:radial-gradient(circle,rgba(52,211,153,.35),rgba(96,165,250,.12) 50%,transparent 70%);animation:aiBreath 3.6s ease-in-out infinite}
+html.ai2 .ai-orb b{position:absolute;inset:0;display:grid;place-items:center;color:#fff;z-index:2}
+html.ai2 .ai-orb b svg.i{width:30px;height:30px;filter:drop-shadow(0 2px 8px rgba(0,0,0,.4))}
+@keyframes aiBlob{0%,100%{transform:rotate(0) scale(1);border-radius:42% 58% 55% 45%/48% 42% 58% 52%}33%{transform:rotate(120deg) scale(1.06);border-radius:58% 42% 45% 55%/40% 58% 42% 60%}66%{transform:rotate(240deg) scale(.95);border-radius:50% 50% 38% 62%/58% 45% 55% 42%}}
+@keyframes aiBreath{50%{transform:scale(1.15);opacity:.7}}
+html.ai2 .ai-hero h2{font-size:21px;letter-spacing:-.02em;line-height:1.35;margin:0}
+html.ai2 .ai-hero p{font-size:13px;color:var(--mut);margin:6px 0 0;max-width:300px}
+
+/* صندوق السؤال: زجاج + حد متدرّج يدور لما تكتب */
+html.ai2 .searchbox.ai-box{position:relative;min-height:58px;padding:6px 8px 6px 6px;border-radius:22px;border:0;
+  background:linear-gradient(180deg,rgba(26,36,56,.75),rgba(14,20,33,.7));-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+  box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 18px 40px -24px rgba(0,0,0,.9)}
+html.ai2 .searchbox.ai-box::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;
+  background:conic-gradient(from var(--ab),rgba(52,211,153,.9),rgba(96,165,250,.9),rgba(192,132,252,.9),rgba(52,211,153,.9));opacity:.45;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:aiSpin 6s linear infinite;transition:opacity .25s}
+html.ai2 .searchbox.ai-box:focus-within{box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 0 34px -10px rgba(52,211,153,.55)}
+html.ai2 .searchbox.ai-box:focus-within::before{opacity:1;animation-duration:2.6s}
+@keyframes aiSpin{to{--ab:360deg}}
+html.ai2 .ai-box .sicon{display:grid;place-items:center;width:34px;color:#6EE7B7}
+html.ai2 .ai-box input{font-size:16px;padding:10px 4px}
+html.ai2 .ai-send{flex:none;width:46px;height:46px;border-radius:16px;display:grid;place-items:center;color:#052E1F;
+  background:linear-gradient(140deg,#6EE7B7,#34D399 55%,#10B981);box-shadow:0 8px 20px -8px rgba(52,211,153,.8);transition:transform .15s}
+html.ai2 .ai-send:active{transform:scale(.9) rotate(-12deg)}
+
+/* الأقسام */
+html.ai2 .ai-sec{display:flex;flex-direction:column;gap:10px}
+html.ai2 .ai-h{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;color:var(--mut);padding:0 2px}
+html.ai2 .ai-h button{font-size:12px;font-weight:600;color:var(--mut2);padding:2px 6px}
+
+/* بطاقات الأسئلة */
+html.ai2 .ai-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+html.ai2 .ai-tile{--c:52,211,153;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:start;padding:14px 13px 13px;border-radius:20px;
+  background:linear-gradient(160deg,rgba(var(--c),.10),rgba(255,255,255,.025) 60%);box-shadow:0 0 0 1px rgba(255,255,255,.055) inset,0 14px 30px -24px rgba(0,0,0,.9);
+  animation:aiTile .5s cubic-bezier(.2,1.2,.4,1) both;animation-delay:calc(var(--n) * 45ms);transition:transform .2s cubic-bezier(.2,1.6,.4,1),box-shadow .2s}
+html.ai2 .ai-tile.b{--c:96,165,250}html.ai2 .ai-tile.p{--c:192,132,252}html.ai2 .ai-tile.a{--c:251,191,36}
+html.ai2 .ai-tile::after{content:"";position:absolute;width:110px;height:110px;top:-55px;inset-inline-end:-40px;border-radius:50%;background:radial-gradient(circle,rgba(var(--c),.22),transparent 70%);pointer-events:none}
+html.ai2 .ai-tile:active{transform:scale(.95);box-shadow:0 0 0 1.5px rgba(var(--c),.6) inset}
+html.ai2 .ai-ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;color:rgb(var(--c));background:rgba(var(--c),.14);box-shadow:0 0 0 1px rgba(var(--c),.25) inset}
+html.ai2 .ai-ic svg.i{width:19px;height:19px}
+html.ai2 .ai-tile b{font-size:14.5px;margin-top:2px}
+html.ai2 .ai-tile small{font-size:11.5px;line-height:1.45;color:var(--mut);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@keyframes aiTile{from{opacity:0;transform:translateY(10px) scale(.97)}}
+
+/* آخر الأسئلة */
+html.ai2 .ai-recent{border-radius:18px;overflow:hidden;background:rgba(255,255,255,.035);box-shadow:0 0 0 1px rgba(255,255,255,.05) inset}
+html.ai2 .ai-recent button{width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;text-align:start;font-size:13.5px;box-shadow:inset 0 -1px 0 rgba(255,255,255,.05)}
+html.ai2 .ai-recent button:last-child{box-shadow:none}
+html.ai2 .ai-recent button:active{background:rgba(255,255,255,.05)}
+html.ai2 .ai-recent svg.i{width:16px;height:16px;color:var(--mut2);flex:none}
+html.ai2 .ai-recent span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* البحث السريع: شريط يتمرر */
+html.ai2 .ai-chips{display:flex;gap:8px;overflow-x:auto;margin:0 -14px;padding:0 14px 4px;scrollbar-width:none}
+html.ai2 .ai-chips::-webkit-scrollbar{display:none}
+html.ai2 .ai-chips button{flex:none;display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:99px;font-size:13px;white-space:nowrap;background:rgba(255,255,255,.055);box-shadow:0 0 0 1px rgba(255,255,255,.05) inset}
+html.ai2 .ai-chips button svg.i{width:14px;height:14px;color:#6EE7B7}
+html.ai2 .ai-chips button:active{transform:scale(.94)}
+
+/* المحادثة: سؤالك فقاعة، والجواب بطاقة بكرة صغيرة */
+html.ai2 .ai-u{display:flex;justify-content:flex-start;animation:aiIn .3s ease-out both}
+html.ai2 .ai-u span{max-width:85%;padding:10px 14px;border-radius:18px 18px 18px 6px;font-size:14px;font-weight:600;color:#052E1F;background:linear-gradient(140deg,#A7F3D0,#6EE7B7);box-shadow:0 8px 20px -12px rgba(52,211,153,.7)}
+html.ai2 .omni .ansbox{border:0;border-radius:22px 22px 22px 22px;padding:16px;background:linear-gradient(180deg,rgba(24,32,50,.72),rgba(14,20,33,.62));-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+  box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 0 0 1px rgba(96,165,250,.14) inset,0 20px 40px -28px rgba(0,0,0,.9);animation:aiIn .35s .05s ease-out both}
+html.ai2 .omni .ansh .ic{position:relative;width:34px;height:34px;border-radius:50%;color:#fff;overflow:hidden;
+  background:conic-gradient(from var(--ab),#34D399,#60A5FA,#C084FC,#34D399);animation:aiSpin 4s linear infinite;box-shadow:0 0 16px -2px rgba(96,165,250,.6)}
+html.ai2 .omni .ansh b{display:none}
+html.ai2 .omni .md{font-size:14.5px;line-height:1.75}
+html.ai2 .omni .tools span{border-radius:99px;padding:3px 9px;background:rgba(96,165,250,.1);color:#93C5FD;animation:aiIn .3s ease-out both}
+html.ai2 .aiload i{background:linear-gradient(#6EE7B7,#60A5FA)}
+html.ai2 .omni .ansbox form input{border-radius:14px;background:rgba(255,255,255,.05);border:0}
+@keyframes aiIn{from{opacity:0;transform:translateY(8px)}}
+
+@media (prefers-reduced-motion:reduce){html.ai2 .ai-orb i,html.ai2 .ai-orb::before,html.ai2 .searchbox.ai-box::before,html.ai2 .ai-tile,html.ai2 .omni .ansh .ic{animation:none}}

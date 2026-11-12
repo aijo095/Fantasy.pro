@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="ui2 lux ai2">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A0D14">
+<meta name="description" content="فانتازي برو — منصة فانتازي احترافية ببيانات حقيقية">
+<title>فانتازي برو</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/icon-180.png?v=2">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/ui2.css">
+<link rel="stylesheet" href="/lux.css">
+<link rel="stylesheet" href="/journey.css">
+<link rel="stylesheet" href="/ai2.css">
+</head>
+<body>
+<section id="splash" class="splash"><div class="logo-ic">F</div><div id="splashMsg" class="mut" style="text-align:center;padding:0 20px">…</div></section>
+<section id="auth" class="auth-wrap hidden"></section>
+<section id="link" class="auth-wrap hidden"></section>
+<div id="app" class="hidden">
+  <aside class="side" id="side"></aside>
+  <div class="app">
+    <header class="topbar">
+      <button class="icon-btn hidden" id="tbBack" onclick="goBack()" aria-label="back"><svg class="i back-ic"><use href="#i-back"/></svg></button>
+      <div class="av" id="tbAv">A</div>
+      <div style="flex:1;min-width:0"><h1 id="tbTitle">—</h1><small><span id="tbSubT"></span><span class="fresh" id="fresh"><i></i><span></span></span></small></div>
+      <button class="sbar" onclick="go('search')" aria-label="search"><svg class="i"><use href="#i-search"/></svg><span class="t" data-ph></span><kbd>/</kbd></button>
+      <button class="icon-btn" onclick="go('notifs')" aria-label="notifications"><svg class="i"><use href="#i-bell"/></svg><span class="dot hidden" id="bellDot"></span></button>
+    </header>
+    <main id="view"></main>
+  </div>
+  <nav class="bnav" id="bnav"></nav>
+</div>
+<div id="sheetRoot"></div>
+<div id="toast"></div>
+<script type="module" src="/js/app.js"></script>
+<script type="module" src="/js/ui2.js"></script>
+<script type="module" src="/js/lux.js"></script>
+<script>try{const q=new URLSearchParams(location.search).get("jr");if(q==="1")localStorage.setItem("fp_jr","1");if(q==="0")localStorage.removeItem("fp_jr");localStorage.removeItem("fp_ai2")}catch(e){}</script>
+<script>try{localStorage.removeItem("fp_mc2")}catch(e){}</script>
+<script>try{localStorage.removeItem("fp_ph2")}catch(e){}</script>
+<script>try{localStorage.removeItem("fp_coach")}catch(e){}</script>
+<script>try{const w=new URLSearchParams(location.search).get("walk");if(w==="1")localStorage.setItem("fp_walk","1");if(w==="0")localStorage.removeItem("fp_walk")}catch(e){}</script>
+<script>try{const g=new URLSearchParams(location.search).get("glow");localStorage.removeItem("fp_glow");if(g==="demo")sessionStorage.setItem("fp_glow_demo","1");if(g==="0")sessionStorage.removeItem("fp_glow_demo");}catch(e){}</script>
+<script>try{localStorage.removeItem("fp_pfx");localStorage.removeItem("fp_bg");localStorage.removeItem("fp_lux")}catch(e){}</script>
+</body>
+</html>

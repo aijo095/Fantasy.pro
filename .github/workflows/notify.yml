@@ -1,0 +1,22 @@
+name: notify
+# محرك الإشعارات شبه لحظي: وظيفة وحدة تشتغل ~55 دقيقة وتفحص كل 45 ثانية
+# (الجدول كل 10 دقايق احتياط إذا GitHub أخّر أو أسقط تشغيل؛ concurrency يمنع التكرار)
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+concurrency:
+  group: notify-loop
+  cancel-in-progress: false
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Run notifier every 45s
+        run: |
+          end=$(( $(date +%s) + 55*60 ))
+          while [ $(date +%s) -lt $end ]; do
+            curl -sS --max-time 50 https://fantasy-pro-aijo0.vercel.app/api/notify | head -c 300; echo
+            sleep 45
+          done

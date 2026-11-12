@@ -1,0 +1,81 @@
+/* =========================================================
+   فانتازي برو — طبقة «بريميوم»  ·  تتفعّل فقط مع html.lux
+   (معتمدة للجميع)
+   21 زجاج · 22 نيون · 23 مغناطيس · 24 خلفية حيّة · 25 انتقال سائل
+   26 بارالاكس · 27 ضبابية ديناميكية · 28 شارات هولوغرافية · 29 هيكل تحميل · 30 تفاعلات دقيقة
+========================================================= */
+@property --na{syntax:'<angle>';inherits:false;initial-value:0deg}
+html.lux{--tx:0;--ty:0;--tbb:0px}
+
+/* ---------- 24 الخلفية الحيّة ---------- */
+#lux-bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0;transition:opacity .6s}
+html.lux #lux-bg{opacity:1}
+html.lux body::before{opacity:.55}
+
+/* ---------- 21 البطاقات الزجاجية ---------- */
+html.lux .card,html.lux .list{background:linear-gradient(180deg,rgba(24,32,50,.62),rgba(14,20,33,.52));
+  -webkit-backdrop-filter:blur(16px) saturate(1.5);backdrop-filter:blur(16px) saturate(1.5);
+  box-shadow:0 1px 0 rgba(255,255,255,.09) inset,0 0 0 1px rgba(255,255,255,.045) inset,0 20px 40px -30px rgba(0,0,0,.95)}
+html.lux .hero,html.lux .team-hero,html.lux .ss-hero{background:linear-gradient(160deg,rgba(26,36,56,.72),rgba(13,19,31,.62));
+  -webkit-backdrop-filter:blur(20px) saturate(1.6);backdrop-filter:blur(20px) saturate(1.6)}
+html.lux .tabs2,html.lux .mc-tabs,html.lux .kpis>div{-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+
+/* ---------- 22 حدود نيون متحركة (البطاقات الرئيسية) ---------- */
+html.lux .hero::after,html.lux .team-hero::after,html.lux .ss-hero::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;z-index:2;
+  background:conic-gradient(from var(--na),rgba(52,211,153,0) 0deg,rgba(52,211,153,.95) 50deg,rgba(96,165,250,.9) 95deg,rgba(52,211,153,0) 150deg,rgba(52,211,153,0) 210deg,rgba(167,139,250,.75) 260deg,rgba(52,211,153,0) 320deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
+  filter:drop-shadow(0 0 6px rgba(52,211,153,.55));animation:luxNeon 6s linear infinite}
+@keyframes luxNeon{to{--na:360deg}}
+html.lux .bnav .nav-ind{box-shadow:0 0 0 1px rgba(52,211,153,.4) inset,0 0 18px -2px rgba(52,211,153,.55)}
+
+/* ---------- 23 أزرار مغناطيسية ---------- */
+html.lux .mag{transition:transform .5s cubic-bezier(.2,1.6,.4,1)!important;will-change:transform}
+html.lux .mag.mag-on{transition:transform .08s linear!important}
+
+/* ---------- 27 ضبابية ديناميكية ---------- */
+html.lux .topbar.scrolled{background:rgba(7,10,17,calc(.35 + var(--tbb) / 60px));-webkit-backdrop-filter:saturate(1.7) blur(var(--tbb));backdrop-filter:saturate(1.7) blur(var(--tbb))}
+html.lux .bnav{-webkit-backdrop-filter:saturate(1.8) blur(calc(14px + var(--tbb) * .5));backdrop-filter:saturate(1.8) blur(calc(14px + var(--tbb) * .5))}
+html.lux .ov{animation:luxOv .35s ease-out both}
+@keyframes luxOv{from{-webkit-backdrop-filter:blur(0);backdrop-filter:blur(0);background:rgba(3,5,9,0)}to{-webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3);background:rgba(3,5,9,.55)}}
+html.lux #view.blurring>*{transition:filter .2s}
+
+/* ---------- 28 شارات هولوغرافية ---------- */
+html.lux .badge-c:not(.locked){position:relative;overflow:hidden;isolation:isolate}
+html.lux .badge-c:not(.locked)::before{content:"";position:absolute;inset:-40%;z-index:-1;pointer-events:none;opacity:.5;mix-blend-mode:screen;
+  background:linear-gradient(calc(115deg + var(--tx) * 40deg),transparent 20%,rgba(255,0,170,.35) 32%,rgba(0,229,255,.35) 42%,rgba(132,255,0,.3) 52%,rgba(255,214,0,.32) 62%,transparent 75%);
+  transform:translate(calc(var(--tx) * 18%),calc(var(--ty) * 18%));animation:luxHolo 5s ease-in-out infinite alternate}
+html.lux .badge-c:not(.locked)::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:repeating-linear-gradient(calc(60deg + var(--ty) * 30deg),rgba(255,255,255,0) 0 6px,rgba(255,255,255,.05) 6px 7px)}
+html.lux .badge-c:not(.locked) .be{background:conic-gradient(from calc(var(--tx) * 90deg),#6EE7B7,#60A5FA,#C084FC,#F472B6,#FBBF24,#6EE7B7);color:#071018;
+  box-shadow:0 0 0 1px rgba(255,255,255,.35) inset,0 6px 18px -4px rgba(96,165,250,.6)}
+html.lux .mvp-b{background:linear-gradient(calc(90deg + var(--tx) * 60deg),#F59E0B,#FDE68A,#F0ABFC,#FDE68A,#F59E0B);background-size:200% 100%;animation:luxHoloB 3s linear infinite}
+@keyframes luxHolo{from{background-position:0 0;filter:hue-rotate(0)}to{filter:hue-rotate(60deg)}}
+@keyframes luxHoloB{to{background-position:200% 0}}
+
+/* ---------- 29 هيكل التحميل ---------- */
+html.lux .skel{background:linear-gradient(180deg,rgba(24,32,50,.55),rgba(14,20,33,.45));border-radius:20px;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 1px 0 rgba(255,255,255,.07) inset}
+html.lux .skel::before{content:"";position:absolute;inset:18px;pointer-events:none;opacity:.9;
+  background:
+    radial-gradient(circle at 20px 20px,rgba(255,255,255,.07) 19px,transparent 20px) no-repeat right top/40px 40px,
+    linear-gradient(rgba(255,255,255,.07),rgba(255,255,255,.07)) no-repeat calc(100% - 54px) 6px/42% 11px,
+    linear-gradient(rgba(255,255,255,.05),rgba(255,255,255,.05)) no-repeat calc(100% - 54px) 26px/26% 9px,
+    repeating-linear-gradient(180deg,transparent 0 58px,rgba(255,255,255,.055) 58px 70px,transparent 70px 84px) no-repeat 0 0/100% 100%}
+html.lux .skel::after{background:linear-gradient(100deg,transparent 30%,rgba(52,211,153,.10) 45%,rgba(255,255,255,.10) 50%,rgba(96,165,250,.08) 55%,transparent 70%);animation:luxShim 1.5s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes luxShim{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
+
+/* ---------- 30 تفاعلات دقيقة ---------- */
+html.lux .card.tap,html.lux .row.tap,html.lux button.row,html.lux .badge-c{transition:transform .35s cubic-bezier(.2,1.5,.4,1),box-shadow .2s}
+html.lux .card.tap:active,html.lux .row.tap:active,html.lux button.row:active{transform:scale(.97)}
+html.lux .lux-shine{position:absolute;inset:0;pointer-events:none;border-radius:inherit;overflow:hidden;z-index:3}
+html.lux .lux-shine::before{content:"";position:absolute;top:-20%;bottom:-20%;width:45%;left:-60%;transform:skewX(-20deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);animation:luxSweep .6s ease-out forwards}
+@keyframes luxSweep{to{left:120%}}
+html.lux .bnav button.pop svg.i,html.lux .tabs2 button.pop,html.lux .mc-tabs button.pop{animation:luxPop .4s cubic-bezier(.2,1.8,.4,1)}
+@keyframes luxPop{40%{transform:scale(1.22) translateY(-2px)}}
+html.lux .shake{animation:luxShake .35s}
+@keyframes luxShake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.lux-hap{position:fixed;left:-99px;top:-99px;width:1px;height:1px;opacity:0;pointer-events:none}
+
+@media (prefers-reduced-motion:reduce){
+  html.lux .hero::after,html.lux .team-hero::after,html.lux .ss-hero::after,html.lux .badge-c::before,html.lux .mvp-b,html.lux .skel::after{animation:none}
+}
