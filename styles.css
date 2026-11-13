@@ -1652,3 +1652,9 @@ svg.flipx{transform:scaleX(-1)}
 .h2-lg em{flex:none;font-style:normal;font:600 11.5px Inter,sans-serif}
 .h2-nw .mini{flex:none;width:30px;height:30px}.h2-nw .mini svg{width:100%;height:100%}
 .h2-nw b{font-size:13px}.h2-nw small{font-size:11.5px;color:var(--warn);line-height:1.45}
+
+/* المباراة الجاية: حرف H أو A بمربع صغير مرتب */
+.pl .lb.fxl{gap:5px}
+.pl .lb.fxl .fxo{gap:4px}
+.pl .lb.fxl .ha,.pl .lb.fxl .ha.sm{display:inline-grid;place-items:center;width:14px;height:14px;padding:0;border-radius:4px;font:800 9px/1 Inter,sans-serif;letter-spacing:0}
+.pl .lb.fxl.dbl .ha{width:12px;height:12px;font-size:8px}

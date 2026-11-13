@@ -25,8 +25,8 @@ function label(p) {
   if (m === 'next') { const cells = [0, 1, 2].map((i) => { const f = fixturesFor(p.team, G.next + i); return f.length ? `<i class="f${Math.round(f.reduce((a, x) => a + x.fdr, 0) / f.length)}" title="${f.map((x) => tShort(x.opp)).join('+')}">${f.length > 1 ? '2' : tShort(f[0].opp).slice(0, 3)}</i>` : '<i style="background:#475569;color:#fff">—</i>'; }).join(''); return `<div class="lb nx3" dir="ltr">${cells}</div>`; }
   const f = fixturesFor(p.team, G.next);
   if (!f.length) return `<div class="lb fxl blank">${tt('ما يلعب', 'Blank')}</div>`;
-  // ملعبه (أرضه) أو خارج ملعبه — بشارة واضحة جنب الخصم
-  const one = (x, sm) => `<span class="fxo"><b>${tShort(x.opp)}</b><i class="ha ${x.home ? 'h' : 'a'}${sm ? ' sm' : ''}">${sm ? (x.home ? tt('د', 'H') : tt('خ', 'A')) : x.home ? tt('أرضه', 'Home') : tt('خارج', 'Away')}</i></span>`;
+  // H = بملعبه، A = بملعب الخصم (مثل الفانتازي الرسمي)
+  const one = (x, sm) => `<span class="fxo"><b>${tShort(x.opp)}</b><i class="ha ${x.home ? 'h' : 'a'}${sm ? ' sm' : ''}">${x.home ? 'H' : 'A'}</i></span>`;
   return `<div class="lb fxl f${f[0].fdr}${f.length > 1 ? ' dbl' : ''}">${f.map((x) => one(x, f.length > 1)).join('')}</div>`;
 }
 function canSwap(a, b) {
@@ -359,7 +359,7 @@ export function vTeam() {
    ${tab === 'live' ? liveView() : tab === 'pitch' ? toolbar(P) + pitch(P) + actions : insight(P)}
    ${WALK() && tab !== 'insight' ? `<button class="walk-again" onclick="walkAgain()">${I('i-pitch', 'i', 'width:15px;height:15px')}${tt('شوف دخول اللاعبين مرة ثانية', 'Replay the walkout')}</button>` : ''}
    ${P.transfers.length ? `<div class="sec"><h2>${I('i-swap')}${tt('انتقالات مسجّلة', 'Recorded transfers')}</h2></div><div class="list">${P.transfers.map((x, i) => `<div class="row"><div class="mini">${pShirt(PM(x.in))}</div><div class="info"><b class="mv" dir="ltr"><span class="down">${esc(PM(x.out).name)}</span><i class="mv-a">→</i><span class="up">${esc(PM(x.in).name)}</span></b><span>${x.cost ? '−4' : tt('مجاني', 'free')} · ${tt('فرق المتوقع', 'xP diff')} ${r1(xpN(PM(x.in), ST.G.next, 3) - xpN(PM(x.out), ST.G.next, 3))}/3</span></div><button class="icon-btn" onclick="undoT(${i})" aria-label="undo">${I('i-x')}</button></div>`).join('')}</div>` : ''}
-   ${tab === 'live' ? '' : `<p class="mut" style="font-size:11.5px;text-align:center;margin-top:12px">${tt('أرضه = يلعب بملعبه، خارج = يلعب بملعب الخصم. اضغط لاعب لتفاصيله، أو اختار "بدّل" من صفحته حتى تبدّله. التغييرات تنحفظ كخطة، والتنفيذ بالتطبيق الرسمي.', 'Home = at his own ground, Away = at the opponent\'s. Tap a player for details or swap. Changes save as a plan.')}</p>`}`;
+   ${tab === 'live' ? '' : `<p class="mut" style="font-size:11.5px;text-align:center;margin-top:12px">${tt('حرف <b>H</b> يعني يلعب بملعبه، وحرف <b>A</b> يعني يلعب بملعب الخصم. اضغط لاعب لتفاصيله، أو اختار "بدّل" من صفحته حتى تبدّله. التغييرات تنحفظ كخطة، والتنفيذ بالتطبيق الرسمي.', 'H = home, A = away. Tap a player for details or swap. Changes save as a plan.')}</p>`}`;
 }
 function pitchTap(id) { if (swapFrom) { const a = swapFrom; swapFrom = null; if (a !== id) doSwap(a, id); return window.render(); } window.openPlayer(id); }
 function doSwap(a, b) {
