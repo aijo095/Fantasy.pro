@@ -72,6 +72,7 @@ export function vLive() {
     ${lp != null ? `<div style="text-align:end"><div style="font-size:12px;opacity:.85">${tt('نقاط فريقك', 'Your points')}</div><div class="score" style="font-size:40px;color:#34D399">${lp}</div></div>` : ''}</div></div>
    <div class="seg" id="lvseg" style="margin:12px 0">${Array.from({ length: G.lastGW }, (_, i) => i + 1).map((g) => `<button class="${g === gwSel ? 'on' : ''}" onclick="lvGW(${g})">${g}</button>`).join('')}</div>
    ${live ? `<div class="mut" style="font-size:11.5px;text-align:center;margin-bottom:8px">${tt('يتحدّث تلقائياً كل دقيقة', 'Auto-refreshes every minute')} · <button class="more" style="display:inline" onclick="lvRefresh()">${I('i-refresh', 'i', 'width:13px;height:13px')} ${t('refresh')}</button></div>` : ''}
+   ${LU2() ? lu2Section(fx, gwSel) : ''}
    ${Object.values(byDay).map((list) => `<div class="sec" style="margin:12px 2px 8px"><h2 style="font-size:14px">${I('i-cal', 'i', 'width:16px;height:16px')}${list[0].ko ? new Date(list[0].ko).toLocaleDateString(document.documentElement.lang === 'en' ? 'en-GB' : 'ar-IQ', { weekday: 'long', day: 'numeric', month: 'long' }) : tt('غير محدد', 'TBD')}</h2></div>${list.map((f) => fxCard(f, myTeams)).join('')}`).join('') || `<div class="empty"><b>${t('noData')}</b></div>`}
    ${gwSel === G.cur && ST.E.picks && ST.live ? `<div class="sec" style="margin:16px 2px 8px"><h2 style="font-size:14px">${I('i-pitch', 'i', 'width:16px;height:16px')}${tt('فريقك مباشر', 'Your team live')}</h2></div>${myLiveBlock()}` : ''}
    <p class="mut" style="font-size:11.5px;text-align:center;margin-top:10px">${tt('النتائج والنقاط والبونص من الفانتازي الرسمي مباشرة — بدون توقعات.', 'Scores, points and bonus straight from official FPL — no estimates.')}</p>`;
@@ -367,7 +368,74 @@ async function openMatchC(fid, ev) {
   }
 }
 Object.assign(window, { mcSideSet: (sd, fid, ev) => { mcSide = sd; const f = (ST.G.fx[ev] || []).find((x) => x.id === fid), el = document.getElementById('mcBody'); if (f && el) morphHTML(el, mcBody(f, ev)); }, lvGW: (g) => { gwSel = g; window.render(); setTimeout(() => document.querySelector('#lvseg .on')?.scrollIntoView({ inline: 'center', block: 'nearest' }), 30); }, lvRefresh: () => refreshLive(true), openMatchC });
+/* ---------- التشكيلات الرسمية (معاينة ?lu2=1) — من ESPN، تنعلن عادة قبل المباراة بساعة وقبل ما يحدثها الفانتازي ---------- */
+const LU2 = () => { try { return localStorage.getItem('fp_lu2') === '1'; } catch { return false; } };
+const luWin = (f) => { if (!f.ko) return false; const dt = new Date(f.ko) - Date.now(); return dt < 100 * 60e3 && (dt > -4 * 3600e3 || (f.started && !f.fin)); };
+const luHas = (f) => Object.values(LU[f.id]?.d?.sides || {}).some((x) => x.players?.some((p) => p.starter));
+function lu2Fetch(f, done) {
+  const c = LU[f.id]; if (c?.busy || (c && Date.now() - c.at < 45e3)) return;
+  LU[f.id] = { ...(c || {}), busy: true };
+  fetch(`/api/lineups?ko=${encodeURIComponent(f.ko)}&h=${tShort(f.h)}&a=${tShort(f.a)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((d) => {
+    const had = luHas(f); LU[f.id] = { d: d?.sides && Object.keys(d.sides).length ? d : c?.d || null, at: Date.now() };
+    if (luHas(f) !== had || !had) done && done();
+  });
+}
+function lu2Poll() {
+  const run = () => { if (ST.view !== 'live') return clearInterval(window.__lu2T); (ST.G.fx[gwSel] || []).filter(luWin).forEach((f) => lu2Fetch(f, () => { if (ST.view === 'live') window.render(); })); };
+  run(); clearInterval(window.__lu2T); window.__lu2T = setInterval(() => { if (!document.hidden) run(); }, 60e3);
+}
+function lu2Section(fx, ev) {
+  const L = fx.filter(luWin); if (!L.length) return '';
+  const mine = ST.plan ? new Set([...ST.plan.xi, ...ST.plan.bench]) : new Set();
+  return `<div class="sec" style="margin:12px 2px 8px"><h2 style="font-size:14px">${I('i-pitch', 'i', 'width:16px;height:16px')}${tt('التشكيلات الرسمية', 'Official line-ups')}</h2></div>
+  <div class="lu2-list">${L.map((f) => { const has = luHas(f), d = LU[f.id]?.d, mins = f.ko ? Math.round((new Date(f.ko) - Date.now()) / 60e3) : 0;
+    const myN = ST.G.players.filter((p) => mine.has(p.id) && (p.team === f.h || p.team === f.a)).length;
+    return `<button class="lu2-c ${has ? 'ok' : ''}" ${has ? `onclick="openLineup(${f.id},${ev})"` : ''}>
+      <span class="lu2-t" dir="ltr">${crest(tShort(f.h), 24)}<b>${tShort(f.h)}</b><i>v</i><b>${tShort(f.a)}</b>${crest(tShort(f.a), 24)}</span>
+      <span class="lu2-s">${has ? `<em class="ok">✓ ${tt('انعلنت', 'Announced')}</em><small dir="ltr">${esc(d.sides?.h?.formation || '—')} · ${esc(d.sides?.a?.formation || '—')}</small>` : `<em>${tt('بعدها ما انعلنت', 'Not yet')}</em><small>${mins > 0 ? tt(`المباراة بعد ${mins} دقيقة · تنعلن عادة قبلها بساعة`, `KO in ${mins}m · usually 1h before`) : tt('نتابعها كل دقيقة', 'Checking every minute')}</small>`}</span>
+      ${myN ? `<span class="lu2-my">${tt(`${myN} من لاعبينك`, `${myN} yours`)}</span>` : ''}${has ? I('i-chev', 'chev') : ''}</button>`; }).join('')}</div>`;
+}
+const LUD = (pos) => { const p = String(pos || '').toUpperCase(); if (p === 'G' || p === 'GK') return 0; if (/^(RB|LB|CB|CD|SW|D)(-|$)/.test(p)) return 1; if (/^(RWB|LWB)/.test(p)) return 1.5; if (/^(DM|CDM)/.test(p)) return 2; if (/^(CM|RM|LM|M)(-|$)/.test(p)) return 3; if (/^(AM|CAM)/.test(p)) return 4; if (/^(RW|LW|RF|LF)/.test(p)) return 4.5; if (/^(CF|F|ST|FW|S)(-|$)/.test(p)) return 5; return 3; };
+function lu2Lines(sd, team, top) {
+  // نوزع الأساسيين على خطوط الخطة الرسمية (مثلاً 4-2-3-1)، وكل خط من اليسار لليمين
+  const M = mapFPL(sd.players, team);
+  const st = sd.players.filter((p) => p.starter).sort((a, b) => LUD(a.pos) - LUD(b.pos) || a.place - b.place);
+  const cnt = [1, ...String(sd.formation || '').split('-').map(Number).filter((n) => n > 0)];
+  let lines = [];
+  if (cnt.reduce((a, b) => a + b, 0) === st.length) { let k = 0; cnt.forEach((n) => { lines.push(st.slice(k, k + n)); k += n; }); }
+  else { const g = {}; st.forEach((e) => (g[LUD(e.pos)] = g[LUD(e.pos)] || []).push(e)); lines = Object.keys(g).map(Number).sort((a, b) => a - b).map((k) => g[k]); }
+  lines = lines.map((ln) => ln.sort((a, b) => SIDE(a.pos || '') - SIDE(b.pos || '') || a.place - b.place));
+  const n = lines.length, out = [];
+  lines.forEach((ln, i) => { const y = i === 0 ? 93.5 : 81 - (i - 1) * (24 / Math.max(1, n - 2)); ln.forEach((e, j) => { let x = ((j + 1) / (ln.length + 1)) * 100; if (top) x = 100 - x; out.push({ e, p: M[e.id], x, y: top ? 100 - y : y }); }); });
+  return { out, M };
+}
+window.openLineup = (fid, ev) => {
+  const f = (ST.G.fx[ev] || []).find((x) => x.id === fid), d = LU[fid]?.d; if (!f || !d) return;
+  const mine = ST.plan ? new Set([...ST.plan.xi, ...ST.plan.bench]) : new Set(), cap = ST.plan?.cap;
+  const H = d.sides.h, A = d.sides.a, hl = H ? lu2Lines(H, f.h, false) : { out: [], M: {} }, al = A ? lu2Lines(A, f.a, true) : { out: [], M: {} };
+  const dot = (z, team) => { const p = z.p, my = p && mine.has(p.id), nm = esc(p?.name || z.e.last || z.e.short || z.e.name);
+    return `<button class="lu2-pl${my ? ' my' : ''}" style="left:${z.x}%;top:${z.y}%" ${p ? `onclick="closeSheet();setTimeout(()=>openPlayer(${p.id}),200)"` : ''}><span class="lu2-sh">${p ? pShirt(p) : pShirt({ team, pos: z.e.pos === 'G' ? 'GK' : 'MID' })}${z.e.jersey ? `<i class="lu2-no">${esc(z.e.jersey)}</i>` : ''}${p && p.id === cap ? '<i class="lu2-cap">C</i>' : ''}${z.e.yc ? '<i class="mc-yc"></i>' : ''}</span><span class="lu2-nm">${nm}</span></button>`; };
+  const subs = (sd, M, team) => (sd?.players || []).filter((e) => !e.starter).map((e) => { const p = M[e.id], my = p && mine.has(p.id); return `<button class="lu2-sb${my ? ' my' : ''}${e.subIn ? ' in' : ''}" ${p ? `onclick="closeSheet();setTimeout(()=>openPlayer(${p.id}),200)"` : ''}><i>${esc(e.jersey || '')}</i><span>${esc(p?.name || e.last || e.name)}</span>${e.subIn ? `<em>↑${e.subAt ? ' ' + e.subAt + '′' : ''}</em>` : ''}</button>`; }).join('') || `<p class="mut" style="font-size:12px">—</p>`;
+  // لاعبينك بهالمباراة: أساسي / بديل / مو بالقائمة
+  const myP = ST.G.players.filter((p) => mine.has(p.id) && (p.team === f.h || p.team === f.a));
+  const inXI = new Set([...hl.out, ...al.out].map((z) => z.p?.id).filter(Boolean));
+  const benchIds = new Set([...Object.entries(hl.M), ...Object.entries(al.M)].filter(([eid]) => [...(H?.players || []), ...(A?.players || [])].some((e) => e.id === eid && !e.starter)).map(([, p]) => p.id));
+  const myHTML = myP.length ? `<div class="lu2-mine">${myP.map((p) => { const k = inXI.has(p.id) ? 'xi' : benchIds.has(p.id) ? 'bench' : 'out'; return `<span class="${k}">${k === 'xi' ? '✓' : k === 'bench' ? '⇄' : '✕'} <b>${esc(p.name)}</b> ${k === 'xi' ? tt('أساسي', 'starting') : k === 'bench' ? tt('على الدكة', 'on the bench') : tt('مو بالقائمة', 'not in squad')}</span>`; }).join('')}</div>` : '';
+  openSheet(`${sheetHead(`<div class="lu2-hc" dir="ltr">${crest(tShort(f.h), 30)}${crest(tShort(f.a), 30)}</div>`, `${tName(f.h)} ${tt('ضد', 'vs')} ${tName(f.a)}`, tt('التشكيلة الرسمية', 'Official line-ups'))}
+    ${myHTML}
+    <div class="lu2-fm" dir="ltr"><span>${crest(tShort(f.a), 18)}<b>${tShort(f.a)}</b> ${esc(A?.formation || '')}</span></div>
+    <div class="lu2-pitch">
+      <svg viewBox="0 0 68 105" preserveAspectRatio="none" aria-hidden="true"><defs><pattern id="lu2g" width="68" height="15" patternUnits="userSpaceOnUse"><rect width="68" height="7.5" fill="#1E7A3C"/><rect y="7.5" width="68" height="7.5" fill="#22843F"/></pattern></defs><rect width="68" height="105" fill="url(#lu2g)"/>
+      <g fill="none" stroke="rgba(255,255,255,.7)" stroke-width=".35"><rect x="1.5" y="1.5" width="65" height="102"/><line x1="1.5" y1="52.5" x2="66.5" y2="52.5"/><circle cx="34" cy="52.5" r="9.15"/><rect x="13.85" y="1.5" width="40.3" height="16.5"/><rect x="24.85" y="1.5" width="18.3" height="5.5"/><rect x="13.85" y="87" width="40.3" height="16.5"/><rect x="24.85" y="98" width="18.3" height="5.5"/><path d="M26.7 18 A9.15 9.15 0 0 0 41.3 18"/><path d="M26.7 87 A9.15 9.15 0 0 1 41.3 87"/></g><circle cx="34" cy="52.5" r=".5" fill="rgba(255,255,255,.8)"/></svg>
+      ${al.out.map((z) => dot(z, f.a)).join('')}${hl.out.map((z) => dot(z, f.h)).join('')}
+    </div>
+    <div class="lu2-fm" dir="ltr"><span>${crest(tShort(f.h), 18)}<b>${tShort(f.h)}</b> ${esc(H?.formation || '')}</span></div>
+    <div class="lu2-subs"><div><h5>${tt('بدلاء', 'Subs')} ${tShort(f.h)}</h5>${subs(H, hl.M, f.h)}</div><div><h5>${tt('بدلاء', 'Subs')} ${tShort(f.a)}</h5>${subs(A, al.M, f.a)}</div></div>
+    <p class="lu2-note">${tt('المصدر: ESPN. التشكيلة الرسمية تنعلن عادة قبل المباراة بحوالي ساعة، وتوصل هنا قبل ما يحدثها الفانتازي. اللاعب اللي إطاره أخضر من لاعبينك.', 'Source: ESPN. Line-ups are usually announced ~1h before kick-off and arrive here before FPL updates. Green ring = your player.')}</p>`);
+};
+
 export function afterLive() {
+  if (LU2()) lu2Poll();
   setTimeout(() => document.querySelector('#lvseg .on')?.scrollIntoView({ inline: 'center', block: 'nearest' }), 30);
   if (gwSel === ST.G.cur && (!ST.live || Date.now() - lastFetch > 60000)) refreshLive(false);
 }
