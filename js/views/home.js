@@ -46,6 +46,7 @@ function actions() {
   return out.slice(0, 4);
 }
 export function vHome() {
+  if (HOME2()) return vHome2();
   const { G, E, plan } = ST, en = E.entry, hist = E.hist.current || [], last = hist[hist.length - 1], prev = hist[hist.length - 2];
   const ev = G.events.find((e) => e.id === G.cur), livePts = liveTeamPoints();
   const gwPts = livePts ?? last?.points ?? en.summary_event_points, diff = ev?.avg ? gwPts - ev.avg : null;
@@ -75,6 +76,52 @@ export function vHome() {
 
    ${news.length ? `<div class="sec"><h2>${I('i-alert')}${tt('أخبار لاعبينك', 'Your player news')}</h2></div><div class="list">${news.map((p) => `<div class="row tap" onclick="openPlayer(${p.id})"><div class="mini">${pShirt(p)}</div><div class="info"><b>${esc(p.name)}</b><span style="white-space:normal;color:var(--warn)">${esc(p.news)}</span></div></div>`).join('')}</div>` : ''}
    <div class="updated">${t('updated')}: ${fmtTime(new Date(ST.G.fetchedAt).toISOString())}</div>`;
+}
+/* ---------- الرئيسية المرتبة (معاينة ?home2=1) ---------- */
+const HOME2 = () => { try { return localStorage.getItem('fp_home2') === '1'; } catch { return false; } };
+function vHome2() {
+  const { G, E, plan } = ST, en = E.entry, hist = E.hist.current || [], last = hist[hist.length - 1];
+  const ev = G.events.find((e) => e.id === G.cur), livePts = liveTeamPoints();
+  const gwPts = livePts ?? last?.points ?? en.summary_event_points, diff = ev?.avg ? gwPts - ev.avg : null;
+  const priv = (en.leagues?.classic || []).filter((l) => l.league_type === 'x').sort((x, y) => x.entry_rank / x.rank_count - y.entry_rank / y.rank_count);
+  const news = plan ? plan.squad.map(PM).filter((p) => p.news) : [];
+  const A = actions().slice(0, 3), recent = hist.slice(-8);
+  const mx = Math.max(1, ...recent.map((h) => Math.max(h.points, G.events.find((e) => e.id === h.event)?.avg || 0)));
+  const R0 = officialRank(), U = upcoming(G);
+  let ck = '';
+  try { const C = runChecks(), bad = C.filter((c) => c.lvl === 'bad').length, warn = C.filter((c) => c.lvl === 'warn').length;
+    if (bad || warn) ck = `<button class="h2-ck ${bad ? 'bad' : 'warn'}" onclick="go('check')">${I('i-alert', 'i')}<span>${bad ? tt(`${bad} مشاكل بفريقك قبل الإغلاق`, `${bad} issues before deadline`) : tt(`${warn} تنبيهات بفريقك`, `${warn} warnings`)}</span>${I('i-chev', 'chev')}</button>`; } catch {}
+  const stat = (lbl, val, sub = '') => `<div class="h2-st"><small>${lbl}</small><b class="num">${val}</b>${sub}</div>`;
+  return `<div class="h2">
+    ${ck}
+    <section class="h2-hero">
+      <div class="h2-top"><span>${t('gw')} ${G.cur}${livePts != null ? `<i class="h2-live">${tt('مباشر', 'Live')}</i>` : ''}</span><div class="h2-acts"><button onclick="openShareCard(${G.cur})" aria-label="share">${I('i-send', 'i')}</button><button onclick="seasonGo(${G.cur})">${tt('التفاصيل', 'Details')}${I('i-chev', 'chev')}</button></div></div>
+      <div class="h2-pts"><b class="num count" data-v="${gwPts ?? ''}">${gwPts ?? '—'}</b><span>${tt('نقطة هالجولة', 'pts this GW')}</span></div>
+      ${diff != null ? `<div class="h2-avg ${diff >= 0 ? 'up' : 'down'}"><bdi dir="ltr">${diff >= 0 ? '+' : ''}${diff}</bdi> ${tt('عن المعدل', 'vs avg')} <span>(${ev.avg})</span></div>` : ''}
+      <div class="h2-stats">
+        ${stat(t('total'), fmt(en.summary_overall_points))}
+        ${stat(t('overall'), R0.rank ? fmt(R0.rank) : '—', R0.move ? `<em class="${R0.move > 0 ? 'up' : 'down'}">${R0.move > 0 ? '▲' : '▼'} ${fmt(Math.abs(R0.move))}</em>` : '')}
+        ${stat(`${tt('متوقع', 'Proj.')} GW${G.next}`, plan ? projected(plan) : '—')}
+      </div>
+    </section>
+
+    <button class="h2-dl" onclick="go('team')">${I('i-clock', 'i')}<span class="h2-dlt" id="cdLbl">${t('deadline')} ${t('gw')} ${U.gw ?? '—'}<small>${fmtTime(U.deadline)}</small></span><div class="cd h2-cd" id="cd"></div></button>
+
+    ${A.length ? `<h3 class="h2-h">${tt('خطوتك الجاية', 'Your next moves')}</h3>
+    <div class="h2-list">${A.map((x) => `<button class="h2-act" ${x.b ? `onclick="${x.b[1]}"` : 'disabled'}><span class="h2-ic" style="--c:${x.col}">${I(x.ok ? 'i-check' : x.ic, 'i')}</span><span class="h2-tx"><b>${x.h}</b><small>${x.d}</small></span>${x.b ? `<em>${x.b[0]}</em>` : ''}</button>`).join('')}</div>` : ''}
+
+    <button class="h2-ask" onclick="go('search')">${I('i-sparkle', 'i')}<span>${tt('اسأل المساعد: منو أكابتن؟ شنو أبيع؟', 'Ask: who to captain? who to sell?')}</span></button>
+
+    <div class="h2-hrow"><h3 class="h2-h">${tt('آخر الجولات', 'Recent gameweeks')}</h3><button onclick="go('season')">${t('season')}${I('i-chev', 'chev')}</button></div>
+    <div class="h2-card"><div class="h2-chart" dir="ltr">${recent.map((h) => { const a = G.events.find((e) => e.id === h.event)?.avg || 0, up = h.points >= a; return `<button onclick="seasonGo(${h.event})" aria-label="GW${h.event}"><span class="v num">${h.points}</span><span class="bar"><i class="${up ? 'up' : ''}" style="height:${Math.max(4, (h.points / mx) * 100)}%"></i><s style="bottom:${(a / mx) * 100}%"></s></span><span class="g num">${h.event}</span></button>`; }).join('')}</div>
+      <div class="h2-leg"><span><i class="up"></i>${tt('فوق المعدل', 'Above avg')}</span><span><i></i>${tt('تحت المعدل', 'Below avg')}</span><span><s></s>${tt('معدل الجولة', 'GW average')}</span></div></div>
+
+    ${priv.length ? `<div class="h2-hrow"><h3 class="h2-h">${t('leagues')}</h3><button onclick="go('leagues')">${tt('الكل', 'All')}${I('i-chev', 'chev')}</button></div>
+    <div class="h2-card h2-lg">${priv.slice(0, 3).map((l) => `<button onclick="go('leagues')"><b class="num">${fmt(l.entry_rank)}</b><span><span class="n">${esc(l.name)}</span><small>${tt('من', 'of')} ${fmt(l.rank_count)}</small></span>${l.entry_last_rank && l.entry_rank !== l.entry_last_rank ? `<em class="${l.entry_rank < l.entry_last_rank ? 'up' : 'down'}">${l.entry_rank < l.entry_last_rank ? '▲' : '▼'} ${Math.abs(l.entry_last_rank - l.entry_rank)}</em>` : ''}</button>`).join('')}</div>` : ''}
+
+    ${news.length ? `<h3 class="h2-h">${tt('أخبار لاعبينك', 'Your player news')}</h3><div class="h2-card h2-nw">${news.slice(0, 4).map((p) => `<button onclick="openPlayer(${p.id})"><span class="mini">${pShirt(p)}</span><span><b>${esc(p.name)}</b><small>${esc(p.news)}</small></span></button>`).join('')}</div>` : ''}
+    <div class="updated">${t('updated')}: ${fmtTime(new Date(ST.G.fetchedAt).toISOString())}</div>
+  </div>`;
 }
 export function afterHome() {
   clearInterval(cdT); tick(); cdT = setInterval(tick, 1000);
