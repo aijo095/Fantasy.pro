@@ -1768,3 +1768,6 @@ svg.flipx{transform:scaleX(-1)}
 .lu2-box.open .lu2-arr{transform:rotate(90deg)}
 .lu2-body{display:none;padding:0 10px 10px}.lu2-box.open .lu2-body{display:block}
 .lu2-empty{margin:0;padding:4px 6px 4px;font-size:12.5px;line-height:1.7;color:var(--mut)}
+
+.ev2-p.sh{box-shadow:inset -3px 0 0 #A78BFA}[dir=ltr] .ev2-p.sh{box-shadow:inset 3px 0 0 #A78BFA}
+.ev2-p.sh .ev2-who{background:rgba(167,139,250,.16);color:#C4B5FD}

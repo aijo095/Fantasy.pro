@@ -183,8 +183,8 @@ function evSection(rows, C, anyLive) {
   list.sort((a, b) => (C.live(b.f) ? 1 : 0) - (C.live(a.f) ? 1 : 0) || b.E.length - a.E.length || b.pts - a.pts);
   const sum = (w) => list.filter((r) => r.who === w).reduce((a, r) => a + r.pts * Math.max(1, r.m), 0);
   return `<div class="ev2-sum"><span class="me">${tt('لاعبينك', 'Yours')} <b dir="ltr">${sum('me')}</b></span><span class="rv">${tt('لاعبين خصمك', 'Rival')} <b dir="ltr">${sum('rv')}</b></span></div>
-  <div class="ev2">${list.map((r) => `<div class="ev2-p ${r.who}" onclick="playerGW(${r.p.id},${ST.G.cur})">
-      <div class="ev2-h"><span class="mini">${pShirt(r.p)}</span><span class="ev2-n"><b>${esc(r.p.name)}</b><small><span class="ev2-who">${r.who === 'me' ? tt('لاعبك', 'Yours') : tt('خصمك', 'Rival')}</span>${tShort(r.p.team)} · ${r.p.pos}${r.m > 1 ? ` · <i class="ev2-c">${r.m === 3 ? '3×' : 'C ×2'}</i>` : ''}${C.live(r.f) ? ` · <i class="ev2-live">${C.minute(r.f)}′</i>` : C.done(r.f) ? ` · ${tt('خلصت', 'FT')}` : ''}</small></span><b class="ev2-t" dir="ltr">${r.pts * Math.max(1, r.m)}</b></div>
+  <div class="ev2">${list.map((r) => `<div class="ev2-p ${r.who}${r.sh ? ' sh' : ''}" onclick="playerGW(${r.p.id},${ST.G.cur})">
+      <div class="ev2-h"><span class="mini">${pShirt(r.p)}</span><span class="ev2-n"><b>${esc(r.p.name)}</b><small><span class="ev2-who">${r.sh ? tt('لاعب مشترك', 'Shared') : r.who === 'me' ? tt('لاعبك', 'Yours') : tt('خصمك', 'Rival')}</span>${tShort(r.p.team)} · ${r.p.pos}${r.m > 1 ? ` · <i class="ev2-c">${r.m === 3 ? '3×' : 'C ×2'}</i>` : ''}${C.live(r.f) ? ` · <i class="ev2-live">${C.minute(r.f)}′</i>` : C.done(r.f) ? ` · ${tt('خلصت', 'FT')}` : ''}</small></span><b class="ev2-t" dir="ltr">${r.pts * Math.max(1, r.m)}</b></div>
       <div class="ev2-e">${r.E.map((e) => `<span class="ev2-x ${e.k}"><i>${EVI[e.k] || '•'}</i>${e.txt}${e.extra ? ` <small>(${e.extra})</small>` : ''}${e.pts != null ? `<em class="${e.pts > 0 ? 'up' : e.pts < 0 ? 'down' : ''}" dir="ltr">${e.pts > 0 ? '+' : ''}${e.pts}</em>` : ''}</span>`).join('')}</div>
     </div>`).join('')}</div>`;
 }
@@ -271,7 +271,8 @@ export function vPulse() {
   const chips = RV.list?.length ? `<div class="seg pu-rv">${RV.list.map((x) => `<button class="${x.entry === RV.sel ? 'on' : ''}" onclick="puRv(${x.entry})">${esc(x.name)}<small>${esc(x.why)}</small></button>`).join('')}</div>` : RV.list ? '' : `<div class="aiload" style="padding:8px"><i></i><i></i><i></i></div>`;
   // الأحداث المباشرة: لاعبينك + لاعبين خصمك اللي ما عندك
   const myIds = new Set((ST.E.picks.picks || []).map((x) => x.element));
-  const rows = (ST.E.picks.picks || []).filter((x) => x.multiplier > 0).map((x) => ({ p: PM(x.element), s: ST.live[x.element], m: x.multiplier, who: 'me' }));
+  const rvIds = new Set((rp?.picks || []).map((x) => x.element));
+  const rows = (ST.E.picks.picks || []).filter((x) => x.multiplier > 0).map((x) => ({ p: PM(x.element), s: ST.live[x.element], m: x.multiplier, who: 'me', sh: rvIds.has(x.element) }));
   if (rp) (rp.picks || []).filter((x) => x.multiplier > 0 && !myIds.has(x.element)).forEach((x) => rows.push({ p: PM(x.element), s: ST.live[x.element], m: x.multiplier, who: 'rv' }));
   const nearHTML = SIMON() ? simHTML() : evSection(rows.filter((r) => r.p && r.s), realCtx(), anyLive);
   // منافسك
