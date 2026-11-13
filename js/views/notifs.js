@@ -44,6 +44,7 @@ export function vSettings() {
    <div class="card push-card" id="pushCard">${pushCardHTML()}</div>
    <div class="card" style="margin-top:10px">${PREFS.map(([k, l]) => `<div class="set-row"><span>${l}</span>${sw(ST.prefs[k] !== false, `setPref('${k}')`)}</div>`).join('')}
     <div class="set-row"><span>${tt('إشعارات المتصفح', 'Browser notifications')}<br><small class="mut">${'Notification' in window ? tt('تشتغل والتطبيق مفتوح بالخلفية', 'Works while the app is open in background') : tt('المتصفح لا يدعمها', 'Not supported')}</small></span>${sw(ST.prefs.browser && 'Notification' in window && Notification.permission === 'granted', 'setBrowserN()')}</div></div>
+   ${appearanceHTML()}
    <div class="sec"><h2>${I('i-globe')}${tt('عام', 'General')}</h2></div>
    <div class="card"><div class="set-row"><span>${tt('اللغة', 'Language')}</span><button class="btn btn-g btn-sm" onclick="toggleLang()">${lang() === 'ar' ? 'English' : 'العربية'}</button></div>
     <div class="set-row"><span>${tt('آخر تحديث للبيانات', 'Last data update')}</span><b class="num" style="font-size:12px">${fmtTime(new Date(lu).toISOString())}</b></div>
@@ -53,10 +54,41 @@ export function vSettings() {
    <button class="btn btn-r btn-b" style="margin-top:14px" onclick="doLogout()">${I('i-logout')}${tt('تسجيل الخروج', 'Sign out')}</button>
    <p class="mut" style="text-align:center;font-size:11px;margin-top:12px">${tt('تطبيق مستقل غير تابع للدوري الإنجليزي. البيانات من واجهة الفانتازي العامة.', 'Independent app, not affiliated with the Premier League.')}</p>`;
 }
+/* ---------- المظهر: ألوان وخلفيات مريحة للبصر ---------- */
+const THEMES = [
+  ['def', tt('الأصلي', 'Original'), tt('أسود وأخضر', 'Black & green'), '#0A0D14', '#171C27', '#34D399'],
+  ['navy', tt('كحلي هادئ', 'Calm navy'), tt('كحلي وفيروزي ناعم', 'Navy & soft teal'), '#0D1422', '#1C2945', '#6CC4B0'],
+  ['sage', tt('عشبي مريح', 'Sage'), tt('أخضر زيتوني فاتح', 'Soft olive green'), '#0D1512', '#1B2B25', '#8CCB9E'],
+  ['ocean', tt('أزرق بحري', 'Ocean'), tt('أزرق رمادي ناعم', 'Muted blue'), '#0B1418', '#182B34', '#7BB8D6'],
+  ['dusk', tt('بنفسجي غروب', 'Dusk'), tt('بنفسجي فاتح هادئ', 'Soft lavender'), '#13111C', '#252137', '#A99BE0'],
+  ['sand', tt('رملي دافئ', 'Warm sand'), tt('بني دافئ وذهبي هادئ', 'Warm brown & muted gold'), '#141310', '#29261F', '#D9B77E'],
+  ['graphite', tt('رمادي مريح', 'Graphite'), tt('رمادي محايد وتباين أخف', 'Neutral, lower contrast'), '#121315', '#24262B', '#9CC9B4'],
+];
+const BGS = [['live', tt('حيّة', 'Live')], ['calm', tt('هادئة', 'Calm')], ['plain', tt('سادة', 'Plain')], ['pitch', tt('ملعب', 'Pitch')], ['aurora', tt('شفق', 'Aurora')]];
+const curTh = () => { try { return localStorage.getItem('fp_theme') || 'def'; } catch { return 'def'; } };
+const curBg = () => { try { return localStorage.getItem('fp_bg') || 'live'; } catch { return 'live'; } };
+function appearanceHTML() {
+  const th = curTh(), bg = curBg();
+  return `<div class="sec"><h2>${I('i-sparkle')}${tt('المظهر', 'Appearance')}</h2></div>
+   <div class="card"><div class="set-row" style="border:0;padding-bottom:4px"><span>${tt('ألوان التطبيق', 'App colours')}<br><small class="mut">${tt('كلها ألوان هادئة ومريحة للعين', 'All calm, easy-on-the-eye palettes')}</small></span></div>
+    <div class="th-grid">${THEMES.map(([k, n, d, b, s2, a]) => `<button class="th-opt ${th === k ? 'on' : ''}" onclick="setTheme('${k}')" style="--pb:${b};--ps:${s2};--pa:${a}"><div class="th-prev"><i></i><i></i><b></b><em></em></div><span>${n}</span><small>${d}</small><i class="th-ck">✓</i></button>`).join('')}</div>
+    <div class="set-row" style="border:0;padding:14px 0 4px"><span>${tt('الخلفية', 'Background')}<br><small class="mut">${tt('"حيّة" فيها نقاط تتحرك، والباقي ثابتة أو هادئة جداً', '"Live" has moving dots; the rest are still or very slow')}</small></span></div>
+    <div class="bg-row">${BGS.map(([k, n]) => `<button class="bg-opt ${bg === k ? 'on' : ''}" onclick="setBg('${k}')"><i class="${k}"></i>${n}</button>`).join('')}</div>
+   </div>`;
+}
+function applyLook() {
+  const r = document.documentElement, th = curTh(), bg = curBg();
+  th === 'def' ? r.removeAttribute('data-th') : r.setAttribute('data-th', th);
+  bg === 'live' ? r.removeAttribute('data-bg') : r.setAttribute('data-bg', bg);
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', (THEMES.find((x) => x[0] === th) || THEMES[0])[3]);
+  window.dispatchEvent(new Event('fp-theme'));
+}
+applyLook();
+
 let pushSt = null;
 function pushCardHTML() {
   if (pushSt === null) { PU.pushState().then((v) => { pushSt = v; const c = document.getElementById('pushCard'); if (c) c.innerHTML = pushCardHTML(); }); return `<div class="mut" style="font-size:13px">${tt('جارِ التحقق…', 'Checking…')}</div>`; }
-  const head = (sub) => `<div class="flex" style="gap:12px;align-items:center"><div class="pbig" style="background:${pushSt === 'on' ? 'rgba(52,211,153,.16)' : 'var(--s3)'};color:${pushSt === 'on' ? 'var(--acc)' : 'var(--mut)'}">${I('i-bell', 'i', 'width:20px;height:20px')}</div><div style="flex:1"><b style="font-size:14.5px">${tt('إشعارات على الجوال', 'Phone notifications')}</b><div class="mut" style="font-size:12.5px;line-height:1.6">${sub}</div></div>${pushSt === 'on' ? `<span class="tag lime">${I('i-check')}${tt('مفعّلة', 'On')}</span>` : ''}</div>`;
+  const head = (sub) => `<div class="flex" style="gap:12px;align-items:center"><div class="pbig" style="background:${pushSt === 'on' ? 'rgba(var(--acc-rgb),.16)' : 'var(--s3)'};color:${pushSt === 'on' ? 'var(--acc)' : 'var(--mut)'}">${I('i-bell', 'i', 'width:20px;height:20px')}</div><div style="flex:1"><b style="font-size:14.5px">${tt('إشعارات على الجوال', 'Phone notifications')}</b><div class="mut" style="font-size:12.5px;line-height:1.6">${sub}</div></div>${pushSt === 'on' ? `<span class="tag lime">${I('i-check')}${tt('مفعّلة', 'On')}</span>` : ''}</div>`;
   const M = {
     on: [tt('توصلك حتى والتطبيق مسكّر: الإغلاق، الإصابات، الأسعار، الأهداف، ونهاية الجولة.', 'Delivered even when the app is closed.'), `<div class="flex" style="gap:8px;margin-top:12px"><button class="btn btn-g btn-sm" style="flex:1" onclick="pushTest(this)">${I('i-send')}${tt('إشعار تجريبي', 'Send test')}</button><button class="btn btn-g btn-sm" onclick="pushOff()">${tt('إيقاف', 'Turn off')}</button></div>`],
     off: [tt('فعّلها حتى يوصلك كل شي يخص فريقك والتطبيق مسكّر.', 'Turn on to get alerts even when the app is closed.'), `<button class="btn btn-p btn-b" style="margin-top:12px" onclick="pushOn(this)">${I('i-bell')}${tt('تفعيل الإشعارات', 'Enable notifications')}</button>`],
@@ -82,6 +114,8 @@ Object.assign(window, {
   },
   setFav: (v) => { ST.profile.fav = v ? +v : null; AU.saveProfile(ST.user.uid, { fav: ST.profile.fav }).catch(() => {}); toast(tt('تم الحفظ', 'Saved')); },
   linkP: async (k) => { try { await AU.linkProvider(k); toast(tt('تم الربط', 'Linked')); window.render(); } catch (e) { toast(AU.authError(e)); } },
+  setTheme: (k) => { try { localStorage.setItem('fp_theme', k); } catch {} applyLook(); try { AU.saveProfile(ST.user.uid, { look: { th: k, bg: curBg() } }).catch(() => {}); } catch {} window.render(); },
+  setBg: (k) => { try { localStorage.setItem('fp_bg', k); } catch {} applyLook(); try { AU.saveProfile(ST.user.uid, { look: { th: curTh(), bg: k } }).catch(() => {}); } catch {} window.render(); },
   clearCache: () => { Object.keys(localStorage).filter((k) => k.startsWith('fpc_')).forEach((k) => localStorage.removeItem(k)); toast(tt('تم مسح الكاش', 'Cache cleared')); },
 });
 

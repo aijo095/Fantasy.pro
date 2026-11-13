@@ -11,13 +11,14 @@ root.classList.add('lux');
 const cv = document.createElement('canvas'); cv.id = 'lux-bg'; document.body.prepend(cv);
 const ctx = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1, P = [];
+const ACC = () => (getComputedStyle(root).getPropertyValue('--acc-rgb') || '52,211,153').trim().replace(/\s+/g, '');
 function size() {
   DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight;
   cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   const n = Math.round(Math.min(46, (W * H) / 15000));
-  P = Array.from({ length: n }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .22, vy: (Math.random() - .5) * .22, r: Math.random() * 1.4 + .5, c: Math.random() < .7 ? '52,211,153' : '96,165,250' }));
+  P = Array.from({ length: n }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .22, vy: (Math.random() - .5) * .22, r: Math.random() * 1.4 + .5, c: Math.random() < .7 ? ACC() : '96,165,250' }));
 }
-size(); addEventListener('resize', size);
+size(); addEventListener('resize', size); addEventListener('fp-theme', size);
 let last = 0;
 function draw(t) {
   requestAnimationFrame(draw);

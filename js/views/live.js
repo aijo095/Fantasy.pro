@@ -79,7 +79,7 @@ export function vLive() {
 function fxCard(f, myTeams) {
   const st = f.fin ? tt('انتهت', 'FT') : f.started ? fxMin(f) : f.ko ? new Date(f.ko).toLocaleTimeString(document.documentElement.lang === 'en' ? 'en-GB' : 'ar-IQ', { hour: 'numeric', minute: '2-digit' }) : '—';
   const mine = myTeams.has(f.h) || myTeams.has(f.a);
-  return `<div class="card tap" style="margin-bottom:8px;${mine ? 'border-color:rgba(52,211,153,.3)' : ''}" onclick="openMatchC(${f.id},${f.ev})"><div class="fx-card"><div class="tm">${crest(tShort(f.h), 38)}${tName(f.h)}</div><div class="mid">${f.started ? `<div>${scoreHTML(f.hs, f.as)}</div>` : ''}<span class="${f.started && !f.fin ? 'livebadge' : 'mut'}" style="font-size:11.5px">${st}</span></div><div class="tm">${crest(tShort(f.a), 38)}${tName(f.a)}</div></div></div>`;
+  return `<div class="card tap" style="margin-bottom:8px;${mine ? 'border-color:rgba(var(--acc-rgb),.3)' : ''}" onclick="openMatchC(${f.id},${f.ev})"><div class="fx-card"><div class="tm">${crest(tShort(f.h), 38)}${tName(f.h)}</div><div class="mid">${f.started ? `<div>${scoreHTML(f.hs, f.as)}</div>` : ''}<span class="${f.started && !f.fin ? 'livebadge' : 'mut'}" style="font-size:11.5px">${st}</span></div><div class="tm">${crest(tShort(f.a), 38)}${tName(f.a)}</div></div></div>`;
 }
 function myLiveBlock() {
   const calc = liveCalc(ST.E.picks, ST.G.cur); if (!calc) return '';

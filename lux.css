@@ -22,11 +22,11 @@ html.lux .tabs2,html.lux .mc-tabs,html.lux .kpis>div{-webkit-backdrop-filter:blu
 
 /* ---------- 22 حدود نيون متحركة (البطاقات الرئيسية) ---------- */
 html.lux .hero::after,html.lux .team-hero::after,html.lux .ss-hero::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;z-index:2;
-  background:conic-gradient(from var(--na),rgba(52,211,153,0) 0deg,rgba(52,211,153,.95) 50deg,rgba(96,165,250,.9) 95deg,rgba(52,211,153,0) 150deg,rgba(52,211,153,0) 210deg,rgba(167,139,250,.75) 260deg,rgba(52,211,153,0) 320deg);
+  background:conic-gradient(from var(--na),rgba(var(--acc-rgb),0) 0deg,rgba(var(--acc-rgb),.95) 50deg,rgba(96,165,250,.9) 95deg,rgba(var(--acc-rgb),0) 150deg,rgba(var(--acc-rgb),0) 210deg,rgba(167,139,250,.75) 260deg,rgba(var(--acc-rgb),0) 320deg);
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
-  filter:drop-shadow(0 0 6px rgba(52,211,153,.55));animation:luxNeon 6s linear infinite}
+  filter:drop-shadow(0 0 6px rgba(var(--acc-rgb),.55));animation:luxNeon 6s linear infinite}
 @keyframes luxNeon{to{--na:360deg}}
-html.lux .bnav .nav-ind{box-shadow:0 0 0 1px rgba(52,211,153,.4) inset,0 0 18px -2px rgba(52,211,153,.55)}
+html.lux .bnav .nav-ind{box-shadow:0 0 0 1px rgba(var(--acc-rgb),.4) inset,0 0 18px -2px rgba(var(--acc-rgb),.55)}
 
 /* ---------- 23 أزرار مغناطيسية ---------- */
 html.lux .mag{transition:transform .5s cubic-bezier(.2,1.6,.4,1)!important;will-change:transform}
@@ -46,7 +46,7 @@ html.lux .badge-c:not(.locked)::before{content:"";position:absolute;inset:-40%;z
   transform:translate(calc(var(--tx) * 18%),calc(var(--ty) * 18%));animation:luxHolo 5s ease-in-out infinite alternate}
 html.lux .badge-c:not(.locked)::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
   background:repeating-linear-gradient(calc(60deg + var(--ty) * 30deg),rgba(255,255,255,0) 0 6px,rgba(255,255,255,.05) 6px 7px)}
-html.lux .badge-c:not(.locked) .be{background:conic-gradient(from calc(var(--tx) * 90deg),#6EE7B7,#60A5FA,#C084FC,#F472B6,#FBBF24,#6EE7B7);color:#071018;
+html.lux .badge-c:not(.locked) .be{background:conic-gradient(from calc(var(--tx) * 90deg),color-mix(in srgb,var(--acc) 65%,#fff),#60A5FA,#C084FC,#F472B6,#FBBF24,color-mix(in srgb,var(--acc) 65%,#fff));color:#071018;
   box-shadow:0 0 0 1px rgba(255,255,255,.35) inset,0 6px 18px -4px rgba(96,165,250,.6)}
 html.lux .mvp-b{background:linear-gradient(calc(90deg + var(--tx) * 60deg),#F59E0B,#FDE68A,#F0ABFC,#FDE68A,#F59E0B);background-size:200% 100%;animation:luxHoloB 3s linear infinite}
 @keyframes luxHolo{from{background-position:0 0;filter:hue-rotate(0)}to{filter:hue-rotate(60deg)}}
@@ -60,7 +60,7 @@ html.lux .skel::before{content:"";position:absolute;inset:18px;pointer-events:no
     linear-gradient(rgba(255,255,255,.07),rgba(255,255,255,.07)) no-repeat calc(100% - 54px) 6px/42% 11px,
     linear-gradient(rgba(255,255,255,.05),rgba(255,255,255,.05)) no-repeat calc(100% - 54px) 26px/26% 9px,
     repeating-linear-gradient(180deg,transparent 0 58px,rgba(255,255,255,.055) 58px 70px,transparent 70px 84px) no-repeat 0 0/100% 100%}
-html.lux .skel::after{background:linear-gradient(100deg,transparent 30%,rgba(52,211,153,.10) 45%,rgba(255,255,255,.10) 50%,rgba(96,165,250,.08) 55%,transparent 70%);animation:luxShim 1.5s cubic-bezier(.4,0,.2,1) infinite}
+html.lux .skel::after{background:linear-gradient(100deg,transparent 30%,rgba(var(--acc-rgb),.10) 45%,rgba(255,255,255,.10) 50%,rgba(96,165,250,.08) 55%,transparent 70%);animation:luxShim 1.5s cubic-bezier(.4,0,.2,1) infinite}
 @keyframes luxShim{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
 
 /* ---------- 30 تفاعلات دقيقة ---------- */

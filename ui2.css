@@ -14,7 +14,7 @@ html.ui2{
 }
 /* ضوء الملعب من فوق */
 html.ui2 body::before{background:
-  radial-gradient(520px 300px at 85% -8%,rgba(52,211,153,.13),transparent 62%),
+  radial-gradient(520px 300px at 85% -8%,rgba(var(--acc-rgb),.13),transparent 62%),
   radial-gradient(420px 260px at 8% -6%,rgba(96,165,250,.09),transparent 60%),
   linear-gradient(180deg,rgba(255,255,255,.02),transparent 240px)}
 html.ui2 .app{padding:0 14px 118px}
@@ -23,7 +23,7 @@ html.ui2 .app{padding:0 14px 118px}
 html.ui2 .topbar{margin:0 -14px;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;background:transparent;transition:background .25s,box-shadow .25s,backdrop-filter .25s}
 html.ui2 .topbar.scrolled{background:rgba(7,10,17,.72);-webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px);box-shadow:0 1px 0 var(--line)}
 html.ui2 .topbar h1{font-size:17px;letter-spacing:-.01em}
-html.ui2 .topbar .av{width:40px;height:40px;border-radius:14px;border:0;color:#052E1F;background:linear-gradient(140deg,#6EE7B7,#34D399 55%,#10B981);box-shadow:0 6px 16px -6px rgba(52,211,153,.6)}
+html.ui2 .topbar .av{width:40px;height:40px;border-radius:14px;border:0;color:#052E1F;background:linear-gradient(140deg,color-mix(in srgb,var(--acc) 65%,#fff),var(--acc) 55%,var(--acc-d));box-shadow:0 6px 16px -6px rgba(var(--acc-rgb),.6)}
 html.ui2 .icon-btn{border:0;border-radius:14px;background:var(--s1);box-shadow:var(--sh)}
 html.ui2 .icon-btn:active{transform:scale(.92)}
 html.ui2 .sbar{border:0;border-radius:14px;background:var(--s1);box-shadow:var(--sh)}
@@ -37,7 +37,7 @@ html.ui2 .list .row:last-child{box-shadow:none}
 html.ui2 .row.tap:active,html.ui2 button.row:active{background:var(--s2)}
 html.ui2 .sec{margin:26px 2px 12px}
 html.ui2 .sec h2{font-size:16.5px;letter-spacing:-.01em;gap:9px}
-html.ui2 .sec h2::before{content:"";width:4px;height:18px;border-radius:4px;background:linear-gradient(var(--acc),rgba(52,211,153,.25));flex:none}
+html.ui2 .sec h2::before{content:"";width:4px;height:18px;border-radius:4px;background:linear-gradient(var(--acc),rgba(var(--acc-rgb),.25));flex:none}
 html.ui2 .sec h2 svg.i{display:none}
 html.ui2 .kpis{background:transparent;gap:8px;border-radius:0;overflow:visible}
 html.ui2 .kpis>div{background:rgba(255,255,255,.045);border-radius:16px;padding:12px}
@@ -48,22 +48,22 @@ html.ui2 .hero,html.ui2 .team-hero,html.ui2 .ss-hero{--mx:78%;--my:0%;position:r
   background:linear-gradient(160deg,#141C2C 0%,#0F1522 55%,#0C111B 100%);
   box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 24px 50px -34px rgba(0,0,0,.95)}
 html.ui2 .hero::before,html.ui2 .team-hero::before,html.ui2 .ss-hero::before{content:"";position:absolute;inset:0;z-index:-1;animation:none;pointer-events:none;
-  background:radial-gradient(340px 240px at var(--mx) var(--my),rgba(52,211,153,.26),transparent 62%),radial-gradient(260px 200px at calc(100% - var(--mx)) 110%,rgba(96,165,250,.16),transparent 65%);transition:background .25s}
+  background:radial-gradient(340px 240px at var(--mx) var(--my),rgba(var(--acc-rgb),.26),transparent 62%),radial-gradient(260px 200px at calc(100% - var(--mx)) 110%,rgba(96,165,250,.16),transparent 65%);transition:background .25s}
 html.ui2 .ss-hero::before{background:radial-gradient(340px 240px at var(--mx) var(--my),rgba(251,191,36,.22),transparent 62%)}
 html.ui2 .hero::after,html.ui2 .team-hero::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
-  background:linear-gradient(140deg,rgba(52,211,153,.55),rgba(255,255,255,.06) 35%,rgba(255,255,255,.03) 65%,rgba(96,165,250,.4));
+  background:linear-gradient(140deg,rgba(var(--acc-rgb),.55),rgba(255,255,255,.06) 35%,rgba(255,255,255,.03) 65%,rgba(96,165,250,.4));
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
 html.ui2 .hero .big-num,html.ui2 .team-hero .big-num{letter-spacing:-.03em;background:linear-gradient(180deg,#fff,#B8F5DC);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent!important}
 html.ui2 .hero .kpis>div,html.ui2 .team-hero .tstrip>div,html.ui2 .live-side>div{background:rgba(255,255,255,.05);border:0;border-radius:16px;box-shadow:0 1px 0 rgba(255,255,255,.06) inset;transition:transform .12s,background .12s}
 html.ui2 .hero .kpis>div:active,html.ui2 .live-side>div:active,html.ui2 .ss-h-grid>div:active,html.ui2 .ss-mini>div:active{transform:scale(.95);background:rgba(255,255,255,.09)}
-html.ui2 .hero .kpis>div{border-top:2px solid rgba(52,211,153,.5)}
+html.ui2 .hero .kpis>div{border-top:2px solid rgba(var(--acc-rgb),.5)}
 html.ui2 .hero .kpis>div:nth-child(2){border-top-color:rgba(96,165,250,.55)}
 html.ui2 .hero .kpis>div:nth-child(3){border-top-color:rgba(251,191,36,.55)}
 html.ui2 .tstrip{background:transparent;gap:8px}
 
 /* عناوين الأقسام: أيقونة بمربع ملوّن */
 html.ui2 .sec h2::before{display:none}
-html.ui2 .sec h2 svg.i{display:block;width:28px;height:28px;padding:6px;border-radius:10px;color:var(--acc);background:rgba(52,211,153,.12);stroke-width:2}
+html.ui2 .sec h2 svg.i{display:block;width:28px;height:28px;padding:6px;border-radius:10px;color:var(--acc);background:rgba(var(--acc-rgb),.12);stroke-width:2}
 html.ui2 .sec:nth-of-type(3n+2) h2 svg.i{color:#60A5FA;background:rgba(96,165,250,.12)}
 html.ui2 .sec:nth-of-type(3n) h2 svg.i{color:#FBBF24;background:rgba(251,191,36,.12)}
 
@@ -85,11 +85,11 @@ html.ui2 .tabs2[data-fx-keep] button.on,html.ui2 .mc-tabs[data-fx-keep] button.o
 html.ui2 .tabs2[data-fx-keep]::before,html.ui2 .mc-tabs[data-fx-keep]::before{content:"";position:absolute;top:4px;bottom:4px;left:var(--ix,0);width:var(--iw,0);border-radius:12px;background:var(--s3);box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 6px 14px -8px rgba(0,0,0,.8);transition:left .16s cubic-bezier(.2,.8,.2,1),width .16s cubic-bezier(.2,.8,.2,1)}
 html.ui2 .seg{gap:8px;padding:2px 0 4px}
 html.ui2 .seg button{border:0;border-radius:99px;background:rgba(255,255,255,.055);padding:8px 15px;transition:background .2s,color .2s,transform .15s}
-html.ui2 .seg button.on{background:var(--acc);color:#052E1F;box-shadow:0 8px 18px -10px rgba(52,211,153,.9)}
+html.ui2 .seg button.on{background:var(--acc);color:#052E1F;box-shadow:0 8px 18px -10px rgba(var(--acc-rgb),.9)}
 html.ui2 .seg button:active,html.ui2 .chips2 button:active{transform:scale(.94)}
 html.ui2 .chips2 button{border:0;border-radius:99px;background:rgba(255,255,255,.055)}
 html.ui2 .btn{border-radius:16px}
-html.ui2 .btn-p{box-shadow:0 12px 24px -14px rgba(52,211,153,.95)}
+html.ui2 .btn-p{box-shadow:0 12px 24px -14px rgba(var(--acc-rgb),.95)}
 
 /* ---------- شريط التنقّل العائم ---------- */
 html.ui2 .bnav{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-width:520px;margin:0 auto;padding:6px;gap:0;border:0;border-radius:26px;
@@ -99,9 +99,9 @@ html.ui2 .bnav button{position:relative;z-index:1;max-width:none;min-height:52px
 html.ui2 .bnav button::before{display:none}
 html.ui2 .bnav button svg.i{width:23px;height:23px;transition:transform .15s ease}
 html.ui2 .bnav button.on{color:var(--acc)}
-html.ui2 .bnav button.on svg.i{transform:translateY(-1px) scale(1.08);fill:rgba(52,211,153,.2);stroke-width:2}
+html.ui2 .bnav button.on svg.i{transform:translateY(-1px) scale(1.08);fill:rgba(var(--acc-rgb),.2);stroke-width:2}
 html.ui2 .bnav button:active{transform:scale(.9)}
-html.ui2 .bnav .nav-ind{position:absolute;z-index:0;top:6px;bottom:6px;left:0;width:0;border-radius:20px;background:linear-gradient(180deg,rgba(52,211,153,.2),rgba(52,211,153,.07));box-shadow:0 0 0 1px rgba(52,211,153,.22) inset;transition:left .16s cubic-bezier(.2,.8,.2,1),width .16s cubic-bezier(.2,.8,.2,1);pointer-events:none}
+html.ui2 .bnav .nav-ind{position:absolute;z-index:0;top:6px;bottom:6px;left:0;width:0;border-radius:20px;background:linear-gradient(180deg,rgba(var(--acc-rgb),.2),rgba(var(--acc-rgb),.07));box-shadow:0 0 0 1px rgba(var(--acc-rgb),.22) inset;transition:left .16s cubic-bezier(.2,.8,.2,1),width .16s cubic-bezier(.2,.8,.2,1);pointer-events:none}
 html.ui2 #toast{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
 
 /* ---------- صفحة «المزيد»: قائمة عمودية مضغوطة بأيقونات ملوّنة ---------- */
@@ -109,9 +109,9 @@ html.ui2 #view[data-view=more] .sec{margin:18px 4px 8px}
 html.ui2 #view[data-view=more] .sec h2{font-size:12.5px!important}
 html.ui2 #view[data-view=more] .sec h2::before{display:none}
 html.ui2 #view[data-view=more] .list .row{padding:9px 12px;gap:12px;min-height:54px;align-items:center}
-html.ui2 #view[data-view=more] .pbig{width:36px;height:36px;border-radius:11px;color:#fff!important;background:linear-gradient(140deg,var(--c1,#34D399),var(--c2,#059669))!important;box-shadow:0 8px 14px -10px var(--c1,#34D399)}
+html.ui2 #view[data-view=more] .pbig{width:36px;height:36px;border-radius:11px;color:#fff!important;background:linear-gradient(140deg,var(--c1,var(--acc)),var(--c2,#059669))!important;box-shadow:0 8px 14px -10px var(--c1,var(--acc))}
 html.ui2 #view[data-view=more] .pbig svg{width:18px!important;height:18px!important;stroke-width:2}
-html.ui2 #view[data-view=more] .row:nth-child(6n+1) .pbig{--c1:#34D399;--c2:#059669}
+html.ui2 #view[data-view=more] .row:nth-child(6n+1) .pbig{--c1:var(--acc);--c2:#059669}
 html.ui2 #view[data-view=more] .row:nth-child(6n+2) .pbig{--c1:#60A5FA;--c2:#2563EB}
 html.ui2 #view[data-view=more] .row:nth-child(6n+3) .pbig{--c1:#FBBF24;--c2:#D97706}
 html.ui2 #view[data-view=more] .row:nth-child(6n+4) .pbig{--c1:#A78BFA;--c2:#7C3AED}
@@ -145,10 +145,10 @@ html.ui2 .card.mut:only-child,html.ui2 #gwTeam>.card.mut{color:transparent;min-h
 html.ui2 .tag{border-radius:99px}
 html.ui2 .note{border:0;border-radius:16px;background:rgba(96,165,250,.09)}
 html.ui2 .livebadge{border-radius:99px}
-html.ui2 .mt-row.me{box-shadow:inset 0 0 0 1px rgba(52,211,153,.35)}
+html.ui2 .mt-row.me{box-shadow:inset 0 0 0 1px rgba(var(--acc-rgb),.35)}
 html.ui2 .ss-hero{border:0;box-shadow:0 1px 0 rgba(255,255,255,.07) inset,0 26px 50px -36px rgba(251,191,36,.6)}
 html.ui2 .ss-hl,html.ui2 .pgw-hero,html.ui2 .mc-sec{border-color:transparent;box-shadow:var(--sh)}
-html.ui2 ::selection{background:rgba(52,211,153,.35)}
+html.ui2 ::selection{background:rgba(var(--acc-rgb),.35)}
 
 /* شريط المعاينة */
 .ui2-flag{position:fixed;z-index:39;bottom:calc(80px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:5px 6px 5px 12px;border-radius:99px;background:rgba(251,191,36,.95);color:#1C1404;font:700 11.5px 'IBM Plex Sans Arabic',sans-serif;box-shadow:0 10px 24px -10px rgba(0,0,0,.8);white-space:nowrap}
@@ -192,7 +192,7 @@ html.ui2 .bnav{bottom:calc(env(safe-area-inset-bottom,0px) * .3 + 6px);left:10px
   background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.035)),rgba(22,28,42,.42);
   -webkit-backdrop-filter:blur(30px) saturate(1.9) brightness(1.08);backdrop-filter:blur(30px) saturate(1.9) brightness(1.08);
   box-shadow:0 1px 0 rgba(255,255,255,.22) inset,0 -1px 0 rgba(0,0,0,.25) inset,0 0 0 1px rgba(255,255,255,.08),0 16px 36px -14px rgba(0,0,0,.85)}
-html.ui2 .bnav .nav-ind{background:linear-gradient(180deg,rgba(52,211,153,.26),rgba(52,211,153,.1));box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 0 0 1px rgba(52,211,153,.28) inset}
+html.ui2 .bnav .nav-ind{background:linear-gradient(180deg,rgba(var(--acc-rgb),.26),rgba(var(--acc-rgb),.1));box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 0 0 1px rgba(var(--acc-rgb),.28) inset}
 html.ui2 .app{padding-bottom:calc(92px + env(safe-area-inset-bottom,0px) * .3)}
 html.ui2 #toast{bottom:calc(84px + env(safe-area-inset-bottom,0px) * .3)}
 /* الشريط السفلي يغطي أسفل الشاشة بالكامل (ما يبين شي تحته) */
@@ -205,7 +205,7 @@ html.ui2 #toast{bottom:calc(80px + env(safe-area-inset-bottom,0px) * .55)}
 html.ui2 .bnav button:active{transform:none}
 html.ui2 .bnav button,html.ui2 .tabs2 button,html.ui2 .mc-tabs button{touch-action:manipulation}
 html.ui2 .hero::after,html.ui2 .team-hero::after{display:none}
-html.ui2 .hero,html.ui2 .team-hero{box-shadow:0 0 0 1px rgba(52,211,153,.22) inset,0 1px 0 rgba(255,255,255,.1) inset,0 24px 50px -34px rgba(0,0,0,.95)}
+html.ui2 .hero,html.ui2 .team-hero{box-shadow:0 0 0 1px rgba(var(--acc-rgb),.22) inset,0 1px 0 rgba(255,255,255,.1) inset,0 24px 50px -34px rgba(0,0,0,.95)}
 /* الملعب: مسافات متناسقة بين الصفوف + شارة نجم الجولة ما تغطي اللاعب اللي فوق */
 html.ui2 .pitch{min-height:0;justify-content:flex-start;gap:22px;padding:20px 4px 20px}
 html.ui2 .pitch .prow{justify-content:center;gap:6px}
@@ -221,7 +221,7 @@ html.ui2 .pitch .prow{gap:8px}
 /* البطاقة الرئيسية: أضواء تتحرك وحدها (أورورا) + لمعة تمر كل فترة + خطوط البلاطات تتنفس */
 html.ui2 .hero::before,html.ui2 .team-hero::before{inset:-35%;
   background:
-    radial-gradient(38% 34% at var(--mx) var(--my),rgba(52,211,153,.34),transparent 70%),
+    radial-gradient(38% 34% at var(--mx) var(--my),rgba(var(--acc-rgb),.34),transparent 70%),
     radial-gradient(30% 30% at 22% 78%,rgba(96,165,250,.26),transparent 70%),
     radial-gradient(26% 26% at 70% 60%,rgba(167,139,250,.16),transparent 70%);
   filter:blur(6px)}
@@ -238,14 +238,14 @@ html.ui2 .hero>*,html.ui2 .team-hero>*{position:relative;z-index:1}
   html.ui2 .hero .kpis>div:nth-child(2){animation-delay:.07s,1.5s}
   html.ui2 .hero .kpis>div:nth-child(3){animation-delay:.14s,3s}
   @keyframes tileIn{from{opacity:0;transform:translateY(10px) scale(.96)}}
-  @keyframes tileLine{0%,100%{border-top-color:rgba(255,255,255,.14)}50%{border-top-color:var(--tl,rgba(52,211,153,.9))}}
+  @keyframes tileLine{0%,100%{border-top-color:rgba(255,255,255,.14)}50%{border-top-color:var(--tl,rgba(var(--acc-rgb),.9))}}
   html.ui2 .hero .big-num,html.ui2 .team-hero .big-num{background-size:100% 220%;animation:numShine 5s ease-in-out infinite}
   @keyframes numShine{0%,100%{background-position:0 0}50%{background-position:0 100%}}
 }
-html.ui2 .hero .kpis>div{--tl:rgba(52,211,153,.95)}
+html.ui2 .hero .kpis>div{--tl:rgba(var(--acc-rgb),.95)}
 html.ui2 .hero .kpis>div:nth-child(2){--tl:rgba(96,165,250,.95)}
 html.ui2 .hero .kpis>div:nth-child(3){--tl:rgba(251,191,36,.95)}
-html.ui2 .hero .big-num,html.ui2 .team-hero .big-num{background-image:linear-gradient(180deg,#fff 0%,#B8F5DC 45%,#6EE7B7 100%)}
+html.ui2 .hero .big-num,html.ui2 .team-hero .big-num{background-image:linear-gradient(180deg,#fff 0%,#B8F5DC 45%,color-mix(in srgb,var(--acc) 65%,#fff) 100%)}
 
 /* تنبيه انقطاع الإنترنت */
 .net-off{position:fixed;z-index:44;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px) * .55);transform:translate(-50%,20px);opacity:0;pointer-events:none;padding:7px 14px;border-radius:99px;white-space:nowrap;font:600 12px 'IBM Plex Sans Arabic',sans-serif;color:#1C1404;background:rgba(251,191,36,.96);box-shadow:0 12px 26px -10px rgba(0,0,0,.8);transition:transform .25s,opacity .25s}

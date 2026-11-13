@@ -95,7 +95,7 @@ function seasonReset(ss) {
 
 /* ---------- ربط الفريق ---------- */
 function renderLink(prefill = '', notice = '') {
-  $('#link').innerHTML = `<div class="auth-box"><div style="display:flex;justify-content:center"><div class="logo-ic">${I('i-users', 'i', 'width:30px;height:30px')}</div></div><h1>${tt('ربط فريقك', 'Link your team')}</h1>${notice ? `<div class="note" style="margin:10px 0 4px;border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.07);font-size:13px;line-height:1.8">${I('i-season', 'i', 'color:var(--acc);flex:none')}<span>${notice}</span></div>` : ''}
+  $('#link').innerHTML = `<div class="auth-box"><div style="display:flex;justify-content:center"><div class="logo-ic">${I('i-users', 'i', 'width:30px;height:30px')}</div></div><h1>${tt('ربط فريقك', 'Link your team')}</h1>${notice ? `<div class="note" style="margin:10px 0 4px;border-color:rgba(var(--acc-rgb),.35);background:rgba(var(--acc-rgb),.07);font-size:13px;line-height:1.8">${I('i-season', 'i', 'color:var(--acc);flex:none')}<span>${notice}</span></div>` : ''}
    <p class="auth-sub">${tt(`أهلاً ${esc(ST.user.name.split(' ')[0])}! اربط فريقك برقم الفريق مرة وحدة`, `Hi ${esc(ST.user.name.split(' ')[0])}! Link your team once by Team ID`)}</p>
    <div class="card" style="margin-bottom:12px;font-size:13.5px;line-height:1.9">${tt('افتح <b>fantasy.premierleague.com</b> ← صفحة <b>Points</b> ← الرابط يكون <code dir="ltr">/entry/<b style="color:#34D399">1234567</b>/event/10</code> ← الرقم بعد entry هو رقم فريقك.', 'Open <b>fantasy.premierleague.com</b> → <b>Points</b> → URL looks like <code>/entry/<b style="color:#34D399">1234567</b>/event/10</code> → that number is your Team ID.')}</div>
    <form id="linkForm"><div class="field"><label>${tt('رقم الفريق', 'Team ID')}</label><input id="tid" inputmode="numeric" dir="ltr" value="${esc(prefill)}" placeholder="1234567"></div><div class="err" id="lErr"></div><button class="btn btn-p btn-b" id="lBtn">${tt('تحقّق', 'Verify')}</button></form><div id="lPrev"></div>
@@ -105,7 +105,7 @@ function renderLink(prefill = '', notice = '') {
     if (!id || id.length > 10) return ($('#lErr').textContent = tt('اكتب رقم صحيح', 'Enter a valid ID'));
     try {
       const en = await FPL.fetchEntry(id);
-      $('#lPrev').innerHTML = `<div class="row" style="margin-top:12px;border-color:rgba(52,211,153,.45)"><div class="mini" style="display:grid;place-items:center;font-weight:700;font-size:20px;border-radius:14px;background:var(--g2)">${esc((en.name || '?')[0])}</div><div class="info"><b>${esc(en.name)}</b><span>${esc(en.player_first_name)} ${esc(en.player_last_name)} · ${fmt(en.summary_overall_points)} ${t('points')} · ${t('rank')} ${fmt(en.summary_overall_rank)}</span></div></div><button class="btn btn-p btn-b" id="lOk">${tt('نعم، هذا فريقي ✓', 'Yes, this is my team ✓')}</button>`;
+      $('#lPrev').innerHTML = `<div class="row" style="margin-top:12px;border-color:rgba(var(--acc-rgb),.45)"><div class="mini" style="display:grid;place-items:center;font-weight:700;font-size:20px;border-radius:14px;background:var(--g2)">${esc((en.name || '?')[0])}</div><div class="info"><b>${esc(en.name)}</b><span>${esc(en.player_first_name)} ${esc(en.player_last_name)} · ${fmt(en.summary_overall_points)} ${t('points')} · ${t('rank')} ${fmt(en.summary_overall_rank)}</span></div></div><button class="btn btn-p btn-b" id="lOk">${tt('نعم، هذا فريقي ✓', 'Yes, this is my team ✓')}</button>`;
       $('#lOk').onclick = async () => { const season = ST.pendingSeason || ST.profile?.season || null; await AU.saveProfile(ST.user.uid, { teamId: +id, teamName: en.name, displayName: ST.user.name, linkedAt: Date.now(), ...(season ? { season } : {}) }); ST.profile = { ...(ST.profile || {}), teamId: +id, teamName: en.name, ...(season ? { season } : {}) }; ST.pendingSeason = null; loadAll(); };
     } catch (ex) { $('#lErr').textContent = ex.status === 404 ? tt('ما لگيت فريق بهذا الرقم', 'Team not found') : ex.message; }
   };
@@ -116,6 +116,7 @@ function renderLink(prefill = '', notice = '') {
 async function onSignedIn(u) {
   ST.user = u; splash(tt('جارِ تحميل حسابك…', 'Loading your account…'));
   try { ST.profile = await AU.loadProfile(u.uid); } catch { ST.profile = null; }
+  try { const L = ST.profile?.look; if (L && !localStorage.getItem('fp_theme')) { localStorage.setItem('fp_theme', L.th || 'def'); localStorage.setItem('fp_bg', L.bg || 'live'); const r = document.documentElement; L.th && L.th !== 'def' ? r.setAttribute('data-th', L.th) : r.removeAttribute('data-th'); L.bg && L.bg !== 'live' ? r.setAttribute('data-bg', L.bg) : r.removeAttribute('data-bg'); } } catch {} // المظهر يتبعك على أي جهاز
   if (ST.profile?.banned) { splash(tt('تم إيقاف هذا الحساب من الإدارة.', 'This account was suspended by admin.') + `<br><button class="btn btn-g btn-sm" style="margin-top:12px" onclick="doLogout()">${t('logout')}</button>`); return; }
   if (ST.profile?.lang && ST.profile.lang !== lang()) setLang(ST.profile.lang);
   ST.admin = await AU.isAdmin(u);

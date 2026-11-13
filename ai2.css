@@ -6,10 +6,10 @@ html.ai2 .ai2v{gap:16px}
 html.ai2 .ai-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 8px 2px}
 html.ai2 .ai-orb{position:relative;width:96px;height:96px;margin-bottom:14px;isolation:isolate}
 html.ai2 .ai-orb i{position:absolute;inset:0;border-radius:42% 58% 55% 45%/48% 42% 58% 52%;mix-blend-mode:screen;filter:blur(1px);animation:aiBlob 7s ease-in-out infinite}
-html.ai2 .ai-orb i:nth-child(1){background:radial-gradient(circle at 35% 30%,#6EE7B7,#10B981 60%,transparent 72%)}
+html.ai2 .ai-orb i:nth-child(1){background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--acc) 65%,#fff),var(--acc-d) 60%,transparent 72%)}
 html.ai2 .ai-orb i:nth-child(2){background:radial-gradient(circle at 65% 40%,#60A5FA,#2563EB 58%,transparent 72%);animation-duration:9s;animation-direction:reverse}
 html.ai2 .ai-orb i:nth-child(3){background:radial-gradient(circle at 50% 70%,#C084FC,#7C3AED 55%,transparent 72%);animation-duration:11s;opacity:.85}
-html.ai2 .ai-orb::before{content:"";position:absolute;inset:-26px;z-index:-1;border-radius:50%;background:radial-gradient(circle,rgba(52,211,153,.35),rgba(96,165,250,.12) 50%,transparent 70%);animation:aiBreath 3.6s ease-in-out infinite}
+html.ai2 .ai-orb::before{content:"";position:absolute;inset:-26px;z-index:-1;border-radius:50%;background:radial-gradient(circle,rgba(var(--acc-rgb),.35),rgba(96,165,250,.12) 50%,transparent 70%);animation:aiBreath 3.6s ease-in-out infinite}
 html.ai2 .ai-orb b{position:absolute;inset:0;display:grid;place-items:center;color:#fff;z-index:2}
 html.ai2 .ai-orb b svg.i{width:30px;height:30px;filter:drop-shadow(0 2px 8px rgba(0,0,0,.4))}
 @keyframes aiBlob{0%,100%{transform:rotate(0) scale(1);border-radius:42% 58% 55% 45%/48% 42% 58% 52%}33%{transform:rotate(120deg) scale(1.06);border-radius:58% 42% 45% 55%/40% 58% 42% 60%}66%{transform:rotate(240deg) scale(.95);border-radius:50% 50% 38% 62%/58% 45% 55% 42%}}
@@ -22,15 +22,15 @@ html.ai2 .searchbox.ai-box{position:relative;min-height:58px;padding:6px 8px 6px
   background:linear-gradient(180deg,rgba(26,36,56,.75),rgba(14,20,33,.7));-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
   box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 18px 40px -24px rgba(0,0,0,.9)}
 html.ai2 .searchbox.ai-box::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;
-  background:conic-gradient(from var(--ab),rgba(52,211,153,.9),rgba(96,165,250,.9),rgba(192,132,252,.9),rgba(52,211,153,.9));opacity:.45;
+  background:conic-gradient(from var(--ab),rgba(var(--acc-rgb),.9),rgba(96,165,250,.9),rgba(192,132,252,.9),rgba(var(--acc-rgb),.9));opacity:.45;
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:aiSpin 6s linear infinite;transition:opacity .25s}
-html.ai2 .searchbox.ai-box:focus-within{box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 0 34px -10px rgba(52,211,153,.55)}
+html.ai2 .searchbox.ai-box:focus-within{box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 0 34px -10px rgba(var(--acc-rgb),.55)}
 html.ai2 .searchbox.ai-box:focus-within::before{opacity:1;animation-duration:2.6s}
 @keyframes aiSpin{to{--ab:360deg}}
-html.ai2 .ai-box .sicon{display:grid;place-items:center;width:34px;color:#6EE7B7}
+html.ai2 .ai-box .sicon{display:grid;place-items:center;width:34px;color:color-mix(in srgb,var(--acc) 65%,#fff)}
 html.ai2 .ai-box input{font-size:16px;padding:10px 4px}
 html.ai2 .ai-send{flex:none;width:46px;height:46px;border-radius:16px;display:grid;place-items:center;color:#052E1F;
-  background:linear-gradient(140deg,#6EE7B7,#34D399 55%,#10B981);box-shadow:0 8px 20px -8px rgba(52,211,153,.8);transition:transform .15s}
+  background:linear-gradient(140deg,color-mix(in srgb,var(--acc) 65%,#fff),var(--acc) 55%,var(--acc-d));box-shadow:0 8px 20px -8px rgba(var(--acc-rgb),.8);transition:transform .15s}
 html.ai2 .ai-send:active{transform:scale(.9) rotate(-12deg)}
 
 /* الأقسام */
@@ -64,20 +64,20 @@ html.ai2 .ai-recent span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;t
 html.ai2 .ai-chips{display:flex;gap:8px;overflow-x:auto;margin:0 -14px;padding:0 14px 4px;scrollbar-width:none}
 html.ai2 .ai-chips::-webkit-scrollbar{display:none}
 html.ai2 .ai-chips button{flex:none;display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:99px;font-size:13px;white-space:nowrap;background:rgba(255,255,255,.055);box-shadow:0 0 0 1px rgba(255,255,255,.05) inset}
-html.ai2 .ai-chips button svg.i{width:14px;height:14px;color:#6EE7B7}
+html.ai2 .ai-chips button svg.i{width:14px;height:14px;color:color-mix(in srgb,var(--acc) 65%,#fff)}
 html.ai2 .ai-chips button:active{transform:scale(.94)}
 
 /* المحادثة: سؤالك فقاعة، والجواب بطاقة بكرة صغيرة */
 html.ai2 .ai-u{display:flex;justify-content:flex-start;animation:aiIn .3s ease-out both}
-html.ai2 .ai-u span{max-width:85%;padding:10px 14px;border-radius:18px 18px 18px 6px;font-size:14px;font-weight:600;color:#052E1F;background:linear-gradient(140deg,#A7F3D0,#6EE7B7);box-shadow:0 8px 20px -12px rgba(52,211,153,.7)}
+html.ai2 .ai-u span{max-width:85%;padding:10px 14px;border-radius:18px 18px 18px 6px;font-size:14px;font-weight:600;color:#052E1F;background:linear-gradient(140deg,#A7F3D0,color-mix(in srgb,var(--acc) 65%,#fff));box-shadow:0 8px 20px -12px rgba(var(--acc-rgb),.7)}
 html.ai2 .omni .ansbox{border:0;border-radius:22px 22px 22px 22px;padding:16px;background:linear-gradient(180deg,rgba(24,32,50,.72),rgba(14,20,33,.62));-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
   box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 0 0 1px rgba(96,165,250,.14) inset,0 20px 40px -28px rgba(0,0,0,.9);animation:aiIn .35s .05s ease-out both}
 html.ai2 .omni .ansh .ic{position:relative;width:34px;height:34px;border-radius:50%;color:#fff;overflow:hidden;
-  background:conic-gradient(from var(--ab),#34D399,#60A5FA,#C084FC,#34D399);animation:aiSpin 4s linear infinite;box-shadow:0 0 16px -2px rgba(96,165,250,.6)}
+  background:conic-gradient(from var(--ab),var(--acc),#60A5FA,#C084FC,var(--acc));animation:aiSpin 4s linear infinite;box-shadow:0 0 16px -2px rgba(96,165,250,.6)}
 html.ai2 .omni .ansh b{display:none}
 html.ai2 .omni .md{font-size:14.5px;line-height:1.75}
 html.ai2 .omni .tools span{border-radius:99px;padding:3px 9px;background:rgba(96,165,250,.1);color:#93C5FD;animation:aiIn .3s ease-out both}
-html.ai2 .aiload i{background:linear-gradient(#6EE7B7,#60A5FA)}
+html.ai2 .aiload i{background:linear-gradient(color-mix(in srgb,var(--acc) 65%,#fff),#60A5FA)}
 html.ai2 .omni .ansbox form input{border-radius:14px;background:rgba(255,255,255,.05);border:0}
 @keyframes aiIn{from{opacity:0;transform:translateY(8px)}}
 
