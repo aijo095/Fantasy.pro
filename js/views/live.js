@@ -72,7 +72,7 @@ export function vLive() {
     ${lp != null ? `<div style="text-align:end"><div style="font-size:12px;opacity:.85">${tt('نقاط فريقك', 'Your points')}</div><div class="score" style="font-size:40px;color:#34D399">${lp}</div></div>` : ''}</div></div>
    <div class="seg" id="lvseg" style="margin:12px 0">${Array.from({ length: G.lastGW }, (_, i) => i + 1).map((g) => `<button class="${g === gwSel ? 'on' : ''}" onclick="lvGW(${g})">${g}</button>`).join('')}</div>
    ${live ? `<div class="mut" style="font-size:11.5px;text-align:center;margin-bottom:8px">${tt('يتحدّث تلقائياً كل دقيقة', 'Auto-refreshes every minute')} · <button class="more" style="display:inline" onclick="lvRefresh()">${I('i-refresh', 'i', 'width:13px;height:13px')} ${t('refresh')}</button></div>` : ''}
-   ${LU2() && gwSel >= (G.cur || 0) ? lu2Section(fx, gwSel) : ''}
+   ${LU2() && gwSel >= (G.cur || 0) && (LU2DEMO() || fx.some(luPre)) ? lu2Section(fx, gwSel) : ''}
    ${Object.values(byDay).map((list) => `<div class="sec" style="margin:12px 2px 8px"><h2 style="font-size:14px">${I('i-cal', 'i', 'width:16px;height:16px')}${list[0].ko ? new Date(list[0].ko).toLocaleDateString(document.documentElement.lang === 'en' ? 'en-GB' : 'ar-IQ', { weekday: 'long', day: 'numeric', month: 'long' }) : tt('غير محدد', 'TBD')}</h2></div>${list.map((f) => fxCard(f, myTeams)).join('')}`).join('') || `<div class="empty"><b>${t('noData')}</b></div>`}
    ${gwSel === G.cur && ST.E.picks && ST.live ? `<div class="sec" style="margin:16px 2px 8px"><h2 style="font-size:14px">${I('i-pitch', 'i', 'width:16px;height:16px')}${tt('فريقك مباشر', 'Your team live')}</h2></div>${myLiveBlock()}` : ''}
    <p class="mut" style="font-size:11.5px;text-align:center;margin-top:10px">${tt('النتائج والنقاط والبونص من الفانتازي الرسمي مباشرة — بدون توقعات.', 'Scores, points and bonus straight from official FPL — no estimates.')}</p>`;
@@ -393,12 +393,12 @@ function lu2Fetch(f, done) {
   });
 }
 function lu2Poll() {
-  const run = () => { if (ST.view !== 'live') return clearInterval(window.__lu2T); if (LU2DEMO()) return; (ST.G.fx[gwSel] || []).filter(luWin).forEach((f) => lu2Fetch(f, () => { if (ST.view === 'live') window.render(); })); };
+  const run = () => { if (ST.view !== 'live') return clearInterval(window.__lu2T); if (LU2DEMO()) return; (ST.G.fx[gwSel] || []).filter((f) => luWin(f) && luPre(f)).forEach((f) => lu2Fetch(f, () => { if (ST.view === 'live') window.render(); })); };
   run(); clearInterval(window.__lu2T); window.__lu2T = setInterval(() => { if (!document.hidden) run(); }, 60e3);
 }
 function lu2Section(fx, ev) {
   if (LU2DEMO()) lu2DemoFill(fx);
-  const L = fx.filter((f) => luHas(f) && (luWin(f) || LU2DEMO()));
+  const L = fx.filter((f) => luHas(f) && (LU2DEMO() || (luWin(f) && luPre(f))));
   const mine = ST.plan ? new Set([...ST.plan.xi, ...ST.plan.bench]) : new Set();
   return `<div class="lu2-box ${LU2OPEN() ? 'open' : ''}"><button class="lu2-hd" onclick="lu2Tog(this)">${I('i-pitch', 'i', 'width:16px;height:16px')}<b>${tt('التشكيلات الرسمية', 'Official line-ups')}</b>${L.length ? `<span class="lu2-n">${L.length}</span>` : ''}${I('i-chev', 'lu2-arr')}</button>
   <div class="lu2-body">${L.length ? `<div class="lu2-list">${L.map((f) => { const d = LU[f.id]?.d;
@@ -408,6 +408,8 @@ function lu2Section(fx, ev) {
       <span class="lu2-s"><em class="ok">✓ ${tt('انعلنت', 'Announced')}</em><small dir="ltr">${esc(d.sides?.h?.formation || '—')} · ${esc(d.sides?.a?.formation || '—')}</small></span>
       ${myN ? `<span class="lu2-my">${tt(`${myN} من لاعبينك`, `${myN} yours`)}</span>` : ''}${I('i-chev', 'chev')}</button>`; }).join('')}</div>` : `<p class="lu2-empty">${tt('ماكو تشكيلات معلنة هسة — أول ما تنعلن تشكيلة أي مباراة تنزل هنا تلقائياً.', 'No line-ups out yet — they appear here as soon as they are announced.')}</p>`}</div></div>`;
 }
+// التشكيلة تبقى لحد ما تبدي المباراة وبعدها تختفي
+const luPre = (f) => !f.started && !f.fin && (!f.ko || new Date(f.ko) > Date.now());
 const LU2OPEN = () => { try { return localStorage.getItem('fp_lu2open') === '1'; } catch { return false; } };
 window.lu2Tog = (el) => { const b = el.closest('.lu2-box'); const o = !b.classList.contains('open'); b.classList.toggle('open', o); try { localStorage.setItem('fp_lu2open', o ? '1' : '0'); } catch {} };
 const LUD = (pos) => { const p = String(pos || '').toUpperCase(); if (p === 'G' || p === 'GK') return 0; if (/^(RB|LB|CB|CD|SW|D)(-|$)/.test(p)) return 1; if (/^(RWB|LWB)/.test(p)) return 1.5; if (/^(DM|CDM)/.test(p)) return 2; if (/^(CM|RM|LM|M)(-|$)/.test(p)) return 3; if (/^(AM|CAM)/.test(p)) return 4; if (/^(RW|LW|RF|LF)/.test(p)) return 4.5; if (/^(CF|F|ST|FW|S)(-|$)/.test(p)) return 5; return 3; };
