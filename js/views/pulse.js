@@ -160,7 +160,7 @@ function evList(p, s, C) {
   const started = s.starts != null ? s.starts > 0 : null;
   if (started === false && mins > 0) add('in', tt(`دخل بالدقيقة ${Math.max(1, M - mins)}`, `On at ${Math.max(1, M - mins)}′`), null);
   if (started && (C.done(f) ? mins < 88 : M - mins >= 3) && !s.red_cards) add('out', tt(`طلع بالدقيقة ${mins}`, `Off at ${mins}′`), null);
-  if (mins > 0) add('min', tt(`لعب ${mins} دقيقة`, `${mins} mins`), mins >= 60 ? 2 : 1);
+  if (mins > 0) E.push({ k: 'min', hide: true, pts: mins >= 60 ? 2 : 1 }); // نقاط المشاركة تنحسب بالمجموع بس ما تنعرض
   for (let i = 0; i < (s.goals_scored || 0); i++) add('goal', tt('هدف', 'Goal'), GOALP[pos]);
   for (let i = 0; i < (s.assists || 0); i++) add('assist', tt('صناعة', 'Assist'), 3);
   if (s.clean_sheets && CSP2[pos]) add('cs', tt('شباك نظيفة', 'Clean sheet'), CSP2[pos], C.live(f) ? tt('مؤقت', 'prov.') : '');
@@ -178,9 +178,9 @@ function evList(p, s, C) {
 }
 const EVI = { in: '↑', out: '↓', min: '⏱', goal: '⚽', assist: '🎯', cs: '🧱', gc: '🥅', save: '🧤', pensave: '🧤', dc: '🛡️', yellow: '🟨', red: '🟥', og: '😬', penmiss: '✖', bonus: '⭐' };
 function evSection(rows, C, anyLive) {
-  const list = rows.map((r) => { const E = evList(r.p, r.s, C), pts = E.reduce((a, e) => a + (e.pts || 0), 0); return { ...r, E, pts, f: C.fx(r.p) }; }).filter((r) => r.E.length);
+  const list = rows.map((r) => { const all = evList(r.p, r.s, C), pts = all.reduce((a, e) => a + (e.pts || 0), 0), E = all.filter((e) => !e.hide); return { ...r, E, pts, f: C.fx(r.p) }; }).filter((r) => r.E.length);
   if (!list.length) return `<div class="card mut pu-empty">${anyLive ? tt('بعد ما صار شي للاعبينك أو لاعبين خصمك', 'Nothing yet for your or your rival\'s players') : tt('ماكو مباراة شغّالة هسة', 'No live match right now')}</div>`;
-  list.sort((a, b) => (C.live(b.f) ? 1 : 0) - (C.live(a.f) ? 1 : 0) || b.E.filter((e) => e.k !== 'min').length - a.E.filter((e) => e.k !== 'min').length || b.pts - a.pts);
+  list.sort((a, b) => (C.live(b.f) ? 1 : 0) - (C.live(a.f) ? 1 : 0) || b.E.length - a.E.length || b.pts - a.pts);
   const sum = (w) => list.filter((r) => r.who === w).reduce((a, r) => a + r.pts * Math.max(1, r.m), 0);
   return `<div class="ev2-sum"><span class="me">${tt('لاعبينك', 'Yours')} <b dir="ltr">${sum('me')}</b></span><span class="rv">${tt('لاعبين خصمك', 'Rival')} <b dir="ltr">${sum('rv')}</b></span></div>
   <div class="ev2">${list.map((r) => `<div class="ev2-p ${r.who}" onclick="playerGW(${r.p.id},${ST.G.cur})">
