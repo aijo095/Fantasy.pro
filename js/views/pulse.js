@@ -314,8 +314,7 @@ export function vPulse() {
   const feedHTML = evs.length ? `<div class="card pu-feed">${evs.map((e) => `<div class="pu-ev ${e.tone}"><span class="pu-ei">${ICO[e.k] || '•'}</span><div><b>${esc(txtOf(e))}</b><small>${ago(e.at)}${e.who === 'rv' ? ` · ${tt('منافسك', 'rival')}` : ''}</small></div></div>`).join('')}</div>` : `<div class="card mut pu-empty">${tt('الأحداث تنسجل هنا أول ما تصير (هدف، صناعة، كلين شيت، بونص، تغيّر ترتيبك) — حتى لو التطبيق مسكّر', 'Events are logged here as they happen — even with the app closed')}</div>`;
   return hero + chips
     + `<div class="sec"><h2>${I('i-target')}${tt('الأحداث المباشرة', 'Live events')}</h2></div>${nearHTML}`
-    + h2HTML + `<div class="sec"><h2>${I('i-swords')}${tt('أنت ومنافسك', 'You vs your rival')}</h2></div>${rvHTML}`
-    + `<div class="sec"><h2>${I('i-activity')}${tt('سجل أحداث الجولة', 'GW timeline')}</h2></div>${feedHTML}`;
+    + h2HTML + `<div class="sec"><h2>${I('i-swords')}${tt('أنت ومنافسك', 'You vs your rival')}</h2></div>${rvHTML}`;
 }
 window.puRv = (e) => { RV.sel = e; LS.set(`fp_pulse_rv_${ST.profile.teamId}`, e); loadRivalPicks(); window.render(); };
 /* تسجيل تلقائي عند فتح التطبيق، حتى السيرفر يكمّل يسجّل أحداثك حتى لو ما فتحت هالصفحة */
