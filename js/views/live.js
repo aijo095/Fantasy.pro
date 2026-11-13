@@ -372,6 +372,18 @@ Object.assign(window, { mcSideSet: (sd, fid, ev) => { mcSide = sd; const f = (ST
 const LU2 = () => { try { return localStorage.getItem('fp_lu2') === '1'; } catch { return false; } };
 const luWin = (f) => { if (!f.ko) return false; const dt = new Date(f.ko) - Date.now(); return dt < 100 * 60e3 && (dt > -4 * 3600e3 || (f.started && !f.fin)); };
 const luHas = (f) => Object.values(LU[f.id]?.d?.sides || {}).some((x) => x.players?.some((p) => p.starter));
+const LU2DEMO = () => { try { return sessionStorage.getItem('fp_lu2demo') === '1'; } catch { return false; } };
+function lu2DemoFill(fx) {
+  // مثال تجريبي: نبني تشكيلة واقعية من لاعبين الفانتازي لأقرب مباراتين (مو تشكيلة رسمية)
+  fx.filter((f) => f.ko && new Date(f.ko) > Date.now() - 3 * 3600e3).slice(0, 2).forEach((f) => {
+    if (luHas(f)) return;
+    const side = (tm, form, poss) => { const pl = ST.G.players.filter((p) => p.team === tm).sort((a, b) => (b.min || 0) - (a.min || 0)); const take = (pos, n) => pl.filter((p) => p.pos === pos).slice(0, n);
+      const [d, m, fw] = form.split('-').length === 4 ? [4, 5, 1] : [4, 3, 3]; const xi = [...take('GK', 1), ...take('DEF', d), ...take('MID', m), ...take('FWD', fw)];
+      const bench = pl.filter((p) => !xi.includes(p)).slice(0, 7);
+      return { formation: form, players: xi.map((p, i) => ({ id: 'd' + p.id, name: p.full || p.name, last: p.name, short: p.name, jersey: String(i + 1), pos: poss[i] || 'CM', place: i + 1, starter: true })).concat(bench.map((p, k) => ({ id: 'd' + p.id, name: p.full || p.name, last: p.name, jersey: String(12 + k), pos: 'SUB', place: 0, starter: false }))) }; };
+    LU[f.id] = { at: Date.now() + 1e9, d: { demo: true, sides: { h: side(f.h, '4-2-3-1', ['G', 'RB', 'CD-R', 'CD-L', 'LB', 'DM-R', 'DM-L', 'RM', 'AM', 'LM', 'F']), a: side(f.a, '4-3-3', ['G', 'RB', 'CD-R', 'CD-L', 'LB', 'CM-R', 'CM', 'CM-L', 'RW', 'CF', 'LW']) }, subs: [] } };
+  });
+}
 function lu2Fetch(f, done) {
   const c = LU[f.id]; if (c?.busy || (c && Date.now() - c.at < 45e3)) return;
   LU[f.id] = { ...(c || {}), busy: true };
@@ -381,11 +393,16 @@ function lu2Fetch(f, done) {
   });
 }
 function lu2Poll() {
-  const run = () => { if (ST.view !== 'live') return clearInterval(window.__lu2T); (ST.G.fx[gwSel] || []).filter(luWin).forEach((f) => lu2Fetch(f, () => { if (ST.view === 'live') window.render(); })); };
+  const run = () => { if (ST.view !== 'live') return clearInterval(window.__lu2T); if (LU2DEMO()) return; (ST.G.fx[gwSel] || []).filter(luWin).forEach((f) => lu2Fetch(f, () => { if (ST.view === 'live') window.render(); })); };
   run(); clearInterval(window.__lu2T); window.__lu2T = setInterval(() => { if (!document.hidden) run(); }, 60e3);
 }
 function lu2Section(fx, ev) {
-  const L = fx.filter(luWin); if (!L.length) return '';
+  if (LU2DEMO()) lu2DemoFill(fx);
+  let L = fx.filter((f) => luWin(f) || (LU2DEMO() && luHas(f)));
+  const upcomingL = !L.length ? Object.values(ST.G.fx || {}).flat().filter((f) => f.ko && new Date(f.ko) > Date.now()).sort((x, y) => x.ko.localeCompare(y.ko)).slice(0, 3) : [];
+  if (!L.length && !upcomingL.length) return '';
+  if (!L.length) return `<div class="sec" style="margin:12px 2px 8px"><h2 style="font-size:14px">${I('i-pitch', 'i', 'width:16px;height:16px')}${tt('التشكيلات الرسمية', 'Official line-ups')}</h2></div>
+  <div class="card lu2-wait"><p>${tt('التشكيلات الرسمية تطلع هنا تلقائياً لما تنعلن، عادة قبل كل مباراة بحوالي ساعة. أقرب المباريات:', 'Official line-ups appear here automatically, usually ~1h before each match. Next up:')}</p>${upcomingL.map((f) => { const exp = new Date(new Date(f.ko) - 60 * 60e3); return `<div class="lu2-up"><span dir="ltr">${crest(tShort(f.h), 20)}<b>${tShort(f.h)}</b> v <b>${tShort(f.a)}</b>${crest(tShort(f.a), 20)}</span><small>${tt('تنعلن تقريباً', 'Expected')} ${fmtTime(exp.toISOString())}</small></div>`; }).join('')}<button class="btn btn-g btn-sm" style="margin-top:10px" onclick="location.href='/?lu2=demo'">${tt('شوف مثال تجريبي', 'See a demo')}</button></div>`;
   const mine = ST.plan ? new Set([...ST.plan.xi, ...ST.plan.bench]) : new Set();
   return `<div class="sec" style="margin:12px 2px 8px"><h2 style="font-size:14px">${I('i-pitch', 'i', 'width:16px;height:16px')}${tt('التشكيلات الرسمية', 'Official line-ups')}</h2></div>
   <div class="lu2-list">${L.map((f) => { const has = luHas(f), d = LU[f.id]?.d, mins = f.ko ? Math.round((new Date(f.ko) - Date.now()) / 60e3) : 0;
@@ -431,7 +448,7 @@ window.openLineup = (fid, ev) => {
     </div>
     <div class="lu2-fm" dir="ltr"><span>${crest(tShort(f.h), 18)}<b>${tShort(f.h)}</b> ${esc(H?.formation || '')}</span></div>
     <div class="lu2-subs"><div><h5>${tt('بدلاء', 'Subs')} ${tShort(f.h)}</h5>${subs(H, hl.M, f.h)}</div><div><h5>${tt('بدلاء', 'Subs')} ${tShort(f.a)}</h5>${subs(A, al.M, f.a)}</div></div>
-    <p class="lu2-note">${tt('المصدر: ESPN. التشكيلة الرسمية تنعلن عادة قبل المباراة بحوالي ساعة، وتوصل هنا قبل ما يحدثها الفانتازي. اللاعب اللي إطاره أخضر من لاعبينك.', 'Source: ESPN. Line-ups are usually announced ~1h before kick-off and arrive here before FPL updates. Green ring = your player.')}</p>`);
+    ${d.demo ? `<p class="lu2-demo">${tt('مثال تجريبي مبني من لاعبين الفانتازي — مو التشكيلة الرسمية', 'Demo built from FPL players — not the official line-up')}</p>` : ''}<p class="lu2-note">${tt('المصدر: ESPN. التشكيلة الرسمية تنعلن عادة قبل المباراة بحوالي ساعة، وتوصل هنا قبل ما يحدثها الفانتازي. اللاعب اللي إطاره أخضر من لاعبينك.', 'Source: ESPN. Line-ups are usually announced ~1h before kick-off and arrive here before FPL updates. Green ring = your player.')}</p>`);
 };
 
 export function afterLive() {

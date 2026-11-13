@@ -1753,3 +1753,9 @@ svg.flipx{transform:scaleX(-1)}
 .lu2-sb.my{border-color:rgba(var(--acc-rgb),.5)}.lu2-sb.my span{color:var(--acc);font-weight:600}
 .lu2-note{margin:12px 0 0;font-size:10.5px;line-height:1.6;color:var(--mut)}
 @media(max-width:380px){.lu2-sh{width:26px;height:26px}.lu2-nm{font-size:9px;padding:1px 4px}}
+
+.lu2-wait p{margin:0 0 8px;font-size:12.5px;line-height:1.7;color:var(--mut)}
+.lu2-up{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.lu2-up span{display:flex;align-items:center;gap:5px;font:600 12.5px Inter,sans-serif;color:var(--mut)}.lu2-up b{color:var(--txt)}
+.lu2-up small{font-size:11px;color:var(--mut)}
+.lu2-demo{margin:10px 0 0;text-align:center;font-size:11.5px;font-weight:600;color:#FCD34D}
