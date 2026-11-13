@@ -48,6 +48,7 @@
 <script>try{localStorage.removeItem("fp_ph2")}catch(e){}</script>
 <script>try{localStorage.removeItem("fp_coach")}catch(e){}</script>
 <script>try{localStorage.removeItem("fp_home2")}catch(e){}</script>
+<script>try{const q=new URLSearchParams(location.search).get("pulsedemo");if(q==="1")localStorage.setItem("fp_pulsedemo","1");if(q==="0")localStorage.removeItem("fp_pulsedemo")}catch(e){}</script>
 <script>try{const w=new URLSearchParams(location.search).get("walk");if(w==="1")localStorage.setItem("fp_walk","1");if(w==="0")localStorage.removeItem("fp_walk")}catch(e){}</script>
 <script>try{const g=new URLSearchParams(location.search).get("glow");localStorage.removeItem("fp_glow");if(g==="demo")sessionStorage.setItem("fp_glow_demo","1");if(g==="0")sessionStorage.removeItem("fp_glow_demo");}catch(e){}</script>
 <script>try{localStorage.removeItem("fp_pfx");localStorage.removeItem("fp_bg");localStorage.removeItem("fp_lux")}catch(e){}</script>

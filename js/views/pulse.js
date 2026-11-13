@@ -6,7 +6,7 @@
 ========================================================= */
 import { ST, PM, tShort } from '../store.js';
 import { tt, t } from '../i18n.js';
-import { esc, I, fmt, LS } from '../ui.js';
+import { esc, I, fmt, LS, crest } from '../ui.js';
 import * as FPL from '../fpl.js';
 import { liveCalc } from '../live-engine.js';
 import { liveRankEstimate } from '../predict.js';
@@ -143,8 +143,74 @@ function spark(rk) {
 }
 const ICO = { goal: '⚽', assist: '🎯', cs: '🧱', csl: '🥅', red: '🟥', bonus: '⭐', rank: '📈' };
 
+/* ---------- محاكاة تجريبية لقسم "قريب من الحدث" (معاينة ?pulsedemo=1): مانشستر يونايتد ضد السيتي ---------- */
+const SIMON = () => { try { return localStorage.getItem('fp_pulsedemo') === '1'; } catch { return false; } };
+const SIM = { min: 0, run: true, t: null, ht: 0 };
+function simCast() {
+  const G = ST.G, byT = (sh) => Object.values(G.teams).find((x) => tShort(x.id) === sh)?.id;
+  const H = byT('MUN'), A = byT('MCI'); if (!H || !A) return null;
+  const top = (tm, pos, i = 0) => G.players.filter((p) => p.team === tm && pos.includes(p.pos)).sort((a, b) => b.price - a.price || b.pts - a.pts)[i];
+  return { H, A, h1: top(H, ['MID', 'FWD'], 0), h2: top(H, ['MID', 'FWD'], 1), hd: top(H, ['DEF']), hg: top(H, ['GK']), a1: top(A, ['FWD']), a2: top(A, ['MID'], 0), a3: top(A, ['MID'], 1), ad: top(A, ['DEF']), ag: top(A, ['GK']) };
+}
+// السيناريو: كل سطر = دقيقة + لاعب + تغيير بإحصاءاته (xg/xa/bps/dc/goal/assist/save)
+const SCRIPT = [
+  [6, 'a1', { xg: 0.11, bps: 3 }], [9, 'h1', { xa: 0.08, bps: 2 }], [12, 'hd', { dc: 4, bps: 3 }], [14, 'a2', { xa: 0.21, bps: 4 }],
+  [18, 'a1', { xg: 0.27, bps: 2 }], [20, 'hg', { save: 1, bps: 2 }], [22, 'a1', { goal: 1, xg: 0.31, bps: 12 }], [22, 'a2', { assist: 1, xa: 0.12, bps: 9 }],
+  [27, 'h1', { xg: 0.34, bps: 3 }], [31, 'hd', { dc: 4, bps: 2 }], [34, 'ad', { dc: 5, bps: 3 }], [37, 'h2', { xa: 0.32, bps: 3 }], [40, 'ag', { save: 1, bps: 2 }],
+  [44, 'hd', { dc: 1, bps: 1 }], [52, 'a3', { xa: 0.36, bps: 3 }], [55, 'h1', { xg: 0.18, bps: 2 }], [58, 'h1', { goal: 1, xg: 0.22, bps: 12 }], [58, 'h2', { assist: 1, xa: 0.1, bps: 9 }],
+  [63, 'ad', { dc: 3, bps: 2 }], [66, 'ad', { dc: 2, bps: 2 }], [70, 'a1', { xg: 0.38, bps: 3 }], [73, 'hg', { save: 1, bps: 2 }], [76, 'a1', { xg: 0.33, bps: 2 }], [79, 'hd', { dc: 2, bps: 3 }],
+  [83, 'a1', { goal: 1, xg: 0.45, bps: 12 }], [83, 'a3', { assist: 1, xa: 0.2, bps: 9 }], [88, 'h2', { xg: 0.29, bps: 2 }], [90, 'ag', { save: 1, bps: 2 }],
+];
+function simState(C, m) {
+  const S = {}; ['h1', 'h2', 'hd', 'hg', 'a1', 'a2', 'a3', 'ad', 'ag'].forEach((k) => { if (C[k]) S[k] = { xg: 0, xa: 0, bps: 6, dc: 0, goal: 0, assist: 0, save: 0, p: C[k], side: k[0] }; });
+  const ev = []; let hs = 0, as = 0;
+  SCRIPT.forEach(([min, k, d]) => { if (min > m || !S[k]) return; const x = S[k]; Object.entries(d).forEach(([f, v]) => (x[f] += v));
+    if (d.goal) { x.side === 'h' ? hs++ : as++; ev.push({ min, k: 'goal', p: x.p }); } if (d.assist) ev.push({ min, k: 'assist', p: x.p });
+    const thr = x.p.pos === 'DEF' ? 10 : 12; if (d.dc && x.dc >= thr && x.dc - d.dc < thr) ev.push({ min, k: 'dc', p: x.p }); });
+  if (m >= 22) S.hg && (S.hg.cs = false); if (m >= 58) S.ag && (S.ag.cs = false);
+  const rank = Object.values(S).sort((a, b) => b.bps - a.bps), br = (x) => rank.indexOf(x) + 1;
+  const near = [];
+  Object.values(S).forEach((x) => {
+    const p = x.p; // نفس قواعد القسم الحقيقي بالضبط
+    if (x.xg >= 0.3 && !x.goal) near.push({ p, k: 'goal', v: x.xg, txt: tt(`قريب يسجّل · xG ${x.xg.toFixed(2)}`, `Close to scoring · xG ${x.xg.toFixed(2)}`) });
+    else if (x.xa >= 0.3 && !x.assist) near.push({ p, k: 'assist', v: x.xa, txt: tt(`قريب يصنع · xA ${x.xa.toFixed(2)}`, `Close to an assist · xA ${x.xa.toFixed(2)}`) });
+    const r = br(x); if (r <= 3 && m < 90) near.push({ p, k: 'bonus', v: 4 - r, txt: tt(`المركز ${r} بالـ BPS (${x.bps})`, `#${r} in BPS (${x.bps})`) });
+    const thr = p.pos === 'DEF' ? 10 : p.pos === 'GK' ? 0 : 12; if (thr && x.dc >= thr - 3 && x.dc < thr) near.push({ p, k: 'dc', v: x.dc / thr, txt: tt(`مساهمات دفاعية ${x.dc}/${thr} — باقي ${thr - x.dc}`, `DefCon ${x.dc}/${thr}`) });
+  });
+  near.sort((a, b) => b.v - a.v);
+  return { hs, as, near, ev, rank };
+}
+function simHTML() {
+  const C = simCast(); if (!C) return `<div class="card mut pu-empty">${tt('ما لكينا لاعبين اليونايتد والسيتي', 'Teams not found')}</div>`;
+  const m = SIM.min, st = simState(C, m), last = st.ev.filter((e) => m - e.min <= 4).slice(-1)[0];
+  const clock = m === 0 ? tt('قبل البداية', 'Pre-match') : m >= 90 ? tt('انتهت', 'FT') : SIM.ht ? tt('استراحة', 'HT') : `${m}′`;
+  const evTxt = (e) => ({ goal: tt(`⚽ هدف! <bdi>${esc(e.p.name)}</bdi>`, `⚽ Goal! ${esc(e.p.name)}`), assist: tt(`🎯 صناعة: <bdi>${esc(e.p.name)}</bdi>`, `🎯 Assist: ${esc(e.p.name)}`), dc: tt(`🛡️ <bdi>${esc(e.p.name)}</bdi> حصل +2 مساهمات دفاعية`, `🛡️ ${esc(e.p.name)} DefCon +2`) }[e.k]);
+  setTimeout(simTick, 0);
+  return `<div class="card sim" id="puSim">
+    <div class="sim-tag">${tt('محاكاة تجريبية — مو بيانات حقيقية', 'Demo simulation — not real data')}</div>
+    <div class="sim-sb" dir="ltr"><span>${crest('MUN', 22)}<b>MUN</b></span><b class="num">${st.hs} – ${st.as}</b><span><b>MCI</b>${crest('MCI', 22)}</span></div>
+    <div class="sim-clk"><i class="${SIM.run && m > 0 && m < 90 && !SIM.ht ? 'on' : ''}"></i>${clock}</div>
+    <div class="sim-bar"><i style="width:${Math.min(100, (m / 90) * 100)}%"></i></div>
+    <div class="sim-ctl"><button onclick="simCtl('toggle')">${SIM.run ? tt('⏸ إيقاف', '⏸ Pause') : tt('▶ تشغيل', '▶ Play')}</button><button onclick="simCtl('reset')">${tt('⟲ من البداية', '⟲ Restart')}</button><button onclick="simCtl('skip')">${tt('+10 دقائق', '+10 min')}</button></div>
+    ${last ? `<div class="sim-ev ${last.k}"><span>${evTxt(last)}</span><em dir="ltr">${last.min}′</em></div>` : ''}
+    ${st.near.length ? `<div class="list sim-list">${st.near.slice(0, 8).map((n) => `<div class="row"><div class="mini">${pShirt(n.p)}</div><div class="info"><b>${esc(n.p.name)} <small class="mut">${tShort(n.p.team)}</small></b><span>${n.txt}</span></div><span class="pu-k ${n.k}">${ICO[n.k] || '🛡️'}</span></div>`).join('')}</div>` : `<div class="mut sim-empty">${m === 0 ? tt('اضغط تشغيل أو انتظر تبدي المباراة', 'Press play') : tt('ماكو لاعب قريب من حدث هسة', 'Nothing brewing right now')}</div>`}
+    ${st.ev.length ? `<div class="sim-log">${st.ev.slice().reverse().map((e) => `<span><em dir="ltr">${e.min}′</em>${evTxt(e)}</span>`).join('')}</div>` : ''}
+  </div>`;
+}
+function simTick() {
+  if (SIM.t) return;
+  SIM.t = setInterval(() => {
+    const el = document.getElementById('puSim'); if (!el) { clearInterval(SIM.t); SIM.t = null; return; }
+    if (!SIM.run || document.hidden || SIM.min >= 90) return;
+    if (SIM.min === 45 && SIM.ht < 4) { SIM.ht++; } else { SIM.ht = 0; SIM.min++; }
+    el.outerHTML = simHTML();
+  }, 650);
+}
+window.simCtl = (a) => { if (a === 'toggle') SIM.run = !SIM.run; if (a === 'reset') { SIM.min = 0; SIM.ht = 0; SIM.run = true; } if (a === 'skip') SIM.min = Math.min(90, SIM.min + 10); const el = document.getElementById('puSim'); if (el) el.outerHTML = simHTML(); };
+
 export function vPulse() {
   const gw = ST.G.cur, ev = ST.G.events.find((e) => e.id === gw);
+  if (SIMON() && (!ST.E?.picks || !ST.live || ST.liveRawGW !== gw)) return `<div class="sec"><h2>${I('i-target')}${tt('قريب من الحدث', 'About to happen')}</h2></div>` + simHTML();
   if (!ST.E?.picks || !ST.live || ST.liveRawGW !== gw) return `<section class="hero"><div class="mut" style="font-size:12.5px">${tt('نبض الجولة', 'GW pulse')}</div><p style="margin-top:8px;line-height:1.8">${tt('يشتغل وقت المباريات: أحداث فريقك ومنافسك لحظة بلحظة. ارجع أول ما تبدي مباريات الجولة.', 'Comes alive during matches. Check back at kick-off.')}</p></section>`;
   if (!RV.list || RV.gw !== gw) loadRivals(); else serverSync();
   const my = liveCalc(ST.E.picks, gw), rp = RV.picks[RV.sel], rc = rp ? liveCalc(rp, gw) : null, rv = RV.list?.find((x) => x.entry === RV.sel);
@@ -169,7 +235,7 @@ export function vPulse() {
     if (thr && dc >= thr - 3 && dc < thr) near.push({ p, k: 'dc', v: dc / thr, txt: tt(`مساهمات دفاعية ${dc}/${thr} — باقي ${thr - dc}`, `DefCon ${dc}/${thr}`) });
   });
   near.sort((a, b) => b.v - a.v);
-  const nearHTML = near.length ? `<div class="list">${near.slice(0, 8).map((n) => `<div class="row tap" onclick="playerGW(${n.p.id},${gw})"><div class="mini">${pShirt(n.p)}</div><div class="info"><b>${esc(n.p.name)}</b><span>${n.txt}</span></div><span class="pu-k ${n.k}">${ICO[n.k] || '🛡️'}</span></div>`).join('')}</div>` : `<div class="card mut pu-empty">${anyLive ? tt('ماكو لاعب قريب من حدث هسة — نراقب كل 15 ثانية', 'Nothing brewing right now') : tt('ماكو مباراة شغّالة هسة', 'No live match right now')}</div>`;
+  const nearHTML = SIMON() ? simHTML() : near.length ? `<div class="list">${near.slice(0, 8).map((n) => `<div class="row tap" onclick="playerGW(${n.p.id},${gw})"><div class="mini">${pShirt(n.p)}</div><div class="info"><b>${esc(n.p.name)}</b><span>${n.txt}</span></div><span class="pu-k ${n.k}">${ICO[n.k] || '🛡️'}</span></div>`).join('')}</div>` : `<div class="card mut pu-empty">${anyLive ? tt('ماكو لاعب قريب من حدث هسة — نراقب كل 15 ثانية', 'Nothing brewing right now') : tt('ماكو مباراة شغّالة هسة', 'No live match right now')}</div>`;
   // منافسك
   let rvHTML = '';
   if (rc && rp) {
