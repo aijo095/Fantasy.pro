@@ -369,7 +369,7 @@ async function openMatchC(fid, ev) {
 }
 Object.assign(window, { mcSideSet: (sd, fid, ev) => { mcSide = sd; const f = (ST.G.fx[ev] || []).find((x) => x.id === fid), el = document.getElementById('mcBody'); if (f && el) morphHTML(el, mcBody(f, ev)); }, lvGW: (g) => { gwSel = g; window.render(); setTimeout(() => document.querySelector('#lvseg .on')?.scrollIntoView({ inline: 'center', block: 'nearest' }), 30); }, lvRefresh: () => refreshLive(true), openMatchC });
 /* ---------- التشكيلات الرسمية (معاينة ?lu2=1) — من ESPN، تنعلن عادة قبل المباراة بساعة وقبل ما يحدثها الفانتازي ---------- */
-const LU2 = () => { try { return localStorage.getItem('fp_lu2') === '1'; } catch { return false; } };
+const LU2 = () => true;
 const luWin = (f) => { if (!f.ko) return false; const dt = new Date(f.ko) - Date.now(); return dt < 100 * 60e3 && (dt > -4 * 3600e3 || (f.started && !f.fin)); };
 const luHas = (f) => Object.values(LU[f.id]?.d?.sides || {}).some((x) => x.players?.some((p) => p.starter));
 const LU2DEMO = () => { try { return sessionStorage.getItem('fp_lu2demo') === '1'; } catch { return false; } };
@@ -398,20 +398,18 @@ function lu2Poll() {
 }
 function lu2Section(fx, ev) {
   if (LU2DEMO()) lu2DemoFill(fx);
-  let L = fx.filter((f) => luWin(f) || (LU2DEMO() && luHas(f)));
-  const upcomingL = !L.length ? Object.values(ST.G.fx || {}).flat().filter((f) => f.ko && new Date(f.ko) > Date.now()).sort((x, y) => x.ko.localeCompare(y.ko)).slice(0, 3) : [];
-  if (!L.length && !upcomingL.length) return '';
-  if (!L.length) return `<div class="sec" style="margin:12px 2px 8px"><h2 style="font-size:14px">${I('i-pitch', 'i', 'width:16px;height:16px')}${tt('التشكيلات الرسمية', 'Official line-ups')}</h2></div>
-  <div class="card lu2-wait"><p>${tt('التشكيلات الرسمية تطلع هنا تلقائياً لما تنعلن، عادة قبل كل مباراة بحوالي ساعة. أقرب المباريات:', 'Official line-ups appear here automatically, usually ~1h before each match. Next up:')}</p>${upcomingL.map((f) => { const exp = new Date(new Date(f.ko) - 60 * 60e3); return `<div class="lu2-up"><span dir="ltr">${crest(tShort(f.h), 20)}<b>${tShort(f.h)}</b> v <b>${tShort(f.a)}</b>${crest(tShort(f.a), 20)}</span><small>${tt('تنعلن تقريباً', 'Expected')} ${fmtTime(exp.toISOString())}</small></div>`; }).join('')}<button class="btn btn-g btn-sm" style="margin-top:10px" onclick="location.href='/?lu2=demo'">${tt('شوف مثال تجريبي', 'See a demo')}</button></div>`;
+  const L = fx.filter((f) => luHas(f) && (luWin(f) || LU2DEMO()));
   const mine = ST.plan ? new Set([...ST.plan.xi, ...ST.plan.bench]) : new Set();
-  return `<div class="sec" style="margin:12px 2px 8px"><h2 style="font-size:14px">${I('i-pitch', 'i', 'width:16px;height:16px')}${tt('التشكيلات الرسمية', 'Official line-ups')}</h2></div>
-  <div class="lu2-list">${L.map((f) => { const has = luHas(f), d = LU[f.id]?.d, mins = f.ko ? Math.round((new Date(f.ko) - Date.now()) / 60e3) : 0;
+  return `<div class="lu2-box ${LU2OPEN() ? 'open' : ''}"><button class="lu2-hd" onclick="lu2Tog(this)">${I('i-pitch', 'i', 'width:16px;height:16px')}<b>${tt('التشكيلات الرسمية', 'Official line-ups')}</b>${L.length ? `<span class="lu2-n">${L.length}</span>` : ''}${I('i-chev', 'lu2-arr')}</button>
+  <div class="lu2-body">${L.length ? `<div class="lu2-list">${L.map((f) => { const d = LU[f.id]?.d;
     const myN = ST.G.players.filter((p) => mine.has(p.id) && (p.team === f.h || p.team === f.a)).length;
-    return `<button class="lu2-c ${has ? 'ok' : ''}" ${has ? `onclick="openLineup(${f.id},${ev})"` : ''}>
+    return `<button class="lu2-c ok" onclick="openLineup(${f.id},${ev})">
       <span class="lu2-t" dir="ltr">${crest(tShort(f.h), 24)}<b>${tShort(f.h)}</b><i>v</i><b>${tShort(f.a)}</b>${crest(tShort(f.a), 24)}</span>
-      <span class="lu2-s">${has ? `<em class="ok">✓ ${tt('انعلنت', 'Announced')}</em><small dir="ltr">${esc(d.sides?.h?.formation || '—')} · ${esc(d.sides?.a?.formation || '—')}</small>` : `<em>${tt('بعدها ما انعلنت', 'Not yet')}</em><small>${mins > 0 ? tt(`المباراة بعد ${mins} دقيقة · تنعلن عادة قبلها بساعة`, `KO in ${mins}m · usually 1h before`) : tt('نتابعها كل دقيقة', 'Checking every minute')}</small>`}</span>
-      ${myN ? `<span class="lu2-my">${tt(`${myN} من لاعبينك`, `${myN} yours`)}</span>` : ''}${has ? I('i-chev', 'chev') : ''}</button>`; }).join('')}</div>`;
+      <span class="lu2-s"><em class="ok">✓ ${tt('انعلنت', 'Announced')}</em><small dir="ltr">${esc(d.sides?.h?.formation || '—')} · ${esc(d.sides?.a?.formation || '—')}</small></span>
+      ${myN ? `<span class="lu2-my">${tt(`${myN} من لاعبينك`, `${myN} yours`)}</span>` : ''}${I('i-chev', 'chev')}</button>`; }).join('')}</div>` : `<p class="lu2-empty">${tt('ماكو تشكيلات معلنة هسة — أول ما تنعلن تشكيلة أي مباراة تنزل هنا تلقائياً.', 'No line-ups out yet — they appear here as soon as they are announced.')}</p>`}</div></div>`;
 }
+const LU2OPEN = () => { try { return localStorage.getItem('fp_lu2open') === '1'; } catch { return false; } };
+window.lu2Tog = (el) => { const b = el.closest('.lu2-box'); const o = !b.classList.contains('open'); b.classList.toggle('open', o); try { localStorage.setItem('fp_lu2open', o ? '1' : '0'); } catch {} };
 const LUD = (pos) => { const p = String(pos || '').toUpperCase(); if (p === 'G' || p === 'GK') return 0; if (/^(RB|LB|CB|CD|SW|D)(-|$)/.test(p)) return 1; if (/^(RWB|LWB)/.test(p)) return 1.5; if (/^(DM|CDM)/.test(p)) return 2; if (/^(CM|RM|LM|M)(-|$)/.test(p)) return 3; if (/^(AM|CAM)/.test(p)) return 4; if (/^(RW|LW|RF|LF)/.test(p)) return 4.5; if (/^(CF|F|ST|FW|S)(-|$)/.test(p)) return 5; return 3; };
 function lu2Lines(sd, team, top) {
   // نوزع الأساسيين على خطوط الخطة الرسمية (مثلاً 4-2-3-1)، وكل خط من اليسار لليمين
