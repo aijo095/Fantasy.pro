@@ -16,6 +16,11 @@ async function get(path, params = {}, { ttl = 0, fresh = false } = {}) {
   const key = qs.replace('&fresh=1', '');
   const hit = mem.get(key);
   if (!fresh && hit && Date.now() - hit.t < ttl * 1000) return hit.d;
+  // بيانات اللاعبين العامة: إذا التطبيق انفتح خلال 5 دقايق من آخر جلب ناخذها من التلفون بدون طلب
+  if (!fresh && !hit && path === 'bootstrap-static/') {
+    const c = LS.get('fpc_' + key);
+    if (c && c.d && Date.now() - c.t < Math.min(ttl, 300) * 1000) { mem.set(key, c); lastUpdated[path] = c.t; return c.d; }
+  }
   const fallback = (err) => {
     const cached = hit ? { t: hit.t, d: hit.d } : LS.get('fpc_' + key);
     if (cached) { lastUpdated[path] = cached.t; markStale(true); return cached.d; }
