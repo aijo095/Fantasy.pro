@@ -99,7 +99,7 @@ window.openClub = (tid) => {
   const all = G.fxList.filter((f) => f.h === tid || f.a === tid).sort((a, b) => (a.ev || 99) - (b.ev || 99));
   const past = all.filter((f) => f.fin).slice(-6).reverse(), next = all.filter((f) => !f.fin).slice(0, 6);
   const res = (f) => { const home = f.h === tid, gf = home ? f.hs : f.as, ga = home ? f.as : f.hs; return gf > ga ? ['W', 'var(--good)'] : gf < ga ? ['L', 'var(--bad)'] : ['D', 'var(--mut)']; };
-  const form = past.map((f) => { const [r, c] = res(f); return `<span class="rate" style="background:${c};color:#0A0D14">${tt({ W: 'ف', L: 'خ', D: 'ت' }[r], r)}</span>`; }).join(' ');
+  const form = past.map((f) => { const [r, c] = res(f); return `<span class="rate" style="background:${c};color:#0A0D14">${r}</span>`; }).join(' ');
   const players = G.players.filter((p) => p.team === tid).sort((a, b) => b.total - a.total).slice(0, 8);
   const mine = new Set(ST.plan?.squad || []);
   openSheet(`${sheetHead(crest(tm.short, 44), tName(tid), `${tt('الفورم', 'Form')}: ${form || '—'}`)}
