@@ -1,15 +1,16 @@
 /* =========================================================
-   المظهر: ألوان وخلفيات مريحة للبصر (من الإعدادات)
+   المظهر: ألوان وخلفيات احترافية فيها حيوية (من الإعدادات)
    html[data-th] = لون التطبيق · html[data-bg] = الخلفية
    الافتراضي (بدون data-th) = الألوان الأصلية
 ========================================================= */
 html{--acc-rgb:52,211,153;--card-a:rgba(24,32,50,.62);--card-b:rgba(14,20,33,.52)}
-html.ui2[data-th=navy]{--bg:#0D1422;--bg2:#111A2B;--s1:#16213A;--s2:#1C2945;--s3:#24324F;--txt:#E6ECF5;--mut:#8FA0BA;--mut2:#5F7090;--acc:#6CC4B0;--acc-d:#4FA893;--on-acc:#06231C;--acc-rgb:108,196,176;--card-a:rgba(28,41,69,.62);--card-b:rgba(16,24,40,.55)}
-html.ui2[data-th=sage]{--bg:#0D1512;--bg2:#111C18;--s1:#16231E;--s2:#1B2B25;--s3:#22352D;--txt:#E4EEE8;--mut:#8EA59A;--mut2:#5E7569;--acc:#8CCB9E;--acc-d:#6FB083;--on-acc:#0B2416;--acc-rgb:140,203,158;--card-a:rgba(27,43,37,.62);--card-b:rgba(15,25,21,.55)}
-html.ui2[data-th=sand]{--bg:#141310;--bg2:#1A1915;--s1:#211F1A;--s2:#29261F;--s3:#332F27;--txt:#EEE9DF;--mut:#A39B8B;--mut2:#726B5D;--acc:#D9B77E;--acc-d:#C09B60;--on-acc:#2A1F0A;--acc-rgb:217,183,126;--card-a:rgba(41,38,31,.64);--card-b:rgba(24,22,18,.56)}
-html.ui2[data-th=dusk]{--bg:#13111C;--bg2:#181624;--s1:#1E1B2D;--s2:#252137;--s3:#2E2943;--txt:#ECE8F5;--mut:#A09BB6;--mut2:#6E6987;--acc:#A99BE0;--acc-d:#8E7FCB;--on-acc:#1A1433;--acc-rgb:169,155,224;--card-a:rgba(37,33,55,.64);--card-b:rgba(22,20,34,.56)}
-html.ui2[data-th=ocean]{--bg:#0B1418;--bg2:#0F1A1F;--s1:#13222A;--s2:#182B34;--s3:#1F3540;--txt:#E3EEF2;--mut:#8AA3AE;--mut2:#5A7480;--acc:#7BB8D6;--acc-d:#5E9DBD;--on-acc:#08202B;--acc-rgb:123,184,214;--card-a:rgba(24,43,52,.64);--card-b:rgba(14,26,32,.56)}
-html.ui2[data-th=graphite]{--bg:#121315;--bg2:#17181B;--s1:#1D1F23;--s2:#24262B;--s3:#2D3036;--txt:#E4E6EA;--mut:#9599A2;--mut2:#666A73;--acc:#9CC9B4;--acc-d:#7FB09A;--on-acc:#10241B;--acc-rgb:156,201,180;--card-a:rgba(36,38,43,.66);--card-b:rgba(22,23,26,.58)}
+html.ui2[data-th=royal]{--bg:#080D1C;--bg2:#0C1328;--s1:#111A35;--s2:#172242;--s3:#202D55;--txt:#EEF2FF;--mut:#97A3C4;--mut2:#5F6B8E;--acc:#4F8CFF;--acc-d:#2F6FEB;--on-acc:#FFFFFF;--acc-rgb:79,140,255;--card-a:rgba(23,34,66,.66);--card-b:rgba(11,17,36,.58)}
+html.ui2[data-th=cyan]{--bg:#061316;--bg2:#091B20;--s1:#0E242A;--s2:#132F36;--s3:#1A3A43;--txt:#E8F7FA;--mut:#8FB1B8;--mut2:#5A7C84;--acc:#22D3EE;--acc-d:#0EB5D0;--on-acc:#03262D;--acc-rgb:34,211,238;--card-a:rgba(19,47,54,.66);--card-b:rgba(8,25,30,.58)}
+html.ui2[data-th=violet]{--bg:#0D0A1C;--bg2:#130F27;--s1:#1A1534;--s2:#221C42;--s3:#2C2452;--txt:#F1EDFF;--mut:#A79FC9;--mut2:#6F6894;--acc:#9D7BFF;--acc-d:#7C5CF0;--on-acc:#FFFFFF;--acc-rgb:157,123,255;--card-a:rgba(34,28,66,.66);--card-b:rgba(17,13,36,.58)}
+html.ui2[data-th=gold]{--bg:#110F0A;--bg2:#17140D;--s1:#1F1B12;--s2:#282318;--s3:#332C1E;--txt:#FBF6EA;--mut:#B3A88E;--mut2:#7C735E;--acc:#F5B83D;--acc-d:#DE9D1F;--on-acc:#2A1C00;--acc-rgb:245,184,61;--card-a:rgba(40,35,24,.68);--card-b:rgba(21,18,12,.6)}
+html.ui2[data-th=crimson]{--bg:#130A0D;--bg2:#1A0E13;--s1:#23131A;--s2:#2D1922;--s3:#38202B;--txt:#FFF0F3;--mut:#C09AA5;--mut2:#86636E;--acc:#FF4D6D;--acc-d:#E8325A;--on-acc:#FFFFFF;--acc-rgb:255,77,109;--card-a:rgba(45,25,34,.66);--card-b:rgba(24,13,17,.58)}
+html.ui2[data-th=sunset]{--bg:#130D09;--bg2:#1A120C;--s1:#231912;--s2:#2D2017;--s3:#38291D;--txt:#FFF4EC;--mut:#C2A592;--mut2:#876D5B;--acc:#FF8A3D;--acc-d:#F06E1D;--on-acc:#2B1200;--acc-rgb:255,138,61;--card-a:rgba(45,32,23,.66);--card-b:rgba(24,16,11,.58)}
+html.ui2[data-th=pink]{--bg:#140A13;--bg2:#1B0E1A;--s1:#241323;--s2:#2E192D;--s3:#3A2039;--txt:#FFF0FB;--mut:#C29BBB;--mut2:#87637F;--acc:#F472B6;--acc-d:#E2559E;--on-acc:#FFFFFF;--acc-rgb:244,114,182;--card-a:rgba(46,25,45,.66);--card-b:rgba(24,13,23,.58)}
 html.ui2[data-th] {--acc-soft:rgba(var(--acc-rgb),.12);--g1:var(--acc);--lime:var(--acc);--good:var(--acc)}
 
 /* الأسطح اللي جانت ألوانها ثابتة */

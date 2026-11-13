@@ -56,21 +56,22 @@ export function vSettings() {
 }
 /* ---------- المظهر: ألوان وخلفيات مريحة للبصر ---------- */
 const THEMES = [
-  ['def', tt('الأصلي', 'Original'), tt('أسود وأخضر', 'Black & green'), '#0A0D14', '#171C27', '#34D399'],
-  ['navy', tt('كحلي هادئ', 'Calm navy'), tt('كحلي وفيروزي ناعم', 'Navy & soft teal'), '#0D1422', '#1C2945', '#6CC4B0'],
-  ['sage', tt('عشبي مريح', 'Sage'), tt('أخضر زيتوني فاتح', 'Soft olive green'), '#0D1512', '#1B2B25', '#8CCB9E'],
-  ['ocean', tt('أزرق بحري', 'Ocean'), tt('أزرق رمادي ناعم', 'Muted blue'), '#0B1418', '#182B34', '#7BB8D6'],
-  ['dusk', tt('بنفسجي غروب', 'Dusk'), tt('بنفسجي فاتح هادئ', 'Soft lavender'), '#13111C', '#252137', '#A99BE0'],
-  ['sand', tt('رملي دافئ', 'Warm sand'), tt('بني دافئ وذهبي هادئ', 'Warm brown & muted gold'), '#141310', '#29261F', '#D9B77E'],
-  ['graphite', tt('رمادي مريح', 'Graphite'), tt('رمادي محايد وتباين أخف', 'Neutral, lower contrast'), '#121315', '#24262B', '#9CC9B4'],
+  ['def', tt('الأصلي', 'Original'), tt('أسود وأخضر زمردي', 'Black & emerald'), '#0A0D14', '#171C27', '#34D399'],
+  ['royal', tt('أزرق ملكي', 'Royal blue'), tt('كحلي غامق وأزرق ساطع', 'Deep navy & bright blue'), '#080D1C', '#172242', '#4F8CFF'],
+  ['cyan', tt('فيروزي', 'Cyan'), tt('أخضر بحري وفيروزي حيوي', 'Sea dark & vivid cyan'), '#061316', '#132F36', '#22D3EE'],
+  ['violet', tt('بنفسجي', 'Violet'), tt('ليلي وبنفسجي لامع', 'Night & bright violet'), '#0D0A1C', '#221C42', '#9D7BFF'],
+  ['gold', tt('ذهبي فاخر', 'Premium gold'), tt('أسود دافئ وذهبي', 'Warm black & gold'), '#110F0A', '#282318', '#F5B83D'],
+  ['crimson', tt('أحمر ناري', 'Crimson'), tt('غامق وأحمر حيوي', 'Dark & vivid red'), '#130A0D', '#2D1922', '#FF4D6D'],
+  ['sunset', tt('برتقالي غروب', 'Sunset'), tt('بني غامق وبرتقالي', 'Dark brown & orange'), '#130D09', '#2D2017', '#FF8A3D'],
+  ['pink', tt('وردي', 'Pink'), tt('غامق ووردي لامع', 'Dark & bright pink'), '#140A13', '#2E192D', '#F472B6'],
 ];
 const BGS = [['live', tt('حيّة', 'Live')], ['calm', tt('هادئة', 'Calm')], ['plain', tt('سادة', 'Plain')], ['pitch', tt('ملعب', 'Pitch')], ['aurora', tt('شفق', 'Aurora')]];
-const curTh = () => { try { return localStorage.getItem('fp_theme') || 'def'; } catch { return 'def'; } };
+const curTh = () => { try { const t = localStorage.getItem('fp_theme') || 'def'; return THEMES.some((x) => x[0] === t) ? t : 'def'; } catch { return 'def'; } };
 const curBg = () => { try { return localStorage.getItem('fp_bg') || 'live'; } catch { return 'live'; } };
 function appearanceHTML() {
   const th = curTh(), bg = curBg();
   return `<div class="sec"><h2>${I('i-sparkle')}${tt('المظهر', 'Appearance')}</h2></div>
-   <div class="card"><div class="set-row" style="border:0;padding-bottom:4px"><span>${tt('ألوان التطبيق', 'App colours')}<br><small class="mut">${tt('كلها ألوان هادئة ومريحة للعين', 'All calm, easy-on-the-eye palettes')}</small></span></div>
+   <div class="card"><div class="set-row" style="border:0;padding-bottom:4px"><span>${tt('ألوان التطبيق', 'App colours')}<br><small class="mut">${tt('كل ثيم بلون رئيسي حيوي وخلفية غامقة مريحة', 'Each theme: a vivid accent on a comfortable dark base')}</small></span></div>
     <div class="th-grid">${THEMES.map(([k, n, d, b, s2, a]) => `<button class="th-opt ${th === k ? 'on' : ''}" onclick="setTheme('${k}')" style="--pb:${b};--ps:${s2};--pa:${a}"><div class="th-prev"><i></i><i></i><b></b><em></em></div><span>${n}</span><small>${d}</small><i class="th-ck">✓</i></button>`).join('')}</div>
     <div class="set-row" style="border:0;padding:14px 0 4px"><span>${tt('الخلفية', 'Background')}<br><small class="mut">${tt('"حيّة" فيها نقاط تتحرك، والباقي ثابتة أو هادئة جداً', '"Live" has moving dots; the rest are still or very slow')}</small></span></div>
     <div class="bg-row">${BGS.map(([k, n]) => `<button class="bg-opt ${bg === k ? 'on' : ''}" onclick="setBg('${k}')"><i class="${k}"></i>${n}</button>`).join('')}</div>
