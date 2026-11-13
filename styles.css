@@ -1579,7 +1579,7 @@ svg.flipx{transform:scaleX(-1)}
 .heat3,.nx5{direction:ltr}
 
 /* =========================================================
-   الرئيسية المرتبة (معاينة ?home2=1): هرمية واضحة، أرقام بعمود واحد، مسافات متساوية
+   الرئيسية المرتبة: هرمية واضحة، أرقام بعمود واحد، مسافات متساوية
 ========================================================= */
 .h2{display:flex;flex-direction:column;gap:12px}
 .h2 button{font-family:inherit;color:inherit;cursor:pointer}

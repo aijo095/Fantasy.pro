@@ -77,8 +77,8 @@ export function vHome() {
    ${news.length ? `<div class="sec"><h2>${I('i-alert')}${tt('أخبار لاعبينك', 'Your player news')}</h2></div><div class="list">${news.map((p) => `<div class="row tap" onclick="openPlayer(${p.id})"><div class="mini">${pShirt(p)}</div><div class="info"><b>${esc(p.name)}</b><span style="white-space:normal;color:var(--warn)">${esc(p.news)}</span></div></div>`).join('')}</div>` : ''}
    <div class="updated">${t('updated')}: ${fmtTime(new Date(ST.G.fetchedAt).toISOString())}</div>`;
 }
-/* ---------- الرئيسية المرتبة (معاينة ?home2=1) ---------- */
-const HOME2 = () => { try { return localStorage.getItem('fp_home2') === '1'; } catch { return false; } };
+/* ---------- الرئيسية المرتبة ---------- */
+const HOME2 = () => true; // صارت للكل
 function vHome2() {
   const { G, E, plan } = ST, en = E.entry, hist = E.hist.current || [], last = hist[hist.length - 1];
   const ev = G.events.find((e) => e.id === G.cur), livePts = liveTeamPoints();
