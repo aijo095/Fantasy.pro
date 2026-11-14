@@ -180,11 +180,14 @@ const EVI = { in: '↑', out: '↓', min: '⏱', goal: '⚽', assist: '🎯', cs
 function evSection(rows, C, anyLive) {
   const list = rows.map((r) => { const all = evList(r.p, r.s, C), pts = all.reduce((a, e) => a + (e.pts || 0), 0), E = all.filter((e) => !e.hide); return { ...r, E, pts, f: C.fx(r.p) }; }).filter((r) => r.E.length);
   if (!list.length) return `<div class="card mut pu-empty">${anyLive ? tt('بعد ما صار شي للاعبينك أو لاعبين خصمك', 'Nothing yet for your or your rival\'s players') : tt('ماكو مباراة شغّالة هسة', 'No live match right now')}</div>`;
-  list.sort((a, b) => (C.live(b.f) ? 1 : 0) - (C.live(a.f) ? 1 : 0) || b.E.length - a.E.length || b.pts - a.pts);
-  const sum = (w) => list.filter((r) => r.who === w).reduce((a, r) => a + r.pts * Math.max(1, r.m), 0);
+  // لاعب ما ينحسب لأي طرف (بالدكة عند الكل) ينزل لآخر القائمة
+  const dead = (r) => (r.who === 'me' ? r.bMe && (!r.sh || r.bRv) : r.bRv);
+  list.sort((a, b) => (dead(a) ? 1 : 0) - (dead(b) ? 1 : 0) || (C.live(b.f) ? 1 : 0) - (C.live(a.f) ? 1 : 0) || b.E.length - a.E.length || b.pts - a.pts);
+  const sum = (w) => list.filter((r) => r.who === w && !(w === 'me' ? r.bMe : r.bRv)).reduce((a, r) => a + r.pts * Math.max(1, r.m), 0);
+  const bnote = (r) => { const t = r.sh ? (r.bMe && r.bRv ? tt('بالدكة عندك وعند خصمك', 'Benched by both') : r.bMe ? tt('عندك بالدكة', 'On your bench') : r.bRv ? tt('عند خصمك بالدكة', 'On rival bench') : '') : r.bMe ? tt('بالدكة عندك', 'On your bench') : r.bRv ? tt('بالدكة عند خصمك', 'On rival bench') : ''; return t ? `<span class="ev2-bn">${I('i-bench', 'i', 'width:12px;height:12px')}${t}</span>` : ''; };
   return `<div class="ev2-sum"><span class="me">${tt('لاعبينك', 'Yours')} <b dir="ltr">${sum('me')}</b></span><span class="rv">${tt('لاعبين خصمك', 'Rival')} <b dir="ltr">${sum('rv')}</b></span></div>
-  <div class="ev2">${list.map((r) => `<div class="ev2-p ${r.who}${r.sh ? ' sh' : ''}" onclick="playerGW(${r.p.id},${ST.G.cur})">
-      <div class="ev2-h"><span class="mini">${pShirt(r.p)}</span><span class="ev2-n"><b>${esc(r.p.name)}</b><small><span class="ev2-who">${r.sh ? tt('لاعب مشترك', 'Shared') : r.who === 'me' ? tt('لاعبك', 'Yours') : tt('خصمك', 'Rival')}</span>${tShort(r.p.team)} · ${r.p.pos}${r.m > 1 ? ` · <i class="ev2-c">${r.m === 3 ? '3×' : 'C ×2'}</i>` : ''}${C.live(r.f) ? ` · <i class="ev2-live">${C.minute(r.f)}′</i>` : C.done(r.f) ? ` · ${tt('خلصت', 'FT')}` : ''}</small></span><b class="ev2-t" dir="ltr">${r.pts * Math.max(1, r.m)}</b></div>
+  <div class="ev2">${list.map((r) => `<div class="ev2-p ${r.who}${r.sh ? ' sh' : ''}${dead(r) ? ' bn' : ''}" onclick="playerGW(${r.p.id},${ST.G.cur})">
+      <div class="ev2-h"><span class="mini">${pShirt(r.p)}</span><span class="ev2-n"><b>${esc(r.p.name)}</b>${bnote(r)}<small><span class="ev2-who">${r.sh ? tt('لاعب مشترك', 'Shared') : r.who === 'me' ? tt('لاعبك', 'Yours') : tt('خصمك', 'Rival')}</span>${tShort(r.p.team)} · ${r.p.pos}${r.m > 1 ? ` · <i class="ev2-c">${r.m === 3 ? '3×' : 'C ×2'}</i>` : ''}${C.live(r.f) ? ` · <i class="ev2-live">${C.minute(r.f)}′</i>` : C.done(r.f) ? ` · ${tt('خلصت', 'FT')}` : ''}</small></span><b class="ev2-t" dir="ltr">${r.pts * Math.max(1, r.m)}</b></div>
       <div class="ev2-e">${r.E.map((e) => `<span class="ev2-x ${e.k}"><i>${EVI[e.k] || '•'}</i>${e.txt}${e.extra ? ` <small>(${e.extra})</small>` : ''}${e.pts != null ? `<em class="${e.pts > 0 ? 'up' : e.pts < 0 ? 'down' : ''}" dir="ltr">${e.pts > 0 ? '+' : ''}${e.pts}</em>` : ''}</span>`).join('')}</div>
     </div>`).join('')}</div>`;
 }
@@ -271,9 +274,10 @@ export function vPulse() {
   const chips = RV.list?.length ? `<div class="seg pu-rv">${RV.list.map((x) => `<button class="${x.entry === RV.sel ? 'on' : ''}" onclick="puRv(${x.entry})">${esc(x.name)}<small>${esc(x.why)}</small></button>`).join('')}</div>` : RV.list ? '' : `<div class="aiload" style="padding:8px"><i></i><i></i><i></i></div>`;
   // الأحداث المباشرة: لاعبينك + لاعبين خصمك اللي ما عندك
   const myIds = new Set((ST.E.picks.picks || []).map((x) => x.element));
-  const rvIds = new Set((rp?.picks || []).map((x) => x.element));
-  const rows = (ST.E.picks.picks || []).filter((x) => x.multiplier > 0).map((x) => ({ p: PM(x.element), s: ST.live[x.element], m: x.multiplier, who: 'me', sh: rvIds.has(x.element) }));
-  if (rp) (rp.picks || []).filter((x) => x.multiplier > 0 && !myIds.has(x.element)).forEach((x) => rows.push({ p: PM(x.element), s: ST.live[x.element], m: x.multiplier, who: 'rv' }));
+  // كل لاعبين التشكيلتين (الأساسيين والدكة) — لاعب الدكة ينعرض ويا ملاحظة وما تنحسب نقاطه
+  const rvM = new Map((rp?.picks || []).map((x) => [x.element, x.multiplier]));
+  const rows = (ST.E.picks.picks || []).map((x) => ({ p: PM(x.element), s: ST.live[x.element], m: x.multiplier, who: 'me', sh: rvM.has(x.element), bMe: x.multiplier === 0, bRv: rvM.get(x.element) === 0 }));
+  if (rp) (rp.picks || []).filter((x) => !myIds.has(x.element)).forEach((x) => rows.push({ p: PM(x.element), s: ST.live[x.element], m: x.multiplier, who: 'rv', bRv: x.multiplier === 0 }));
   const nearHTML = SIMON() ? simHTML() : evSection(rows.filter((r) => r.p && r.s), realCtx(), anyLive);
   // منافسك
   let rvHTML = '';

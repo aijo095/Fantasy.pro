@@ -1771,3 +1771,7 @@ svg.flipx{transform:scaleX(-1)}
 
 .ev2-p.sh{box-shadow:inset -3px 0 0 #A78BFA}[dir=ltr] .ev2-p.sh{box-shadow:inset 3px 0 0 #A78BFA}
 .ev2-p.sh .ev2-who{background:rgba(167,139,250,.16);color:#C4B5FD}
+
+.ev2-bn{display:inline-flex;align-items:center;gap:4px;margin:2px 0;font-size:10.5px;font-weight:600;color:#FCD34D;padding:1px 8px;border-radius:99px;background:rgba(252,211,77,.12);width:max-content}
+.ev2-bn .i{color:#FCD34D}
+.ev2-p.bn{opacity:.72}
