@@ -147,10 +147,13 @@ function mc2(f, ev, st, L, live) {
   const bpsOf = (id) => [...st('bps').h, ...st('bps').a].find((y) => y.element === id)?.value;
   const side = (fn) => ['h', 'a'].map((s) => `<div class="m2s ${s}">${fn(s) || none}</div>`).join('');
   const row = (icon, label, fn, cls = '') => { const H = fn('h'), A = fn('a'); if (!H && !A) return ''; return `<section class="m2row ${cls}"><h5>${icon}<span>${label}</span></h5><div class="m2cols">${side(fn)}</div></section>`; };
-  const goals = (s) => st('goals_scored')[s].map((x) => chip(x.element, x.value > 1 ? val('×' + x.value) : '')).join('') + st('own_goals')[s === 'h' ? 'a' : 'h'].map((x) => chip(x.element, `<small class="m2t bad">${tt('عكسي', 'OG')}</small>`, 'og')).join('');
+  // ركلات الجزاء من ESPN: نربط لاعب ESPN بلاعب الفانتازي
+  const PEN = {}; { const ld = LU[f.id]?.d; (ld?.pens || []).forEach((k) => { const sd = k.side || 'h', pl = ld.sides?.[sd]?.players || []; const e = pl.find((x) => x.id === k.id); if (!e) return; const fp = mapFPL([e], sd === 'h' ? f.h : f.a)[e.id]; if (!fp) return; const o = PEN[fp.id] || (PEN[fp.id] = { s: 0, m: 0 }); k.scored ? o.s++ : o.m++; }); }
+  const penTag = (id, n) => { const o = PEN[id]; if (!o?.s) return ''; return `<small class="m2t pen">(${o.s > 1 || n > 1 ? `${o.s} ` : ''}${tt('ركلة جزاء', 'pen')})</small>`; };
+  const goals = (s) => st('goals_scored')[s].map((x) => chip(x.element, (x.value > 1 ? val('×' + x.value) : '') + penTag(x.element, x.value))).join('') + st('own_goals')[s === 'h' ? 'a' : 'h'].map((x) => chip(x.element, `<small class="m2t bad">${tt('عكسي', 'OG')}</small>`, 'og')).join('');
   const assists = (s) => st('assists')[s].map((x) => chip(x.element, x.value > 1 ? val('×' + x.value) : '')).join('');
   const cards = (s) => st('yellow_cards')[s].map((x) => chip(x.element, '<i class="m2card y"></i>')).join('') + st('red_cards')[s].map((x) => chip(x.element, '<i class="m2card r"></i>', 'red')).join('');
-  const pens = (s) => st('penalties_missed')[s].map((x) => chip(x.element, `<small class="m2t bad">${tt('أضاع', 'miss')}</small>`)).join('') + st('penalties_saved')[s].map((x) => chip(x.element, `<small class="m2t ok">${tt('صد', 'save')}</small>`)).join('');
+  const pens = (s) => st('penalties_missed')[s].map((x) => chip(x.element, `<small class="m2t bad">(${x.value > 1 ? x.value + ' ' : ''}${tt('أضاع ركلة جزاء', 'missed pen')})</small>`)).join('') + st('penalties_saved')[s].map((x) => chip(x.element, `<small class="m2t ok">${tt('صد', 'save')}</small>`)).join('');
   const saves = (s) => [...st('saves')[s]].sort((a, b) => b.value - a.value).map((x) => chip(x.element, val(x.value))).join('');
   const hasBonus = st('bonus').h.length || st('bonus').a.length;
   const bonus = (s) => hasBonus
@@ -260,7 +263,7 @@ function loadLU(f, ev, force = false) {
   const c = LU[f.id]; if (c?.busy) return; const empty = !c?.d || !Object.values(c.d.sides || {}).some((x) => x.players?.length);
   if (!force && c && (Date.now() - c.at < 40e3 || (!empty && !(f.started && !f.fin)))) return;
   LU[f.id] = { ...(c || {}), busy: true };
-  fetch(`/api/lineups?ko=${encodeURIComponent(f.ko)}&h=${tShort(f.h)}&a=${tShort(f.a)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((d) => {
+  fetch(`/api/lineups?ko=${encodeURIComponent(f.ko)}&h=${tShort(f.h)}&a=${tShort(f.a)}&v=2`).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((d) => {
     LU[f.id] = { d: d?.sides && Object.keys(d.sides).length ? d : c?.d || null, at: Date.now() };
     const el = document.getElementById('mcBody'); if (el && el.dataset.fid == f.id) morphHTML(el, mcBody(f, ev));
   });
@@ -387,7 +390,7 @@ function lu2DemoFill(fx) {
 function lu2Fetch(f, done) {
   const c = LU[f.id]; if (c?.busy || (c && Date.now() - c.at < 45e3)) return;
   LU[f.id] = { ...(c || {}), busy: true };
-  fetch(`/api/lineups?ko=${encodeURIComponent(f.ko)}&h=${tShort(f.h)}&a=${tShort(f.a)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((d) => {
+  fetch(`/api/lineups?ko=${encodeURIComponent(f.ko)}&h=${tShort(f.h)}&a=${tShort(f.a)}&v=2`).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((d) => {
     const had = luHas(f); LU[f.id] = { d: d?.sides && Object.keys(d.sides).length ? d : c?.d || null, at: Date.now() };
     if (luHas(f) !== had || !had) done && done();
   });

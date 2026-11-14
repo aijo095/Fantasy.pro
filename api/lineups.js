@@ -63,7 +63,17 @@ export default async function handler(req, res) {
       const side = Object.keys(sides).find((sd) => sides[sd].players.some((p) => p.id === inId || p.id === outId)) || null;
       return { side, in: inId, out: outId, at: clockMin(k.clock?.displayValue), injury: /injury/i.test(k.text || '') };
     });
-    const d = { event: ev.id, state, sides, subs, at: Date.now() };
+    // ركلات الجزاء: اللي سجل منها واللي ضيعها (صدّها الحارس أو طلعت برا)
+    const sideOf = (id) => Object.keys(sides).find((sd) => sides[sd].players.some((p) => p.id === id)) || null;
+    const pens = (s.keyEvents || []).map((k) => {
+      const tt = `${k.type?.type || ''} ${k.type?.text || ''}`, all = `${tt} ${k.text || ''}`;
+      if (!/penalt/i.test(all) || /shootout/i.test(all)) return null;
+      const id = String(k.participants?.[0]?.athlete?.id || ''); if (!id) return null;
+      if (k.scoringPlay && (/penalt/i.test(tt) || /\(penalty\)|converts the penalty|penalty kick|from the penalty spot/i.test(k.text || ''))) return { side: sideOf(id), id, scored: true, at: clockMin(k.clock?.displayValue) };
+      if (!k.scoringPlay && /penalt/i.test(tt) && /miss|save/i.test(all) && !/conceded|won|foul/i.test(tt)) return { side: sideOf(id), id, scored: false, at: clockMin(k.clock?.displayValue) };
+      return null;
+    }).filter(Boolean);
+    const d = { event: ev.id, state, sides, subs, pens, at: Date.now() };
     const ttl = state === 'post' ? 6 * 3600 : state === 'in' ? 45 : 600;
     memo.set(key, { d, exp: Date.now() + ttl * 1000, ttl });
     if (memo.size > 200) memo.delete(memo.keys().next().value);
