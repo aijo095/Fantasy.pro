@@ -1,0 +1,99 @@
+/* =========================================================
+   التصميم الجديد (v2) — واجهات فقط، نفس الأقسام والميزات
+   مستلهم من Apple Sports / Revolut / FotMob:
+   خلفية بتوهجات ناعمة، بطاقات زجاجية مدورة، أبطال بتدرجات
+   متعددة الألوان، تبويبات بكبسولة بيضاء، خط Readex Pro.
+   شريط التنقل السفلي ما يتغير.
+========================================================= */
+html.v2{
+  --bg:#07080F;--bg2:#0B0D16;
+  --s1:rgba(255,255,255,.05);--s2:rgba(255,255,255,.08);--s3:rgba(255,255,255,.11);
+  --line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.12);
+  --txt:#F4F6FB;--mut:#8E95A9;--mut2:#5C6378;
+  --r:22px;--r-sm:14px;--r-lg:26px;
+  --sh:none;
+  --v2v:139,124,255;--v2c:255,122,107;--v2b:92,200,255;
+}
+html.v2,html.v2 body{font-family:'Readex Pro','IBM Plex Sans Arabic',system-ui,sans-serif}
+html.v2 .num,html.v2 .v,html.v2 .score,html.v2 .big{font-family:'Readex Pro',var(--num)}
+html.v2 body::before{background:
+  radial-gradient(460px 340px at 92% -4%,rgba(var(--acc-rgb),.17),transparent 70%),
+  radial-gradient(420px 320px at -12% 26%,rgba(var(--v2v),.14),transparent 70%)}
+
+/* بطاقات زجاجية */
+html.v2 .card,html.v2 .list,html.v2 .row,html.v2 .h2-card,html.v2 .h2-list,html.v2 .h2-dl,html.v2 .lu2-box,html.v2 .ev2-p{
+  background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:var(--r);box-shadow:none}
+html.v2 .row{border-radius:18px}
+html.v2 .list .row{border-radius:0}
+
+/* عناوين الأقسام: بسيطة وعريضة */
+html.v2 .sec{margin:22px 4px 10px}
+html.v2 .sec h2,html.v2 .h2-h{font-size:16.5px;font-weight:600;letter-spacing:-.01em}
+html.v2 .sec h2 svg.i{color:var(--mut);width:17px;height:17px}
+
+/* ===== الأبطال (البطاقات الكبيرة) ===== */
+html.v2 .h2-hero,html.v2 .team-hero,html.v2 .stadium,html.v2 .hero{
+  border-radius:28px!important;border:1px solid rgba(255,255,255,.10)!important;
+  background:radial-gradient(110% 110% at 100% 0%,rgba(30,107,83,.95) 0%,transparent 55%),
+    radial-gradient(110% 110% at 0% 100%,rgba(58,47,134,.95) 0%,transparent 55%),#0E1220!important;
+  box-shadow:0 26px 50px -30px rgba(var(--acc-rgb),.35)!important}
+html.v2 .h2-hero::before,html.v2 .team-hero::before,html.v2 .hero::before,html.v2 .stadium::before{display:none!important}
+html.v2 .h2-hero::after,html.v2 .team-hero::after,html.v2 .hero::after,html.v2 .stadium::after{
+  content:""!important;position:absolute!important;inset:0!important;width:auto!important;height:auto!important;border-radius:inherit!important;animation:none!important;
+  background:radial-gradient(180px 180px at 78% 28%,rgba(255,255,255,.07),transparent 70%)!important;pointer-events:none}
+html.v2 .h2-pts b{font-size:64px;font-weight:600;letter-spacing:-.04em;font-family:'Readex Pro',Inter,sans-serif}
+html.v2 .h2-live,html.v2 .livebadge{border-radius:99px}
+html.v2 .h2-acts button{border-radius:99px;background:rgba(255,255,255,.10)}
+/* إحصائيات الهيرو: مربعات زجاجية صغيرة */
+html.v2 .h2-stats{gap:8px;border-top:0;padding-top:0;margin-top:14px}
+html.v2 .h2-st{padding:9px 4px;border-radius:16px;background:rgba(255,255,255,.08)}
+html.v2 .h2-st+.h2-st{border:0}
+html.v2 .h2-st b{font:600 17px 'Readex Pro',Inter,sans-serif}
+html.v2 .live-side>div{background:rgba(255,255,255,.08)!important;border:0!important;border-radius:16px!important}
+html.v2 .live-side b{font-family:'Readex Pro',var(--num);font-weight:600}
+/* العد التنازلي */
+html.v2 .h2 .cd.h2-cd>div,html.v2 .cd div{background:rgba(255,255,255,.07);border:0;border-radius:12px;box-shadow:none}
+html.v2 .h2 .cd.h2-cd b,html.v2 .cd b{font-family:'Readex Pro',Inter,sans-serif;font-weight:600}
+html.v2 .h2-dl{border-radius:22px}
+/* خطوتك الجاية */
+html.v2 .h2-ic{border-radius:13px!important}
+html.v2 .h2-ask{border-radius:22px;background:linear-gradient(90deg,rgba(var(--v2v),.16),rgba(var(--v2v),.03));border:1px solid rgba(var(--v2v),.25)}
+
+/* ===== تبويبات: كبسولة بيضاء ===== */
+html.v2 .tabs2{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:18px;padding:4px}
+html.v2 .tabs2 button{border-radius:14px;font-weight:500}
+html.v2 .tabs2 button.on{background:#F4F6FB!important;color:#07080F!important;font-weight:600}
+html.v2 .tabs2 button.on *{color:#07080F}
+html.v2 .seg button{border-radius:99px;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+html.v2 .seg button.on{background:#F4F6FB;color:#07080F;border-color:#F4F6FB}
+html.v2 .pu-rv button{border-radius:16px!important}
+/* شريط الجولات */
+html.v2 .gwstrip{gap:6px}
+html.v2 .gwstrip button{width:46px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+html.v2 .gwstrip button.on{background:linear-gradient(180deg,var(--acc),var(--acc-d));border-color:transparent}
+html.v2 .gwstrip button.on b,html.v2 .gwstrip button.on small{color:var(--on-acc)}
+
+/* ===== النبض: المواجهة بنصين ===== */
+html.v2 .pu2-vs{gap:0;border-radius:22px;overflow:hidden;margin-top:12px;border:1px solid var(--line)}
+html.v2 .pu2-s{padding:14px 6px 12px}
+html.v2 .pu2-s.me{background:radial-gradient(100% 90% at 70% 0%,rgba(var(--acc-rgb),.30),transparent 70%),rgba(12,26,22,.85)}
+html.v2 .pu2-s.rv{background:radial-gradient(100% 90% at 30% 0%,rgba(var(--v2c),.26),transparent 70%),rgba(26,15,18,.85)}
+html.v2 .pu2-s b{font:600 40px/1.05 'Readex Pro',Inter,sans-serif}
+html.v2 .pu2-mid{align-self:stretch;border-radius:0;background:rgba(7,8,15,.85)}
+html.v2 .pu2-tug{height:8px!important;border-radius:99px}
+html.v2 .pu2-rank{border-radius:18px;background:rgba(255,255,255,.07)}
+
+/* ===== المباشر ===== */
+html.v2 .fx-card .mid b{font:600 22px 'Readex Pro',Inter,sans-serif;letter-spacing:-.01em}
+html.v2 .card.tap{transition:transform .15s}
+html.v2 .card.tap:active{transform:scale(.985)}
+
+/* أزرار */
+html.v2 .btn{border-radius:16px}
+html.v2 .btn-g{background:rgba(255,255,255,.06);border-color:var(--line)}
+html.v2 .tag,html.v2 .chip{border-radius:99px}
+
+@media (prefers-reduced-motion:no-preference){
+  html.v2 .card,html.v2 .h2-card,html.v2 .h2-list,html.v2 .ev2-p{animation:v2in .4s cubic-bezier(.2,.8,.2,1) both}
+}
+@keyframes v2in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
