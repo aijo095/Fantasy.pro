@@ -29,6 +29,7 @@ async function gather(gw) {
     pts, avg: ev.avg, top: ev.top, rank: h.overall_rank, rankPrev: hp?.overall_rank, gwRank: h.rank, total: h.total_points,
     cap: cap ? { name: cap.name, pts: capRow.pts * Math.max(1, capRow.m), mult: capRow.m } : null,
     best: best ? { name: PM(best.id)?.name, pts: best.pts * Math.max(1, best.m) } : null,
+    region: (() => { const en = ST.E.entry || {}, rn = en.player_region_name; const l = (en.leagues?.classic || []).find((x) => x.league_type === 's' && rn && x.name === rn); return l ? { name: rn === 'Iraq' ? 'العراق' : rn, rank: l.entry_rank } : null; })(),
     chip: picks.active_chip, hit: h.event_transfers_cost || 0, bench: h.points_on_bench, live: gw === G.cur && !ev.fin,
     squad: calc.rows.map((r) => ({ id: r.id, name: PM(r.id)?.name || '', pos: PM(r.id)?.pos, team: tShort(PM(r.id)?.team), slot: r.pos, pts: r.m ? r.pts * r.m : r.pts, counted: r.m > 0, cap: r.cap, vc: r.vc, m: r.m, subIn: r.subIn, subOut: r.subOut, best: best && r.id === best.id })),
   };
@@ -63,55 +64,82 @@ async function player(c, p, x, y, sz, dim) {
   if (p.subIn) badge('↑', x - sz / 2 + 8, '#34D399', '#052E1C'); if (p.subOut) badge('↓', x - sz / 2 + 8, '#F87171', '#2A0606');
   if (p.best && !p.cap) badge('★', x - sz / 2 + 8, '#34D399', '#052E1C');
 }
+// صيغة عربية للعدد ويا كلمة نقطة
+const nq = (n) => (n === 1 ? 'نقطة وحدة' : n === 2 ? 'نقطتين' : n >= 3 && n <= 10 ? `${n} نقاط` : `${n} نقطة`);
+// نص مختلط (عربي + إنكليزي) بالكانفس: كل قطعة تنرسم باتجاهها حتى ما تتلخبط الأقواس
+function mixed(c, segs, xRight, y) { let x = xRight; segs.forEach(([t, font, col, dir]) => { c.font = font; c.direction = dir || 'rtl'; c.textAlign = 'right'; if (dir === 'ltr') { c.textAlign = 'left'; const w = c.measureText(t).width; c.fillStyle = col; c.fillText(t, x - w, y); x -= w; } else { c.fillStyle = col; c.fillText(t, x, y); x -= c.measureText(t).width; } }); c.direction = 'rtl'; }
+const segW = (c, segs) => segs.reduce((a, [t, font]) => { c.font = font; return a + c.measureText(t).width; }, 0);
 async function draw(d) {
   try { await Promise.all([document.fonts.load(`700 60px ${AR}`), document.fonts.load(`800 60px ${EN}`), document.fonts.load(`500 30px ${AR}`), document.fonts.load(`600 25px ${EN}`)]); } catch {}
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'); c.direction = 'rtl';
-  // الخلفية
-  const g = c.createRadialGradient(W / 2, 200, 60, W / 2, 700, 1500); g.addColorStop(0, '#174A39'); g.addColorStop(0.45, '#0E2420'); g.addColorStop(1, '#090C13');
-  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  // الخلفية: تدرج عميق + توهجين ناعمين
+  c.fillStyle = '#080B12'; c.fillRect(0, 0, W, H);
+  const g1 = c.createRadialGradient(W * 0.85, 120, 0, W * 0.85, 120, 900); g1.addColorStop(0, 'rgba(52,211,153,.30)'); g1.addColorStop(1, 'rgba(52,211,153,0)'); c.fillStyle = g1; c.fillRect(0, 0, W, H);
+  const g2 = c.createRadialGradient(W * 0.1, 520, 0, W * 0.1, 520, 800); g2.addColorStop(0, 'rgba(139,124,255,.20)'); g2.addColorStop(1, 'rgba(139,124,255,0)'); c.fillStyle = g2; c.fillRect(0, 0, W, H);
   // الهيدر
   c.textAlign = 'right'; c.fillStyle = '#34D399'; c.font = `700 36px ${AR}`; c.fillText('فانتازي برو', W - 64, 92);
   c.fillStyle = 'rgba(255,255,255,.55)'; c.font = `500 28px ${AR}`; c.fillText(d.live ? `الجولة ${d.gw} · مباشر` : `الجولة ${d.gw}`, W - 64, 136);
-  c.textAlign = 'left'; c.fillStyle = '#FBBF24'; c.font = `800 34px ${EN}`; c.fillText('GW' + d.gw, 64, 96);
-  if (d.mgr) { c.fillStyle = 'rgba(255,255,255,.5)'; c.font = `500 26px ${AR}`; c.fillText(d.mgr, 64, 136); }
-  // اسم الفريق + النقاط
-  c.textAlign = 'center'; c.fillStyle = '#fff'; c.font = `700 52px ${AR}`; c.fillText(d.team, W / 2, 228);
-  const pg = c.createLinearGradient(0, 250, 0, 430); pg.addColorStop(0, '#7CF5C4'); pg.addColorStop(1, '#10B981');
-  c.fillStyle = pg; c.font = `800 176px ${EN}`; c.fillText(String(d.pts ?? '—'), W / 2, 420);
-  c.font = `600 30px ${AR}`; const sub = d.avg != null ? `نقطة · ${d.pts - d.avg >= 0 ? '+' : ''}${d.pts - d.avg} عن المعدل (${d.avg})` : 'نقطة';
-  c.fillStyle = d.avg != null && d.pts < d.avg ? '#F87171' : 'rgba(255,255,255,.75)'; c.fillText(sub, W / 2, 470);
-  // الإحصائيات
-  const stats = [['الترتيب العام', fmt(d.rank), d.rankPrev && d.rank ? (d.rank < d.rankPrev ? '▲' : d.rank > d.rankPrev ? '▼' : '') : '', d.rank < d.rankPrev ? '#34D399' : '#F87171'], ['ترتيب الجولة', fmt(d.gwRank), '', ''], ['أعلى نقاط', fmt(d.top), '', '']];
-  stats.forEach(([l, v, ar, col], i) => { const bw = 306, x = W - 64 - bw - i * (bw + 18), y = 505; rr(c, x, y, bw, 124, 24); c.fillStyle = 'rgba(255,255,255,.06)'; c.fill();
-    c.textAlign = 'center'; c.fillStyle = 'rgba(255,255,255,.55)'; c.font = `500 24px ${AR}`; c.fillText(l, x + bw / 2, y + 42); c.fillStyle = '#fff'; c.font = `800 42px ${EN}`; c.fillText(v, x + bw / 2, y + 96);
-    if (ar) { c.fillStyle = col; c.font = `800 26px ${EN}`; c.fillText(ar, x + bw / 2 + c.measureText(v).width / 2 + 44, y + 93); } });
+  // شارة GW
+  c.font = `800 30px ${EN}`; const gwT = 'GW' + d.gw, gwW = c.measureText(gwT).width + 40; rr(c, 64, 58, gwW, 52, 26); c.fillStyle = 'rgba(251,191,36,.14)'; c.fill(); c.strokeStyle = 'rgba(251,191,36,.45)'; c.lineWidth = 2; c.stroke();
+  c.textAlign = 'center'; c.fillStyle = '#FBBF24'; c.fillText(gwT, 64 + gwW / 2, 95);
+  if (d.mgr) { c.textAlign = 'left'; c.fillStyle = 'rgba(255,255,255,.5)'; c.font = `500 26px ${EN}`; c.fillText(d.mgr, 66, 146); }
+  // اسم الفريق
+  c.textAlign = 'center'; c.fillStyle = '#fff'; c.font = `700 50px ${AR}`; c.fillText(d.team, W / 2, 222);
+  // النقاط ويا هالة خلفها
+  const halo = c.createRadialGradient(W / 2, 350, 10, W / 2, 350, 230); halo.addColorStop(0, 'rgba(52,211,153,.22)'); halo.addColorStop(1, 'rgba(52,211,153,0)'); c.fillStyle = halo; c.fillRect(W / 2 - 260, 120, 520, 460);
+  const pg = c.createLinearGradient(0, 250, 0, 420); pg.addColorStop(0, '#A7F3D0'); pg.addColorStop(1, '#10B981');
+  c.fillStyle = pg; c.font = `800 168px ${EN}`; c.fillText(String(d.pts ?? '—'), W / 2, 408);
+  // سطر المقارنة بالمعدل (كبسولة)
+  if (d.avg != null) {
+    const df = d.pts - d.avg, up = df > 0, eq = df === 0;
+    const txt = eq ? `نفس معدل الجولة (${d.avg})` : `${up ? 'أعلى' : 'أقل'} من المعدل بـ ${nq(Math.abs(df))}  ·  المعدل ${d.avg}`;
+    c.font = `600 28px ${AR}`; const tw = c.measureText(txt).width + 56; rr(c, W / 2 - tw / 2, 432, tw, 52, 26);
+    c.fillStyle = eq ? 'rgba(255,255,255,.08)' : up ? 'rgba(52,211,153,.14)' : 'rgba(248,113,113,.14)'; c.fill();
+    c.fillStyle = eq ? 'rgba(255,255,255,.8)' : up ? '#6EE7B7' : '#FCA5A5'; c.textAlign = 'center'; c.fillText(txt, W / 2, 468);
+  } else { c.font = `600 28px ${AR}`; c.fillStyle = 'rgba(255,255,255,.7)'; c.fillText('نقطة', W / 2, 468); }
+  // الإحصائيات: 4 مربعات متساوية
+  const arrow = d.rankPrev && d.rank ? (d.rank < d.rankPrev ? ['▲', '#34D399'] : d.rank > d.rankPrev ? ['▼', '#F87171'] : null) : null;
+  const stats = [['الترتيب العام', fmt(d.rank), arrow], d.region ? [`ترتيب ${d.region.name}`, fmt(d.region.rank), null] : null, ['ترتيب الجولة', fmt(d.gwRank), null], ['أعلى نقاط', fmt(d.top), null]].filter(Boolean);
+  const sg = 14, sw = (W - 128 - sg * (stats.length - 1)) / stats.length, sy = 512, sh = 118;
+  stats.forEach(([l, v, ar], i) => { const x = W - 64 - sw - i * (sw + sg);
+    rr(c, x, sy, sw, sh, 22); c.fillStyle = 'rgba(255,255,255,.06)'; c.fill(); c.strokeStyle = 'rgba(255,255,255,.08)'; c.lineWidth = 2; c.stroke();
+    c.textAlign = 'center'; c.fillStyle = 'rgba(255,255,255,.55)'; c.font = `500 22px ${AR}`; c.fillText(l, x + sw / 2, sy + 40);
+    let fs = stats.length > 3 ? 36 : 42; c.font = `800 ${fs}px ${EN}`; while (c.measureText(v).width > sw - (ar ? 50 : 24) && fs > 24) { fs -= 2; c.font = `800 ${fs}px ${EN}`; }
+    const vw = c.measureText(v).width; c.fillStyle = '#fff'; c.fillText(v, x + sw / 2 - (ar ? 12 : 0), sy + 90);
+    if (ar) { c.fillStyle = ar[1]; c.font = `800 22px ${EN}`; c.fillText(ar[0], x + sw / 2 - 12 + vw / 2 + 18, sy + 88); } });
   // الملعب
-  const px = 40, py = 660, pw = W - 80, ph = 900;
-  rr(c, px, py, pw, ph, 34); const fg = c.createLinearGradient(0, py, 0, py + ph); fg.addColorStop(0, '#15803D'); fg.addColorStop(1, '#166534'); c.fillStyle = fg; c.fill();
+  const px = 40, py = 652, pw = W - 80, ph = 930;
+  rr(c, px, py, pw, ph, 34); const fg = c.createLinearGradient(0, py, 0, py + ph); fg.addColorStop(0, '#178A45'); fg.addColorStop(1, '#125E33'); c.fillStyle = fg; c.fill();
   c.save(); rr(c, px, py, pw, ph, 34); c.clip();
-  for (let i = 0; i < 9; i++) { if (i % 2) { c.fillStyle = 'rgba(255,255,255,.035)'; c.fillRect(px, py + (ph / 9) * i, pw, ph / 9); } }
-  c.strokeStyle = 'rgba(255,255,255,.22)'; c.lineWidth = 4; c.strokeRect(px + 40, py + 30, pw - 80, ph - 60);
-  c.strokeRect(W / 2 - 200, py + 30, 400, 150); c.strokeRect(W / 2 - 95, py + 30, 190, 60);
-  c.beginPath(); c.moveTo(px + 40, py + ph - 30); c.lineTo(px + pw - 40, py + ph - 30); c.stroke();
-  c.beginPath(); c.arc(W / 2, py + ph - 30, 130, Math.PI, 0); c.stroke();
+  for (let i = 0; i < 10; i++) { if (i % 2) { c.fillStyle = 'rgba(255,255,255,.04)'; c.fillRect(px, py + (ph / 10) * i, pw, ph / 10); } }
+  const vg = c.createRadialGradient(W / 2, py + ph / 2, ph * 0.3, W / 2, py + ph / 2, ph * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.28)'); c.fillStyle = vg; c.fillRect(px, py, pw, ph);
+  c.strokeStyle = 'rgba(255,255,255,.2)'; c.lineWidth = 4; c.strokeRect(px + 36, py + 28, pw - 72, ph - 56);
+  c.strokeRect(W / 2 - 200, py + 28, 400, 150); c.strokeRect(W / 2 - 95, py + 28, 190, 60);
+  c.beginPath(); c.moveTo(px + 36, py + ph - 28); c.lineTo(px + pw - 36, py + ph - 28); c.stroke();
+  c.beginPath(); c.arc(W / 2, py + ph - 28, 130, Math.PI, 0); c.stroke();
   c.restore();
+  c.strokeStyle = 'rgba(255,255,255,.10)'; c.lineWidth = 2; rr(c, px, py, pw, ph, 34); c.stroke();
   const xi = d.squad.filter((p) => p.slot <= 11), bench = d.squad.filter((p) => p.slot > 11);
   const lines = ['GK', 'DEF', 'MID', 'FWD'].map((pos) => xi.filter((p) => p.pos === pos)).filter((l) => l.length);
-  const sz = 132, rowH = (ph - 60) / lines.length;
+  // مسافات متساوية بين الخطوط: كل لاعب (تيشيرت + اسم + نقاط) ارتفاعه ثابت
+  const sz = 118, blockH = sz + 84, inner = ph - 56, rowH = inner / lines.length;
   for (let li = 0; li < lines.length; li++) {
-    const L = lines[li], cy = py + 30 + rowH * li + rowH / 2 - 40, gap = Math.min(200, (pw - 60) / L.length);
+    const L = lines[li], top = py + 28 + rowH * li + (rowH - blockH) / 2, cy = top + sz / 2, gap = Math.min(196, (pw - 80) / L.length);
     for (let k = 0; k < L.length; k++) { const cx = W / 2 + (k - (L.length - 1) / 2) * gap * -1; await player(c, L[k], cx, cy, sz, L[k].subOut); }
   }
   // الدكة
-  const by = 1590, bh = 240; rr(c, px, by, pw, bh, 28); c.fillStyle = 'rgba(255,255,255,.06)'; c.fill();
-  c.textAlign = 'right'; c.fillStyle = 'rgba(255,255,255,.55)'; c.font = `600 24px ${AR}`; c.fillText(`الدكة${d.bench != null ? ` · ${d.bench} نقطة` : ''}`, W - 70, by + 40);
+  const by = 1594, bh = 242; rr(c, px, by, pw, bh, 28); c.fillStyle = 'rgba(255,255,255,.05)'; c.fill(); c.strokeStyle = 'rgba(255,255,255,.08)'; c.lineWidth = 2; c.stroke();
+  c.textAlign = 'right'; c.fillStyle = 'rgba(255,255,255,.55)'; c.font = `600 24px ${AR}`; c.fillText(`الدكة${d.bench != null ? ` · ${nq(d.bench)}` : ''}`, W - 70, by + 38);
   const bgap = (pw - 40) / Math.max(1, bench.length);
-  for (let k = 0; k < bench.length; k++) { const cx = W - px - 20 - bgap * (k + 0.5); await player(c, bench[k], cx, by + 104, 104, !bench[k].subIn && d.chip !== 'bboost'); }
-  // التذييل
-  const tags = []; if (d.chip) tags.push([CHIP[d.chip] || d.chip, '#A78BFA']); if (d.hit) tags.push([`خصم −${d.hit}`, '#F87171']); if (d.cap) tags.push([`الكابتن: ${d.cap.name} (${d.cap.pts})`, '#FBBF24']);
-  c.font = `600 26px ${AR}`; let tw = tags.reduce((a, [t]) => a + c.measureText(t).width + 60, -14), tx = W / 2 + tw / 2; c.textAlign = 'right';
-  tags.forEach(([txt, col]) => { const w = c.measureText(txt).width + 46; rr(c, tx - w, 1846, w, 50, 25); c.fillStyle = 'rgba(255,255,255,.08)'; c.fill(); c.fillStyle = col; c.fillText(txt, tx - 23, 1880); tx -= w + 14; });
-  if (!tags.length) { c.textAlign = 'center'; c.fillStyle = 'rgba(255,255,255,.35)'; c.font = `500 24px ${EN}`; c.fillText('fantasy-pro-aijo0.vercel.app', W / 2, 1880); }
+  for (let k = 0; k < bench.length; k++) { const cx = W - px - 20 - bgap * (k + 0.5); await player(c, bench[k], cx, by + 104, 92, !bench[k].subIn && d.chip !== 'bboost'); }
+  // التذييل: كبسولات (الكابتن، الشب، الخصم) — كل قطعة بالاتجاه الصح
+  const tags = [];
+  if (d.cap) tags.push({ col: '#FBBF24', segs: [['الكابتن: ', `600 26px ${AR}`, '#FBBF24'], [`${d.cap.name} (${d.cap.pts})`, `700 26px ${EN}`, '#FBBF24', 'ltr']] });
+  if (d.chip) tags.push({ segs: [[CHIP[d.chip] || d.chip, `600 26px ${AR}`, '#C4B5FD']] });
+  if (d.hit) tags.push({ segs: [['خصم ', `600 26px ${AR}`, '#FCA5A5'], [`−${d.hit}`, `700 26px ${EN}`, '#FCA5A5', 'ltr']] });
+  const ty = 1842; let total = tags.reduce((a, t) => a + segW(c, t.segs) + 48, 0) + 14 * Math.max(0, tags.length - 1), tx = W / 2 + total / 2;
+  tags.forEach((t) => { const w = segW(c, t.segs) + 48; rr(c, tx - w, ty, w, 50, 25); c.fillStyle = 'rgba(255,255,255,.08)'; c.fill(); mixed(c, t.segs, tx - 24, ty + 34); tx -= w + 14; });
+  c.textAlign = 'center'; c.direction = 'ltr'; c.fillStyle = 'rgba(255,255,255,.28)'; c.font = `500 20px ${EN}`; c.fillText('fantasy-pro-aijo0.vercel.app', W / 2, tags.length ? 1910 : 1880); c.direction = 'rtl';
   return cv;
 }
 
