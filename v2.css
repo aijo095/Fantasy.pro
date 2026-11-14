@@ -2,7 +2,7 @@
    التصميم الجديد (v2) — واجهات فقط، نفس الأقسام والميزات
    مستلهم من Apple Sports / Revolut / FotMob:
    خلفية بتوهجات ناعمة، بطاقات زجاجية مدورة، أبطال بتدرجات
-   متعددة الألوان، تبويبات بكبسولة بيضاء، خط Readex Pro.
+   متعددة الألوان، تبويبات بكبسولة بيضاء، الخط نفسه ما تغير.
    شريط التنقل السفلي ما يتغير.
 ========================================================= */
 html.v2{
@@ -14,8 +14,6 @@ html.v2{
   --sh:none;
   --v2v:139,124,255;--v2c:255,122,107;--v2b:92,200,255;
 }
-html.v2,html.v2 body{font-family:'Readex Pro','IBM Plex Sans Arabic',system-ui,sans-serif}
-html.v2 .num,html.v2 .v,html.v2 .score,html.v2 .big{font-family:'Readex Pro',var(--num)}
 html.v2 body::before{background:
   radial-gradient(460px 340px at 92% -4%,rgba(var(--acc-rgb),.17),transparent 70%),
   radial-gradient(420px 320px at -12% 26%,rgba(var(--v2v),.14),transparent 70%)}
@@ -41,19 +39,19 @@ html.v2 .h2-hero::before,html.v2 .team-hero::before,html.v2 .hero::before,html.v
 html.v2 .h2-hero::after,html.v2 .team-hero::after,html.v2 .hero::after,html.v2 .stadium::after{
   content:""!important;position:absolute!important;inset:0!important;width:auto!important;height:auto!important;border-radius:inherit!important;animation:none!important;
   background:radial-gradient(180px 180px at 78% 28%,rgba(255,255,255,.07),transparent 70%)!important;pointer-events:none}
-html.v2 .h2-pts b{font-size:64px;font-weight:600;letter-spacing:-.04em;font-family:'Readex Pro',Inter,sans-serif}
+html.v2 .h2-pts b{font-size:64px;font-weight:600;letter-spacing:-.04em;font-family:Inter,sans-serif}
 html.v2 .h2-live,html.v2 .livebadge{border-radius:99px}
 html.v2 .h2-acts button{border-radius:99px;background:rgba(255,255,255,.10)}
 /* إحصائيات الهيرو: مربعات زجاجية صغيرة */
 html.v2 .h2-stats{gap:8px;border-top:0;padding-top:0;margin-top:14px}
 html.v2 .h2-st{padding:9px 4px;border-radius:16px;background:rgba(255,255,255,.08)}
 html.v2 .h2-st+.h2-st{border:0}
-html.v2 .h2-st b{font:600 17px 'Readex Pro',Inter,sans-serif}
+html.v2 .h2-st b{font:600 17px Inter,sans-serif}
 html.v2 .live-side>div{background:rgba(255,255,255,.08)!important;border:0!important;border-radius:16px!important}
-html.v2 .live-side b{font-family:'Readex Pro',var(--num);font-weight:600}
+html.v2 .live-side b{font-family:var(--num);font-weight:600}
 /* العد التنازلي */
 html.v2 .h2 .cd.h2-cd>div,html.v2 .cd div{background:rgba(255,255,255,.07);border:0;border-radius:12px;box-shadow:none}
-html.v2 .h2 .cd.h2-cd b,html.v2 .cd b{font-family:'Readex Pro',Inter,sans-serif;font-weight:600}
+html.v2 .h2 .cd.h2-cd b,html.v2 .cd b{font-family:Inter,sans-serif;font-weight:600}
 html.v2 .h2-dl{border-radius:22px}
 /* خطوتك الجاية */
 html.v2 .h2-ic{border-radius:13px!important}
@@ -78,13 +76,13 @@ html.v2 .pu2-vs{gap:0;border-radius:22px;overflow:hidden;margin-top:12px;border:
 html.v2 .pu2-s{padding:14px 6px 12px}
 html.v2 .pu2-s.me{background:radial-gradient(100% 90% at 70% 0%,rgba(var(--acc-rgb),.30),transparent 70%),rgba(12,26,22,.85)}
 html.v2 .pu2-s.rv{background:radial-gradient(100% 90% at 30% 0%,rgba(var(--v2c),.26),transparent 70%),rgba(26,15,18,.85)}
-html.v2 .pu2-s b{font:600 40px/1.05 'Readex Pro',Inter,sans-serif}
+html.v2 .pu2-s b{font:600 40px/1.05 Inter,sans-serif}
 html.v2 .pu2-mid{align-self:stretch;border-radius:0;background:rgba(7,8,15,.85)}
 html.v2 .pu2-tug{height:8px!important;border-radius:99px}
 html.v2 .pu2-rank{border-radius:18px;background:rgba(255,255,255,.07)}
 
 /* ===== المباشر ===== */
-html.v2 .fx-card .mid b{font:600 22px 'Readex Pro',Inter,sans-serif;letter-spacing:-.01em}
+html.v2 .fx-card .mid b{font:600 22px Inter,sans-serif;letter-spacing:-.01em}
 html.v2 .card.tap{transition:transform .15s}
 html.v2 .card.tap:active{transform:scale(.985)}
 
@@ -97,3 +95,19 @@ html.v2 .tag,html.v2 .chip{border-radius:99px}
   html.v2 .card,html.v2 .h2-card,html.v2 .h2-list,html.v2 .ev2-p{animation:v2in .4s cubic-bezier(.2,.8,.2,1) both}
 }
 @keyframes v2in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ===== أحجام متناسقة (أصغر) للبطاقات الكبيرة ===== */
+html.v2 .h2-hero,html.v2 .team-hero,html.v2 .stadium,html.v2 .hero{padding:14px 16px!important;border-radius:24px!important}
+html.v2 .h2-pts b{font-size:48px}
+html.v2 .team-hero .big-num{font-size:40px!important}
+html.v2 .stadium .score,html.v2 .stadium .big-num{font-size:40px!important}
+html.v2 .h2-stats,html.v2 .tstrip,html.v2 .live-side{gap:6px!important;margin-top:10px}
+html.v2 .h2-st,html.v2 .live-side>div,html.v2 .tstrip>div{padding:7px 4px!important;border-radius:14px!important;background:rgba(255,255,255,.08)!important;border:0!important}
+html.v2 .h2-st b,html.v2 .live-side b,html.v2 .tstrip b{font-size:15px!important;line-height:1.25}
+html.v2 .h2-st small,html.v2 .live-side small,html.v2 .tstrip small{font-size:10.5px!important}
+html.v2 .live-side em{font-size:10.5px}
+html.v2 .team-hero .score-ring{transform:scale(.85);transform-origin:center}
+html.v2 .pu2-s b{font-size:34px}
+html.v2 .pu2-s{padding:10px 6px}
+html.v2 .tabs2{margin-bottom:12px}
+html.v2 .tstrip{background:none!important;overflow:visible}
