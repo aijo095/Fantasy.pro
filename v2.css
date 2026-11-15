@@ -153,3 +153,7 @@ html.v2 .tstrip{background:none!important;overflow:visible}
 @media (min-width:1300px){
   html .ev2{grid-template-columns:repeat(3,1fr)}
 }
+
+/* جدول المصفوفة: عمود النادي الثابت لازم يكون معتم حتى ما تبين المباريات تحته وقت السحب */
+html .mx td.tn,html .mx th:first-child{position:sticky;left:0;z-index:3;background:#12141C!important;
+  box-shadow:4px 0 0 #12141C,10px 0 12px -6px rgba(0,0,0,.65)}
