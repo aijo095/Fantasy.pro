@@ -144,7 +144,7 @@ function hero2(my, rc, rv, diff, R, f, gw) {
     <div class="pz-st ${diff > 0 ? 'up' : diff < 0 ? 'down' : ''}">${status}</div>
     <div class="pz-bar"><span class="num">${pct}%</span><div><i style="width:${pct}%"></i></div><span class="num">${100 - pct}%</span></div>
     ${A && B ? `<div class="pz-cmp">${cmp(tt('الكابتن', 'Captain'), A.cap, B.cap, `${esc(A.capN)} · ${esc(B.capN)}`)}${cmp(tt('باقين يلعبون', 'Yet to play'), A.left, B.left)}${cmp(tt('البونص', 'Bonus'), A.bonus, B.bonus)}</div>` : ''}
-    ${R ? `<div class="pz-rank"><div><small>${tt('ترتيبك التقديري الآن', 'Live rank (est.)')}</small><b class="num">${fmt(R.rank)}</b>${R.move ? `<em class="${R.move > 0 ? 'up' : 'down'}">${R.move > 0 ? '▲' : '▼'} ${fmt(Math.abs(R.move))}</em>` : ''}</div>${f.rk.length > 2 ? spark(f.rk) : ''}</div>` : ''}`;
+    `;
 }
 function spark(rk) {
   if (rk.length < 2) return '';
