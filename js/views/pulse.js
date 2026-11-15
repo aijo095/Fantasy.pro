@@ -122,18 +122,29 @@ function bpsRank(id) {
 }
 /* الهيرو المرتب : أنت ومنافسك بنفس الحجم والمكان */
 const PH2 = () => true; // صار للكل
-function hero2(my, rc, rv, diff, R, f) {
+function hero2(my, rc, rv, diff, R, f, gw) {
   const meN = ST.profile?.teamName || ST.E?.entry?.name || tt('أنت', 'You'), rvN = rv ? rv.name : tt('منافسك', 'Rival');
   const a = my.total, b = rc ? rc.total : null, lead = b == null ? 0 : Math.sign(a - b);
   const pct = b == null || a + b <= 0 ? 50 : Math.round((a / (a + b)) * 100);
-  const side = (cls, who, nm, v, win) => `<div class="pu2-s ${cls} ${win > 0 ? 'win' : win < 0 ? 'lose' : ''}"><span class="pu2-av">${esc((nm || '?').trim()[0] || '?').toUpperCase()}</span><small>${who}</small><span class="pu2-nm">${esc(nm)}</span><b class="num">${v ?? '…'}</b></div>`;
-  return `<div class="pu2-vs">
-      ${side('me', tt('أنت', 'You'), meN, a, lead)}
-      <div class="pu2-mid">${diff == null ? '<span>—</span>' : `<span class="${diff > 0 ? 'up' : diff < 0 ? 'down' : ''}" dir="ltr">${diff > 0 ? '+' : ''}${diff}</span>`}<small>${diff == null ? 'VS' : diff > 0 ? tt('متقدم', 'ahead') : diff < 0 ? tt('متأخر', 'behind') : tt('تعادل', 'level')}</small></div>
-      ${side('rv', tt('منافسك', 'Rival'), rvN, b, -lead)}
+  const ini = (n) => esc((n || '?').trim()[0] || '?').toUpperCase();
+  // أرقام المقارنة: الكابتن، اللي باقين يلعبون، البونص
+  const done = (team) => { const fx = (ST.G.fx[gw] || []).filter((x) => x.h === team || x.a === team); return !fx.length || fx.every((x) => x.fin); };
+  const stat = (c) => { if (!c) return null; const on = c.rows.filter((r) => r.m > 0); const cap = c.rows.find((r) => r.m >= 2);
+    return { cap: cap ? cap.pts * cap.m : 0, capN: cap ? PM(cap.id)?.name : '—', left: on.filter((r) => r.min === 0 && !done(PM(r.id)?.team)).length, bonus: on.reduce((x, r) => x + (r.bonus || 0) * r.m, 0) }; };
+  const A = stat(my), B = stat(rc);
+  const team = (cls, who, nm, win) => `<div class="pz-team ${cls}${win > 0 ? ' win' : ''}"><span class="pz-av">${ini(nm)}</span><b class="pz-nm">${esc(nm)}</b><small>${who}</small></div>`;
+  const status = diff == null ? tt('اختار منافس', 'Pick a rival') : diff > 0 ? tt(`متقدم بـ ${diff}`, `Ahead by ${diff}`) : diff < 0 ? tt(`متأخر بـ ${-diff}`, `Behind by ${-diff}`) : tt('تعادل', 'Level');
+  const cmp = (lbl, x, y, sub) => { const px = x + y > 0 ? Math.round((x / (x + y)) * 100) : 50, z = x + y === 0;
+    return `<div class="pz-row"><b class="num ${x > y ? 'hi' : ''}">${x}</b><div class="pz-mid"><span>${lbl}</span><div class="pz-mini${z ? ' z' : ''}"><i class="m" style="width:${px}%"></i><i class="r" style="width:${100 - px}%"></i></div>${sub ? `<small>${sub}</small>` : ''}</div><b class="num ${y > x ? 'hi rv' : ''}">${y}</b></div>`; };
+  return `<div class="pz">
+      ${team('me', tt('أنت', 'You'), meN, lead)}
+      <div class="pz-sb"><b class="num ${lead > 0 ? 'w' : ''}">${a ?? '…'}</b><i></i><b class="num ${lead < 0 ? 'w rv' : ''}">${b ?? '…'}</b></div>
+      ${team('rv', tt('منافسك', 'Rival'), rvN, -lead)}
     </div>
-    <div class="pu2-tug" style="--p:${pct}%"><i></i></div>
-    ${R ? `<div class="pu2-rank"><div class="pu2-rk"><small>${tt('ترتيبك التقديري الآن', 'Live rank (est.)')}</small><b class="num">${fmt(R.rank)}</b></div>${R.move ? `<em class="${R.move > 0 ? 'up' : 'down'}">${R.move > 0 ? '▲' : '▼'} ${fmt(Math.abs(R.move))}</em>` : ''}</div>${f.rk.length > 2 ? spark(f.rk) : ''}` : ''}`;
+    <div class="pz-st ${diff > 0 ? 'up' : diff < 0 ? 'down' : ''}">${status}</div>
+    <div class="pz-bar"><span class="num">${pct}%</span><div><i style="width:${pct}%"></i></div><span class="num">${100 - pct}%</span></div>
+    ${A && B ? `<div class="pz-cmp">${cmp(tt('الكابتن', 'Captain'), A.cap, B.cap, `${esc(A.capN)} · ${esc(B.capN)}`)}${cmp(tt('باقين يلعبون', 'Yet to play'), A.left, B.left)}${cmp(tt('البونص', 'Bonus'), A.bonus, B.bonus)}</div>` : ''}
+    ${R ? `<div class="pz-rank"><div><small>${tt('ترتيبك التقديري الآن', 'Live rank (est.)')}</small><b class="num">${fmt(R.rank)}</b>${R.move ? `<em class="${R.move > 0 ? 'up' : 'down'}">${R.move > 0 ? '▲' : '▼'} ${fmt(Math.abs(R.move))}</em>` : ''}</div>${f.rk.length > 2 ? spark(f.rk) : ''}</div>` : ''}`;
 }
 function spark(rk) {
   if (rk.length < 2) return '';
@@ -269,7 +280,7 @@ export function vPulse() {
   const heroOld = () => `<div class="pu-vs"><div class="me"><small>${tt('أنت', 'You')}</small><b class="big-num num">${my.total}</b></div><div class="mid">${diff == null ? '—' : `<span class="${diff > 0 ? 'up' : diff < 0 ? 'down' : ''}" dir="ltr">${diff > 0 ? '+' : ''}${diff}</span>`}<small>${diff == null ? '' : diff > 0 ? tt('متقدم', 'ahead') : diff < 0 ? tt('متأخر', 'behind') : tt('تعادل', 'level')}</small></div><div class="rv"><small>${rv ? esc(rv.name) : tt('منافسك', 'Rival')}</small><b class="num">${rc ? rc.total : '…'}</b></div></div>
     ${R ? `<div class="pu-rank"><div><small>${tt('ترتيبك التقديري الآن', 'Live rank (est.)')}</small><b class="num">${fmt(R.rank)}</b><em class="${R.move > 0 ? 'up' : R.move < 0 ? 'down' : ''}">${R.move ? `${R.move > 0 ? '▲' : '▼'} ${fmt(Math.abs(R.move))}` : ''}</em></div>${spark(f.rk)}</div>` : ''}`;
   const hero = `<section class="hero pu-hero"><div class="pu-top"><span class="mut" style="font-size:12.5px">${tt('نبض الجولة', 'GW pulse')} ${gw}</span>${anyLive ? `<span class="livebadge">${tt('مباشر', 'Live')}</span>` : ev?.fin ? `<span class="tag">${tt('خلصت', 'Done')}</span>` : ''}</div>
-    ${PH2() ? hero2(my, rc, rv, diff, R, f) : heroOld()}</section>`;
+    ${PH2() ? hero2(my, rc, rv, diff, R, f, gw) : heroOld()}</section>`;
   // اختيار المنافس
   const chips = RV.list?.length ? `<div class="seg pu-rv">${RV.list.map((x) => `<button class="${x.entry === RV.sel ? 'on' : ''}" onclick="puRv(${x.entry})">${esc(x.name)}<small>${esc(x.why)}</small></button>`).join('')}</div>` : RV.list ? '' : `<div class="aiload" style="padding:8px"><i></i><i></i><i></i></div>`;
   // الأحداث المباشرة: لاعبينك + لاعبين خصمك اللي ما عندك

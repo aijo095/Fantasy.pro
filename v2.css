@@ -161,27 +161,51 @@ html .mx td.tn,html .mx th:first-child{position:sticky;left:0;z-index:3;backgrou
 html .scroll-x:has(>.mx){overscroll-behavior-x:none}
 html .mx td.tn{clip-path:inset(-2px -30px -2px -12px)}
 
-/* ===== بطاقة نبض الجولة: خلفية هادئة احترافية وتناسق الأحجام ===== */
-html.v2 .hero.pu-hero{padding:16px!important;
-  background:radial-gradient(120% 70% at 85% -10%,rgba(var(--acc-rgb),.16),transparent 60%),linear-gradient(180deg,#121826,#0A0E17)!important;
-  border:1px solid rgba(255,255,255,.08)!important;box-shadow:0 24px 48px -30px rgba(0,0,0,.9)!important}
-html.v2 .hero.pu-hero::after{background:none!important}
-html.v2 .pu2-vs{grid-template-columns:1fr auto 1fr;gap:8px;border:0;border-radius:0;overflow:visible;margin-top:12px;align-items:stretch}
-html.v2 .pu2-s{padding:14px 8px 12px!important;border-radius:20px;gap:4px;justify-content:center}
-html.v2 .pu2-s.me{background:linear-gradient(180deg,rgba(var(--acc-rgb),.14),rgba(var(--acc-rgb),.03))!important;box-shadow:inset 0 0 0 1px rgba(var(--acc-rgb),.22)}
-html.v2 .pu2-s.rv{background:linear-gradient(180deg,rgba(248,113,113,.13),rgba(248,113,113,.03))!important;box-shadow:inset 0 0 0 1px rgba(248,113,113,.2)}
-html.v2 .pu2-av{width:36px;height:36px;font-size:15px}
-html.v2 .pu2-s.rv .pu2-av{background:linear-gradient(145deg,#F87171,#B91C1C);color:#fff}
-html.v2 .pu2-s b{font:700 38px/1.05 Inter,sans-serif!important;margin-top:4px}
-html.v2 .pu2-s.me.win b{color:var(--acc);text-shadow:none}
-html.v2 .pu2-s.rv.win b{color:#FCA5A5;text-shadow:none}
-html.v2 .pu2-s.lose b{color:rgba(255,255,255,.78)}
-html.v2 .pu2-mid{align-self:center;width:60px;height:60px;min-width:0;padding:0;border-radius:50%!important;background:#0A0E17!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 8px 20px -10px #000}
-html.v2 .pu2-mid span{font-size:17px}
-html.v2 .pu2-mid small{font-size:10px;margin-top:3px}
-html.v2 .pu2-tug{height:6px!important;margin:14px 4px 0;background:rgba(248,113,113,.38)}
-html.v2 .pu2-tug i{background:linear-gradient(90deg,var(--acc),#22D3EE);box-shadow:none}
-html.v2 .pu2-tug::after{top:-3px;bottom:-3px;background:rgba(255,255,255,.7)}
-html.v2 .pu2-rank{margin-top:12px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.05)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
-html.v2 .pu2-rk b{font-size:20px}
-html.v2 .pu-hero svg:last-child{opacity:.75}
+/* ===== بطاقة نبض الجولة — لوحة نتيجة احترافية (مستوحاة من شاشات النتائج بالتطبيقات الرياضية) ===== */
+html.v2 .hero.pu-hero{padding:16px 16px 14px!important;position:relative;
+  background:linear-gradient(180deg,#111827 0%,#0B0F19 100%)!important;border:1px solid rgba(255,255,255,.07)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 24px 50px -30px rgba(0,0,0,.95)!important}
+html.v2 .hero.pu-hero::after{content:""!important;inset:0 0 auto 0!important;height:1px!important;border-radius:0!important;
+  background:linear-gradient(90deg,transparent,rgba(var(--acc-rgb),.55),transparent)!important}
+.pu-top{display:flex;align-items:center;justify-content:space-between}
+/* لوحة النتيجة */
+.pz{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;margin-top:16px}
+.pz-team{display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px;min-width:0}
+.pz-av{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font:700 18px Inter,sans-serif;position:relative}
+.pz-team.me .pz-av{background:linear-gradient(145deg,#34D399,#0E7490);color:#04140D;box-shadow:0 0 0 3px #0B0F19,0 0 0 4.5px rgba(52,211,153,.55)}
+.pz-team.rv .pz-av{background:linear-gradient(145deg,#FB7185,#9F1239);color:#fff;box-shadow:0 0 0 3px #0B0F19,0 0 0 4.5px rgba(251,113,133,.5)}
+.pz-nm{max-width:100%;font-size:13px;font-weight:700;color:#F4F6FB;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pz-team small{font-size:10.5px;color:var(--mut)}
+.pz-sb{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:20px;background:#070A12;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07),inset 0 10px 24px -14px rgba(0,0,0,.9)}
+.pz-sb b{font:700 40px/1 Inter,sans-serif;letter-spacing:-.03em;color:rgba(255,255,255,.62);min-width:52px;text-align:center}
+.pz-sb b.w{color:#fff}.pz-sb b.w:not(.rv){color:#6EE7B7}.pz-sb b.w.rv{color:#FDA4AF}
+.pz-sb i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.35);box-shadow:0 14px 0 rgba(255,255,255,.35);transform:translateY(-7px)}
+.pz-st{width:max-content;margin:12px auto 0;padding:5px 14px;border-radius:99px;font-size:12px;font-weight:700;background:rgba(255,255,255,.06);color:#CBD5E1}
+.pz-st.up{background:rgba(52,211,153,.12);color:#6EE7B7}.pz-st.down{background:rgba(251,113,133,.12);color:#FDA4AF}
+/* نسبة النقاط */
+.pz-bar{display:flex;align-items:center;gap:10px;margin-top:14px}
+.pz-bar span{font:600 11px Inter,sans-serif;color:var(--mut);min-width:30px;text-align:center}
+.pz-bar>div{flex:1;height:6px;border-radius:99px;background:rgba(251,113,133,.55);overflow:hidden;display:flex}
+.pz-bar>div i{display:block;height:100%;background:linear-gradient(90deg,#22D3EE,#34D399);border-radius:99px;box-shadow:2px 0 0 #0B0F19}
+/* المقارنة */
+.pz-cmp{margin-top:14px;border-radius:18px;background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);padding:4px 14px}
+.pz-row{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:10px;padding:9px 0}
+.pz-row+.pz-row{border-top:1px solid rgba(255,255,255,.05)}
+.pz-row>b{font:700 17px Inter,sans-serif;color:rgba(255,255,255,.75);text-align:center}
+.pz-row>b.hi{color:#6EE7B7}.pz-row>b.hi.rv{color:#FDA4AF}
+.pz-mid{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+.pz-mid span{font-size:11.5px;color:var(--mut);font-weight:600}
+.pz-mid small{font-size:10px;color:var(--mut2,#5C6378);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pz-mini{display:flex;gap:3px;width:100%;height:4px}
+.pz-mini i{display:block;height:100%;border-radius:99px;min-width:4px}
+.pz-mini i.m{background:#34D399}.pz-mini i.r{background:#FB7185}
+/* الترتيب */
+.pz-rank{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
+.pz-rank>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.pz-rank small{font-size:11px;color:var(--mut)}
+.pz-rank b{font:700 21px Inter,sans-serif;color:#F4F6FB}
+.pz-rank em{width:max-content;font-style:normal;font:700 11.5px Inter,sans-serif;padding:3px 9px;border-radius:99px}
+.pz-rank em.up{color:#6EE7B7;background:rgba(52,211,153,.12)}.pz-rank em.down{color:#FDA4AF;background:rgba(251,113,133,.12)}
+.pz-rank .pu-spark{width:42%;height:44px;flex:none;opacity:.9}
+
+.pz-mini.z i{background:rgba(255,255,255,.12)!important}
