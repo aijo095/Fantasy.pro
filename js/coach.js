@@ -205,3 +205,11 @@ export function coachAnswer(kind) {
   if (kind === 'transfer') { const t = C.transfer; return t.kind === 'go' ? `**${t.m.o.name} → ${t.m.c.name}** (+${t.m.g} xP / 5 ${tt('جولات', 'GWs')})\n${t.alt.map((x) => `- ${x.o.name} → ${x.c.name} (+${x.g})`).join('\n')}\n- ${tt('أسلوبك', 'Your style')}: ${an}` : `**${t.kind === 'roll' ? tt('احتفظ بالانتقال', 'Roll') : tt('لا تاخذ ضربة', 'No hit')}**\n- ${t.why}`; }
   return null;
 }
+
+/** تاريخ المدرب من الكاش: منو امتلك بالجولات الأخيرة + نقاط آخر الجولات لكل لاعب */
+export function coachHistory() {
+  const c = MEM ? loadCacheMem() : loadCache();
+  const owned = new Map(); Object.values(c.picks || {}).forEach((P) => (P.p || []).forEach((x) => owned.set(x[0], (owned.get(x[0]) || 0) + 1)));
+  const gws = Object.keys(c.pts || {}).map(Number).sort((a, b) => b - a);
+  return { owned, hasPts: gws.length > 0, recent: (id, n = 4) => gws.slice(0, n).map((g) => c.pts[g]?.[id]?.[0] || 0) };
+}
