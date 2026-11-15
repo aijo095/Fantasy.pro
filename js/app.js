@@ -262,8 +262,7 @@ const NAV = [
 ];
 const BNAV = [['home', 'i-home'], ['team', 'i-pitch'], ['season', 'i-season'], ['players', 'i-users'], ['more', 'i-grid']];
 export function buildNav() {
-  const SQF = (() => { try { return localStorage.getItem('fp_squads') === '1'; } catch { return false; } })();
-  const nav = NAV.map(([g, items]) => [g, (g === 'g_more' && ST.admin ? [...items, ['admin', 'i-admin']] : items).filter((x) => x[0] !== 'squads' || SQF)]);
+  const nav = NAV.map(([g, items]) => [g, (g === 'g_more' && ST.admin ? [...items, ['admin', 'i-admin']] : items)]);
   $('#side').innerHTML = `<div style="display:flex;align-items:center;gap:10px;margin:4px 8px 14px"><div class="logo-ic" style="width:34px;height:34px;font-size:16px;border-radius:10px">F</div><b style="font-size:16px">${tt('فانتازي', 'Fantasy')} <span class="gt">${tt('برو', 'Pro')}</span></b></div>${nav.map(([g, items]) => `<div class="grp">${t(g)}</div>${items.map((n) => `<button class="nb" data-v="${n[0]}" onclick="go('${n[0]}')">${I(n[1])}<span style="flex:1">${t(n[0])}</span>${n[0] === 'notifs' ? '<span class="tag lime" id="sideBadge"></span>' : ''}</button>`).join('')}`).join('')}`;
   $('#bnav').innerHTML = BNAV.map((n) => `<button data-v="${n[0]}" onclick="go('${n[0]}')" aria-label="${t(n[0])}">${I(n[1])}${t(n[0])}</button>`).join('');
   $('#tbTitle').textContent = ST.E.entry.name; $('#tbAv').textContent = (ST.E.entry.name || ST.user.name || '?').trim()[0].toUpperCase();
