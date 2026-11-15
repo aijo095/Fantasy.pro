@@ -5,11 +5,11 @@
    للاعبيه)، وكل ضغطة تطلع مجموعة جديدة. وبعدها تشكيلة رابعة
    تجمع أفضل لاعبين منهن، وقائمة لاعبين ممكن يتألقون.
 ========================================================= */
-import { ST, PM, tShort } from '../store.js';
+import { ST, PM, tShort, tName } from '../store.js';
 import { tt } from '../i18n.js';
 import { esc, I, r1, fmt } from '../ui.js';
 import { pShirt, playerRow } from './common.js';
-import { xp, avgFdr, avail } from '../engine.js';
+import { xp, avgFdr, avail, dgwBgw } from '../engine.js';
 import { coachReady, ensureCoach, sustain, ARCH, coachHistory } from '../coach.js';
 import { sellPrice10 } from '../solver.js';
 
@@ -117,6 +117,8 @@ function valueMap(mode, st, opt) {
     if (opt.prem === 'stars' && p.price >= 10) m *= 1.07;
     if (opt.prem === 'spread' && p.price >= 10) m *= 0.92;
     if (opt.avoid?.has(id)) m *= 1 - opt.avoidW;
+    if (opt.old?.has(id)) m *= 0.95; // اقتراحات الجولة الماضية — نعطي فرصة لأفكار جديدة
+    if (opt.boost?.has(id)) m *= opt.boost.get(id);
     m *= 1 + (tap() - 0.5) * 0.07;
     if (v > 0) V.set(id, v * m);
   }
@@ -210,46 +212,91 @@ function build(V, budget, mode, favF, o = {}) {
   return sq;
 }
 
-/** الإجابة النهائية: 3 اقتراحات بتشكيلات مختلفة + الأفضل منهم */
+/* =========================================================
+   محرك الخطط الذكي — يقرا وضع الجولة ويطلع خطط تتغير كل جولة:
+   تكديس فريق جدوله سهل، خطة الدبل/البلانك، النجمين، حركة السوق،
+   الجدار الدفاعي، المرشحين للتألق، الفورمة، الجدول، المفاجآت.
+   كل خطة تنقيّم حسب قوتها هالجولة + ميول المدرب، ونختار أقوى 4 مع "الأفضل لك".
+========================================================= */
+function gwsOf(mode, st) { const G = ST.G, H = mode === 'fh' ? 1 : st.H, out = []; for (let g = G.next; g < G.next + H && g <= G.lastGW; g++) out.push(g); return out; }
+function strategies(mode, st) {
+  const G = ST.G, gws = gwsOf(mode, st), base = baseValues(mode, gws), fh = mode === 'fh';
+  const rnd = rng(entrySeed() ^ (G.next * 40503)); // ترتيب يختلف كل جولة ولكل مدرب
+  const aff = { stack: 1, dgw: 1, stars: 1, market: 1, wall: 1, brk: 1, form: 1, fix: 1, diff: 1 };
+  if (st.arch === 'maverick') { aff.brk = 1.35; aff.diff = 1.35; aff.market = 0.85; }
+  if (st.arch === 'template') { aff.stars = 1.3; aff.market = 1.25; aff.diff = 0.7; }
+  if (st.arch === 'strategist') { aff.fix = 1.3; aff.dgw = 1.35; aff.stack = 1.2; }
+  if (st.arch === 'chaser') { aff.form = 0.75; aff.brk = 1.2; }
+  if (st.arch === 'gambler') { aff.form = 1.25; aff.diff = 1.2; }
+  if (st.risk >= 60) aff.diff *= 1.2; if (st.risk <= 32) aff.diff *= 0.75;
+  const L = [];
+  const byTeam = {}; for (const [id, b] of base) { const t = PM(id).team; (byTeam[t] = byTeam[t] || []).push([id, b]); }
+  // 1) تكديس فريق: جدول سهل + هجوم قوي
+  const teamSc = Object.keys(byTeam).map(Number).map((t) => { const top = byTeam[t].map((x) => x[1].proj).sort((a, b) => b - a).slice(0, 3); const ease = 3 - avgFdr(t, gws[0], gws.length); return { t, sc: top.reduce((a, b) => a + b, 0) * (1 + ease * 0.3), ease }; }).sort((a, b) => b.sc - a.sc);
+  const T = teamSc[Math.floor(rnd() * 2)]; // واحد من أقوى فريقين — حتى ما يتكرر نفس الفريق للكل
+  if (T) L.push({ id: 'stack', sc: 0.9 + T.ease * 0.25, label: tt(`تكديس ${tName(T.t)}`, `${tName(T.t)} triple-up`), why: fh ? tt(`مباراة ${tName(T.t)} هالجولة من الأسهل وهجومه قوي — نخلي 3 لاعبين منه`, 'Easy match + strong attack: 3 players') : tt(`جدول ${tName(T.t)} الجاي من الأسهل وهجومه قوي — 3 لاعبين منه يشيلون الفريق`, 'Kind fixtures + strong attack: 3 players'), ins: tt(`${tName(T.t)}: جدول سهل جاي`, `${tName(T.t)}: easy run`), opt: { kind: 'fix', boost: new Map(byTeam[T.t].map(([id]) => [id, 1.24])) } });
+  // 2) الدبل / البلانك
+  const dg = dgwBgw(gws[0], gws[gws.length - 1]); const dbl = dg.flatMap((x) => x.dbl), blk = dg.find((x) => x.blank.length >= 4);
+  if (dbl.length) { const set = new Set(dbl); L.push({ id: 'dgw', sc: 1.4 + dbl.length * 0.05, label: tt('خطة الدبل', 'Double GW plan'), why: tt(`فرق تلعب مباراتين: ${[...set].slice(0, 4).map(tShort).join('، ')} — لاعبينهم ياخذون أولوية`, 'Teams with doubles get priority'), ins: tt(`جولة دبل: ${[...set].slice(0, 3).map(tShort).join('، ')}`, 'Double GW ahead'), opt: { kind: 'bal', boost: new Map([...base.keys()].filter((id) => set.has(PM(id).team)).map((id) => [id, 1.15])) } }); }
+  if (blk && !fh) { const bs = new Set(blk.blank); L.push({ id: 'blank', sc: 1.1, label: tt('تفادي البلانك', 'Blank-proof'), why: tt(`الجولة ${blk.gw} بيها فرق ما تلعب — نقلل لاعبينهم`, 'Fewer players from blanking teams'), ins: tt(`بلانك بالجولة ${blk.gw}`, `Blank in GW${blk.gw}`), opt: { kind: 'bal', boost: new Map([...base.keys()].filter((id) => bs.has(PM(id).team)).map((id) => [id, 0.85])) } }); }
+  // 3) النجمين
+  const prem = [...base].filter(([id]) => PM(id).price >= 9.5).sort((a, b) => (b[1].proj + b[1].mom * 0.3) - (a[1].proj + a[1].mom * 0.3)).slice(0, 3);
+  if (prem.length >= 2) { const pk = rnd() < 0.5 ? [prem[0], prem[1]] : [prem[0], prem[2] || prem[1]]; L.push({ id: 'stars', sc: 1.0, label: tt(`النجمين: ${PM(pk[0][0]).name} و${PM(pk[1][0]).name}`, `Stars: ${PM(pk[0][0]).name} & ${PM(pk[1][0]).name}`), why: tt('نبني حول أقوى نجمين هالفترة ونوفر بباقي المراكز', 'Built around the two strongest premiums'), ins: tt(`${PM(pk[0][0]).name} بأقوى فترة`, `${PM(pk[0][0]).name} in top form`), opt: { kind: 'bal', boost: new Map(pk.map(([id]) => [id, 1.7])) } }); }
+  // 4) حركة السوق
+  const mk = [...base].filter(([id]) => PM(id).tin > 0).sort((a, b) => (PM(b[0]).tin - PM(b[0]).tout) - (PM(a[0]).tin - PM(a[0]).tout)).slice(0, 14);
+  if (mk.length >= 6 && PM(mk[0][0]).tin > 1000) L.push({ id: 'market', sc: 0.85, label: tt('حركة السوق', 'Market movers'), why: tt('اللاعبين اللي المدربين يشترونهم هالجولة — تلحكهم قبل ما يرتفع سعرهم', 'Most-bought players before price rises'), ins: tt(`الأكثر شراء: ${PM(mk[0][0]).name}`, `Most bought: ${PM(mk[0][0]).name}`), opt: { kind: 'mom', boost: new Map(mk.map(([id]) => [id, 1.13])) } });
+  // 5) الجدار الدفاعي
+  const defT = Object.keys(byTeam).map(Number).map((t) => ({ t, e: 3 - avgFdr(t, gws[0], gws.length), gc: byTeam[t].filter(([id]) => PM(id).pos === 'GK').reduce((a, [id]) => Math.max(a, PM(id).cs || 0), 0) })).sort((a, b) => (b.e + b.gc * 0.15) - (a.e + a.gc * 0.15)).slice(0, 3);
+  if (defT.length) { const ds = new Set(defT.map((x) => x.t)); L.push({ id: 'wall', sc: 0.8 + defT[0].e * 0.3, force: rnd() < 0.5 ? '5-3-2' : '5-4-1', label: tt('الجدار الدفاعي', 'Defensive wall'), why: tt(`خمس مدافعين من فرق تحافظ على شباكها وجدولها سهل: ${defT.map((x) => tShort(x.t)).join('، ')}`, '5 defenders from clean-sheet teams'), ins: tt(`شباك نظيفة متوقعة: ${tShort(defT[0].t)}`, `Clean sheets: ${tShort(defT[0].t)}`), opt: { kind: 'fix', boost: new Map([...base.keys()].filter((id) => ds.has(PM(id).team) && (PM(id).pos === 'DEF' || PM(id).pos === 'GK')).map((id) => [id, 1.2])) } }); }
+  // 6) مسارات التحليل
+  L.push({ id: 'brk', sc: 0.95, label: fh ? tt('الأرقام الحقيقية', 'Underlying') : tt('مرشحين للتألق', 'Breakouts'), why: tt('لاعبين أرقامهم الحقيقية أعلى من نقاطهم أو دقائقهم صاعدة', 'Underlying numbers ahead of points'), opt: { kind: 'brk', diff: 0.2 } });
+  L.push({ id: 'form', sc: fh ? 1.05 : 0.8, label: tt('المتألقين هسه', 'In form'), why: tt('لاعبين بفورمة عالية بآخر الجولات', 'Hot players right now'), opt: { kind: 'mom' } });
+  L.push({ id: 'fix', sc: 0.9, label: fh ? tt('المباراة الأسهل', 'Easiest match') : tt('مسار الجدول', 'Fixtures path'), why: tt('لاعبين مبارياتهم الجاية سهلة ومتوقعهم عالي', 'Kindest fixtures'), opt: { kind: 'fix' } });
+  L.push({ id: 'diff', sc: 0.75, label: tt('المفاجآت', 'Differentials'), why: tt('لاعبين قليلين الملكية — تكسب بيهم على الأغلبية', 'Low-owned players'), opt: { kind: 'bal', diff: 0.6 } });
+  L.forEach((x) => (x.sc = x.sc * (aff[x.id] || 1) * (0.85 + rnd() * 0.3)));
+  return L.sort((a, b) => b.sc - a.sc);
+}
+
+/** الإجابة النهائية: "الأفضل لك" + أقوى 4 خطط هالجولة + الأفضل من الكل */
 function generate() {
   const T0 = performance.now();
   const st = styleOf(), budget = budgetOf(), mode = MODE, seed = ++SEED, own = ST.plan?.squad || [];
   const pure = valueMap(mode, st, { seed: 0 });
-  // الرقم المعروض = النقاط المتوقعة الحقيقية (مو قيمة الترتيب الداخلية)
   const DISP = new Map(); [...pure.V.keys()].forEach((id) => DISP.set(id, pure.gws.reduce((a, g) => a + xp(PM(id), g), 0)));
+  // ذاكرة: اقتراحات الجولة الماضية (حتى تطلع أفكار جديدة كل جولة)
+  const hk = `fp_sqh_${ST.E?.entry?.id}_${mode}`; let H0 = null; try { H0 = JSON.parse(localStorage.getItem(hk) || 'null'); } catch {}
+  const old = H0 && H0.gw < ST.G.next ? new Set(H0.ids) : null;
   const prevA = PREV && PREV.mode === mode ? PREV.a : null;
-  const mk = (opt, force, label, why) => { const { V } = valueMap(mode, st, opt); const sq = build(V, budget, mode, st.favF, { start: own, force }); if (!sq) return null; return { sq, label, why, ...summary(sq, DISP, st.favF, budget, force || xiOf(sq, V, st.favF).f) }; };
+  const mk = (opt, force, label, why, extra = {}) => { const { V } = valueMap(mode, st, { old, ...opt }); const sq = build(V, budget, mode, st.favF, { start: own, force }); if (!sq) return null; return { sq, label, why, ...extra, ...summary(sq, DISP, st.favF, budget, force || xiOf(sq, V, st.favF).f) }; };
   const fh = mode === 'fh';
   const A = mk(prevA ? { seed, avoid: prevA, avoidW: 0.07, kind: 'bal' } : { seed, kind: 'bal' }, null, fh ? tt('الأقوى للجولة', 'Strongest this GW') : tt('الأفضل لك', 'Best for you'),
-    fh ? tt('كل المسارات سوية: المباراة، الفورمة، والأرقام الحقيقية — على مقاسك', 'All paths combined, fitted to you') : tt('كل المسارات سوية: المستوى، الجدول، الأرقام الحقيقية والفورمة — على مقاس أسلوبك وفريقك', 'All paths combined, fitted to your style and squad'));
+    tt('كل المسارات سوية: المستوى، الجدول، الأرقام الحقيقية والفورمة — على مقاس أسلوبك وفريقك', 'All paths combined, fitted to you'));
   if (!A) return null;
+  // الخطط: نبدّل بين الخطط القوية مع كل ضغطة حتى تطلع أفكار ثانية
+  const S = strategies(mode, st); const rot = (seed - 1) % 3;
+  const pick = [...S.slice(rot), ...S.slice(0, rot)].filter((x, i, arr) => arr.findIndex((y) => y.id === x.id) === i).slice(0, 4);
   const order = [st.favF, '4-4-2', '3-4-3', '4-3-3', '3-5-2', '5-3-2', '4-5-1', '5-4-1'].filter(Boolean);
-  const fs = []; for (const f of order) if (f !== A.f && !fs.includes(f)) fs.push(f);
-  const aXI = new Set(A.xi);
-  let B = null; for (const w of [0.15, 0.24, 0.34]) { B = mk({ seed: seed + 1, kind: 'fix', avoid: new Set([...aXI, ...(prevA || [])]), avoidW: w }, fs[0], fh ? tt('المباراة الأسهل', 'Easiest fixtures') : tt('مسار الجدول', 'Fixtures path'), fh ? tt('لاعبين مباراتهم هالجولة سهلة', 'Players with the easiest match this GW') : tt('لاعبين جدولهم الجاي سهل ومتوقعهم عالي', 'Players with the kindest run of fixtures')); if (B && B.sq.filter((id) => !A.sq.includes(id)).length >= 4) break; }
-  const starsHeavy = st.prem >= 3;
-  const C = fh
-    ? mk({ seed: seed + 2, kind: 'bal', diff: 0.6, avoid: aXI, avoidW: 0.1 }, fs[1], tt('المفاجآت', 'Differentials'), tt('لاعبين قليلين الملكية بمباريات حلوة — تكسب بيهم نقاط على الأغلبية', 'Low-owned players with good fixtures'))
-    : mk({ seed: seed + 2, kind: 'bal', avoid: aXI, avoidW: 0.08, prem: starsHeavy ? 'spread' : 'stars' }, fs[1], starsHeavy ? tt('التوزيع المتوازن', 'Balanced spread') : tt('هيكل النجوم', 'Star-heavy'),
-      starsHeavy ? tt('بدل التركيز على النجوم، فلوس موزعة على لاعبين أكثر', 'Money spread across more players') : tt('نجوم أكثر بالأمام ودكة أرخص', 'More stars, cheaper bench'));
-  const abXI = new Set([...aXI, ...(B?.xi || [])]);
-  const D = mk({ seed: seed + 3, kind: fh ? 'mom' : 'brk', avoid: abXI, avoidW: 0.1 }, fs[2], fh ? tt('المتألقين هسه', 'In form now') : tt('مرشحين للتألق', 'Breakout picks'),
-    fh ? tt('لاعبين بفورمة عالية بآخر الجولات', 'Players in hot form') : tt('لاعبين أرقامهم الحقيقية أعلى من نقاطهم أو دقائقهم صاعدة — ممكن ينفجرون قريب', 'Underlying numbers ahead of points or rising minutes'));
-  const E = mk({ seed: seed + 4, kind: fh ? 'brk' : 'mom', diff: fh ? 0.3 : 0.45, avoid: new Set([...abXI, ...(D?.xi || [])]), avoidW: 0.08 }, fs[3], fh ? tt('الأرقام الحقيقية', 'Underlying numbers') : tt('الجريئة', 'The bold one'),
-    fh ? tt('لاعبين فرصهم الحقيقية عالية حتى لو نقاطهم قليلة', 'High xG/xA even if points lag') : tt('فورمة حالية + لاعبين قليلين الملكية — مخاطرة أعلى ومكسب أكبر', 'Current form + low-owned — higher risk, higher reward'));
-  const L = [A, B, C, D, E].filter(Boolean);
+  const used = new Set([A.f]); let avoid = new Set([...A.xi, ...(prevA || [])]); const L = [A];
+  pick.forEach((P, k) => {
+    let f = P.force; if (!f || used.has(f)) f = order.find((x) => !used.has(x)) || null; used.add(f);
+    const R = mk({ seed: seed + 11 + k, avoid, avoidW: 0.12, ...P.opt }, f, P.label, P.why, { sid: P.id });
+    if (R) { L.push(R); R.xi.forEach((id) => avoid.add(id)); }
+  });
   const poolU = new Set(L.flatMap((x) => x.sq));
-  const start = [...L].sort((x, y) => objective(y.sq, pure.V, mode, st.favF) - objective(x.sq, pure.V, mode, st.favF))[0].sq;
-  // التقييم المشترك: مستوى اللاعب + نقاطه المتوقعة
   const VB = new Map(); pure.V.forEach((v, id) => VB.set(id, (v + (DISP.get(id) || 0)) / 2));
+  const start = [...L].sort((x, y) => objective(y.sq, VB, mode, st.favF) - objective(x.sq, VB, mode, st.favF))[0].sq;
   const built = build(VB, budget, mode, st.favF, { pool: poolU, start });
   let best = [built, ...L.map((x) => x.sq)].filter(Boolean).sort((a, b) => objective(b, VB, mode, st.favF) - objective(a, VB, mode, st.favF))[0];
-  const BEST = { sq: best, label: tt('الأفضل من الكل', 'Best of all'), why: tt('جمعنا أقوى اللاعبين من كل الاقتراحات بتشكيلة وحدة ضمن ميزانيتك، وبأفضل رسم', 'Strongest players from all suggestions in one squad, best shape'), best: true, ...summary(best, DISP, st.favF, budget, xiOf(best, pure.V, st.favF).f) };
+  const BEST = { sq: best, label: tt('الأفضل من الكل', 'Best of all'), why: tt('جمعنا أقوى اللاعبين من كل الخطط بتشكيلة وحدة ضمن ميزانيتك، وبأفضل رسم', 'Strongest players from all plans in one squad'), best: true, ...summary(best, DISP, st.favF, budget, xiOf(best, pure.V, st.favF).f) };
   const topL = [...L].sort((a, b) => b.xpT - a.xpT)[0];
   if (BEST.xpT < topL.xpT - 0.05) Object.assign(BEST, summary(topL.sq, DISP, st.favF, budget, topL.f), { sq: topL.sq });
+  const list = [...L, BEST];
+  if (old) list.forEach((x) => (x.fresh = x.sq.filter((id) => !old.has(id)).length));
+  // نحفظ اقتراحات هالجولة (حتى الجولة الجاية تطلع أفكار جديدة)
+  try { const prevIds = H0 && H0.gw === ST.G.next ? H0.ids : []; localStorage.setItem(hk, JSON.stringify({ gw: ST.G.next, ids: [...new Set([...prevIds, ...A.sq, ...BEST.sq])].slice(-60) })); } catch {}
   PREV = { mode, a: new Set(A.xi) };
   window.__sqMs = Math.round(performance.now() - T0);
-  return { st, budget, mode, gws: pure.gws, list: [...L, BEST] };
+  return { st, budget, mode, gws: pure.gws, list };
 }
 function summary(sq, D, favF, budget, f) {
   const b = xiOf(sq, D, favF, f), cost = r1(sq.reduce((a, id) => a + PM(id).price, 0));
@@ -278,17 +325,19 @@ export function vSquads() {
   const seg = `<div class="tabs2" style="margin-top:6px"><button class="${MODE === 'wc' ? 'on' : ''}" onclick="sqMode('wc')">${I('i-sparkle')}${tt('وايلد كارد', 'Wildcard')} <small style="opacity:.7">${tt(`${st.H} جولات`, `${st.H} GWs`)}</small></button><button class="${MODE === 'fh' ? 'on' : ''}" onclick="sqMode('fh')">${I('i-bolt')}${tt('فري هيت', 'Free Hit')} <small style="opacity:.7">GW${G.next}</small></button></div>`;
   const arch = ARCH()[st.arch] || ARCH().balanced;
   const who = `<div class="card" style="display:flex;gap:12px;align-items:center"><div class="pbig" style="background:rgba(139,124,255,.14);color:#C4B5FD;width:42px;height:42px;border-radius:13px;display:grid;place-items:center;flex:none">${I('i-user')}</div><div style="flex:1;min-width:0"><b style="font-size:14px">${st.ready ? arch[0] : tt('نحلل أسلوبك…', 'Analysing your style…')}</b><div class="mut" style="font-size:12px;line-height:1.6;margin-top:2px">${st.ready ? [st.favF ? tt(`تشكيلك المفضل ${st.favF}`, `Fav formation ${st.favF}`) : '', st.risk >= 60 ? tt('تحب الخيارات المختلفة', 'You like differentials') : st.risk <= 32 ? tt('تفضّل الخيارات الآمنة', 'You prefer safe picks') : tt('توازن بين الآمن والمختلف', 'Safe/differential balance')].filter(Boolean).join(' · ') : tt('الاقتراحات راح تتخصص أكثر بعد التحليل', 'Suggestions get more personal after analysis')}</div></div><div style="text-align:center"><small class="mut" style="font-size:11px">${tt('الميزانية', 'Budget')}</small><b class="num" style="display:block;font-size:17px">£${b.toFixed(1)}</b></div></div>`;
+  const ideas = (() => { try { return strategies(MODE, st).filter((x) => x.ins).slice(0, 4); } catch { return []; } })();
+  const ideasHTML = ideas.length ? `<div class="sq-ideas"><div class="t">${I('i-sparkle')}${tt(`أفكار الجولة ${G.next}`, `GW${G.next} ideas`)}<small>${tt('تتحدث كل جولة', 'Updated every GW')}</small></div>${ideas.map((x) => `<div class="i"><b>${esc(x.ins)}</b><span>${esc(x.label)}</span></div>`).join('')}</div>` : '';
   const used = MODE === 'wc' ? chips.includes('wildcard') : chips.includes('freehit');
   const note = used ? `<div class="note" style="margin-top:8px">${tt('ملاحظة: استخدمت هالورقة بالنص الأول — الاقتراح يفيدك للنص الثاني أو للتخطيط', 'Note: chip already used this half — useful for planning')}</div>` : '';
-  const btn = `<button class="btn btn-p" style="width:100%;margin-top:12px" onclick="sqGo()" ${BUSY ? 'disabled' : ''}>${I('i-sparkle')}${BUSY ? tt('نبني التشكيلات…', 'Building…') : RES ? tt('اقترح تشكيلات جديدة', 'Suggest new squads') : tt('اقترح 5 تشكيلات', 'Suggest 5 squads')}</button>`;
-  if (!RES || RES.mode !== MODE) return head + seg + who + note + btn + `<div class="card mut" style="margin-top:12px;font-size:13px;line-height:1.8;text-align:center">${tt('كل ضغطة تطلع 5 تشكيلات من مسارات تحليل مختلفة (المستوى، الجدول، المرشحين للتألق، الفورمة، المختلفين) وبرسوم مختلفة، وسادسة تجمع أفضل لاعبين منهن', 'Each tap gives 5 squads from different analysis paths plus a 6th combining the best')}</div>`;
+  const btn = `<button class="btn btn-p" style="width:100%;margin-top:12px" onclick="sqGo()" ${BUSY ? 'disabled' : ''}>${I('i-sparkle')}${BUSY ? tt('نبني التشكيلات…', 'Building…') : RES ? tt('اقترح تشكيلات جديدة', 'Suggest new squads') : tt('اقترح خطط الجولة', 'Suggest GW plans')}</button>`;
+  if (!RES || RES.mode !== MODE) return head + seg + who + ideasHTML + note + btn + `<div class="card mut" style="margin-top:12px;font-size:13px;line-height:1.8;text-align:center">${tt('النظام يقرا وضع الجولة (الجدول، الدبل والبلانك، حركة السوق، النجوم، الفورمة) ويطلع خطط تتغير كل جولة وكل ضغطة — 5 خطط برسوم مختلفة وسادسة تجمع الأفضل منهن', 'The engine reads the GW and builds plans that change every GW and tap')}</div>`;
   const R = RES.list[SEL] || RES.list[0];
   PV.clear(); R.sq.forEach((id) => PV.set(id, RES.gws.reduce((a, g) => a + xp(PM(id), g), 0)));
   const tabs = `<div class="sq-tabs">${RES.list.map((x, i) => `<button class="${i === SEL ? 'on' : ''}${x.best ? ' best' : ''}" onclick="sqSel(${i})"><b>${x.best ? '★' : String.fromCharCode(65 + i)}</b><span>${esc(x.label)}</span><small class="num">${x.f} · ${x.xpT}</small></button>`).join('')}</div>`;
   const prev = SEL > 0 && !R.best ? RES.list[0] : null;
   const diffA = prev ? R.sq.filter((id) => !prev.sq.includes(id)).length : null;
-  const stats = `<div class="sq-stats"><div><small>${tt('المتوقع', 'Projected')}</small><b class="num">${R.xpT}</b><em>${RES.mode === 'fh' ? 'GW' + G.next : tt(`${RES.gws.length} جولات`, `${RES.gws.length} GWs`)}</em></div><div><small>${tt('التشكيل', 'Formation')}</small><b class="num">${R.f}</b></div><div><small>${tt('الكلفة', 'Cost')}</small><b class="num">£${R.cost.toFixed(1)}</b><em>${tt('يبقى', 'Bank')} <bdi dir="ltr">£${R.bank.toFixed(1)}</bdi></em></div><div><small>${tt('من فريقك', 'Kept')}</small><b class="num">${R.keep}/15</b>${diffA != null ? `<em>${tt(`${diffA} مختلفين عن A`, `${diffA} differ from A`)}</em>` : ''}</div></div>`;
-  return head + seg + who + note + btn + tabs + `<div class="card" style="margin-top:10px"><b style="font-size:14.5px">${esc(R.label)}</b><div class="mut" style="font-size:12.5px;margin-top:3px;line-height:1.6">${esc(R.why)}</div>${stats}</div>` + pitch(R) +
+  const stats = `<div class="sq-stats"><div><small>${tt('المتوقع', 'Projected')}</small><b class="num">${R.xpT}</b><em>${RES.mode === 'fh' ? 'GW' + G.next : tt(`${RES.gws.length} جولات`, `${RES.gws.length} GWs`)}</em></div><div><small>${tt('التشكيل', 'Formation')}</small><b class="num">${R.f}</b></div><div><small>${tt('الكلفة', 'Cost')}</small><b class="num">£${R.cost.toFixed(1)}</b><em>${tt('يبقى', 'Bank')} <bdi dir="ltr">£${R.bank.toFixed(1)}</bdi></em></div><div><small>${tt('من فريقك', 'Kept')}</small><b class="num">${R.keep}/15</b>${R.fresh != null ? `<em>${tt(`${R.fresh} جدد عن الجولة الماضية`, `${R.fresh} new vs last GW`)}</em>` : diffA != null ? `<em>${tt(`${diffA} مختلفين عن A`, `${diffA} differ from A`)}</em>` : ''}</div></div>`;
+  return head + seg + who + ideasHTML + note + btn + tabs + `<div class="card" style="margin-top:10px"><b style="font-size:14.5px">${esc(R.label)}</b><div class="mut" style="font-size:12.5px;margin-top:3px;line-height:1.6">${esc(R.why)}</div>${stats}</div>` + pitch(R) +
     breakoutHTML() + `<p class="mut" style="font-size:11.5px;text-align:center;margin-top:10px;line-height:1.7">${tt('الرقم تحت كل لاعب = نقاطه المتوقعة', 'Number under each player = projected points')}${RES.mode === 'wc' ? tt(` لـ ${RES.gws.length} جولات`, ` over ${RES.gws.length} GWs`) : ''} · ${tt('اللاعب المميز ما موجود بفريقك', 'Highlighted = not in your team')}</p>`;
 }
 
