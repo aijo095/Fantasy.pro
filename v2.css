@@ -156,4 +156,7 @@ html.v2 .tstrip{background:none!important;overflow:visible}
 
 /* جدول المصفوفة: عمود النادي الثابت لازم يكون معتم حتى ما تبين المباريات تحته وقت السحب */
 html .mx td.tn,html .mx th:first-child{position:sticky;left:0;z-index:3;background:#12141C!important;
-  box-shadow:4px 0 0 #12141C,10px 0 12px -6px rgba(0,0,0,.65)}
+  box-shadow:-12px 0 0 #12141C,4px 0 0 #12141C,10px 0 12px -6px rgba(0,0,0,.65)}
+/* يغطي حشوة البطاقة على اليسار + يمنع ارتداد السحب */
+html .scroll-x:has(>.mx){overscroll-behavior-x:none}
+html .mx td.tn{clip-path:inset(-2px -30px -2px -12px)}
