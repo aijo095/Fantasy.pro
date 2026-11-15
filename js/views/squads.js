@@ -12,6 +12,7 @@ import { pShirt, playerRow } from './common.js';
 import { xp, avgFdr, avail, dgwBgw } from '../engine.js';
 import { coachReady, ensureCoach, sustain, ARCH, coachHistory } from '../coach.js';
 import { sellPrice10 } from '../solver.js';
+import { adj as lrAdj, brain } from '../learn.js';
 
 const POS = ['GK', 'DEF', 'MID', 'FWD'], NEED = { GK: 2, DEF: 5, MID: 5, FWD: 3 };
 let MODE = 'wc', SEED = 0, RES = null, SEL = 0, BUSY = false, PREV = null;
@@ -40,7 +41,7 @@ const entrySeed = () => { const id = +(ST.E?.entry?.id || 1); return (id * 26544
 ========================================================= */
 let BASE = { k: '', m: null };
 function baseValues(mode, gws) {
-  const k = mode + gws.join(',') + '|' + ST.G.finished + '|' + (coachReady() ? 1 : 0);
+  const k = mode + gws.join(',') + '|' + ST.G.finished + '|' + (coachReady() ? 1 : 0) + '|' + brain().nEval + brain().formK;
   if (BASE.k === k) return BASE.m;
   const m = new Map(), fin = Math.max(1, ST.G.finished), hist = coachHistory();
   const PF = { GK: 0, DEF: 6, MID: 5, FWD: 4 }, CSF = { GK: 4, DEF: 4, MID: 1, FWD: 0 };
@@ -52,6 +53,7 @@ function baseValues(mode, gws) {
     const under = n90 >= 2 ? ((p.xg || 0) * PF[p.pos] + (p.xa || 0) * 3) / n90 + 2 + CSF[p.pos] * (p.cs || 0) / Math.max(1, n90) : 0;
     const a = avail(p, gws[0]);
     let proj = 0; gws.forEach((g, i) => (proj += Math.pow(0.93, i) * xp(p, g)));
+    proj = lrAdj(p, proj); // تصحيح من تعلّم المدرب (معامل المراكز ووزن الفورمة)
     if (mode === 'wc') proj *= sustain(p).k;
     if (proj <= 0) continue;
     const qual = (0.55 * p.ppg + 0.45 * Math.max(p.ppg * 0.7, under)) * Math.min(1, 0.35 + startR) * W * a;
