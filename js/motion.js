@@ -3,8 +3,8 @@
    وميض تغيّر القيم المباشرة، والسحب للتحديث
 ========================================================= */
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-const NUM_SEL = '.big-num, .kpis b, .kv b, .stat .v, .tstrip b, .lab-res b, .score-ring b, .score, .count, .col.num, .vs .big, .ring b, .gauge b, .ss-h-main b, .ss-h-grid b, .ss-cmp b, .ss-hl em, .lpts, .rvs-stats b.num, .mc-lu-sum b, .st-pts, .cp-pct, .dc-n';
-const RX = /^([+\-−]?)([\d,]+(?:\.\d+)?)(%?)$/;
+const NUM_SEL = '.h2-pts b, .h2-st b, .h2-st em, .pz-sb b, .pz-row>b, .sq-stats b, .live-side b, .live-side em, .pu2-s b, .pu2-rk b, .pu2-rank em, .dc-ring b, .dc-row .col>.num, .pitch .lb, .benchbox .lb, .gwstrip b, .sq-tabs b, .pz-bar span, .h2-dl .cd b, .mx td.c, .tile b, .tag.num, .pill.num, .kpi b, .stat b, .big-num, .kpis b, .kv b, .stat .v, .tstrip b, .lab-res b, .score-ring b, .score, .count, .col.num, .vs .big, .ring b, .gauge b, .ss-h-main b, .ss-h-grid b, .ss-cmp b, .ss-hl em, .lpts, .rvs-stats b.num, .mc-lu-sum b, .st-pts, .cp-pct, .dc-n';
+const RX = /^([▲▼+\-−£]*\s*)([\d,]+(?:\.\d+)?)(%?)$/;
 const prev = new Map();
 
 /** يحرّك كل رقم من 0 (أو من قيمته السابقة) لحد قيمته الجديدة */

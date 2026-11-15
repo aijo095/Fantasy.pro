@@ -225,3 +225,21 @@ html.v2 .hero.pu-hero::after{content:""!important;inset:0 0 auto 0!important;hei
 .pz-rank{margin-top:10px;padding:10px 12px;border-radius:16px}
 .pz-rank b{font-size:18px}.pz-rank .pu-spark{height:36px}
 html.v2 .hero.pu-hero{padding:14px 14px 12px!important}
+
+/* ===== حركة احترافية عند فتح أي قسم ===== */
+@property --p{syntax:'<number>';inherits:false;initial-value:0}
+@media (prefers-reduced-motion:no-preference){
+  /* الدوائر (نسب المئوية) تنملي من صفر */
+  .fx-first .dc-ring,.fx-first .score-ring,.fx-first .ring{animation:ringIn 1s cubic-bezier(.2,.8,.2,1) both}
+  /* الأشرطة تنمد من البداية */
+  .fx-first .dc-bar i,.fx-first .pz-mini i,.fx-first .pz-bar>div i,.fx-first .meter i,.fx-first .bar i,.fx-first .pu2-tug i,.fx-first .prog i{animation:barIn .9s cubic-bezier(.2,.8,.2,1) both;transform-origin:right center}
+  [dir=ltr] .fx-first .dc-bar i,[dir=ltr] .fx-first .pz-mini i,[dir=ltr] .fx-first .meter i,[dir=ltr] .fx-first .bar i{transform-origin:left center}
+  /* أعمدة الرسم البياني تصعد */
+  .fx-first .h2-bars i,.fx-first .bars div,.fx-first .chart-bar{animation:colIn .8s cubic-bezier(.2,.8,.2,1) both;transform-origin:bottom}
+  /* الكبسولات البارزة تطلع بنعومة */
+  .fx-first .tag,.fx-first .pz-st,.fx-first .h2-live,.fx-first .pu2-rank em{animation:pillIn .5s .15s cubic-bezier(.2,.8,.2,1) both}
+}
+@keyframes ringIn{from{--p:0}}
+@keyframes barIn{from{transform:scaleX(0)}}
+@keyframes colIn{from{transform:scaleY(0)}}
+@keyframes pillIn{from{opacity:0;transform:scale(.85)}}
