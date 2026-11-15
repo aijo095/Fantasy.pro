@@ -256,13 +256,14 @@ function loadPlan() {
 /* ---------- التنقل ---------- */
 const NAV = [
   ['g_main', [['home', 'i-home'], ['check', 'i-check'], ['team', 'i-pitch'], ['season', 'i-season'], ['live', 'i-live'], ['pulse', 'i-activity'], ['news', 'i-news'], ['search', 'i-sparkle']]],
-  ['g_players', [['players', 'i-users'], ['market', 'i-swap'], ['prices', 'i-coin'], ['planner', 'i-season'], ['watch', 'i-star'], ['lab', 'i-lab'], ['defcon', 'i-shield'], ['setpieces', 'i-target'], ['compare', 'i-compare']]],
+  ['g_players', [['players', 'i-users'], ['market', 'i-swap'], ['prices', 'i-coin'], ['planner', 'i-season'], ['squads', 'i-layers'], ['watch', 'i-star'], ['lab', 'i-lab'], ['defcon', 'i-shield'], ['setpieces', 'i-target'], ['compare', 'i-compare']]],
   ['g_comp', [['leagues', 'i-trophy'], ['rivals', 'i-swords'], ['captains', 'i-crown'], ['elite', 'i-globe'], ['chips', 'i-bolt'], ['stats', 'i-history'], ['achievements', 'i-medal']]],
   ['g_more', [['notifs', 'i-bell'], ['settings', 'i-settings']]],
 ];
 const BNAV = [['home', 'i-home'], ['team', 'i-pitch'], ['season', 'i-season'], ['players', 'i-users'], ['more', 'i-grid']];
 export function buildNav() {
-  const nav = NAV.map(([g, items]) => [g, g === 'g_more' && ST.admin ? [...items, ['admin', 'i-admin']] : items]);
+  const SQF = (() => { try { return localStorage.getItem('fp_squads') === '1'; } catch { return false; } })();
+  const nav = NAV.map(([g, items]) => [g, (g === 'g_more' && ST.admin ? [...items, ['admin', 'i-admin']] : items).filter((x) => x[0] !== 'squads' || SQF)]);
   $('#side').innerHTML = `<div style="display:flex;align-items:center;gap:10px;margin:4px 8px 14px"><div class="logo-ic" style="width:34px;height:34px;font-size:16px;border-radius:10px">F</div><b style="font-size:16px">${tt('فانتازي', 'Fantasy')} <span class="gt">${tt('برو', 'Pro')}</span></b></div>${nav.map(([g, items]) => `<div class="grp">${t(g)}</div>${items.map((n) => `<button class="nb" data-v="${n[0]}" onclick="go('${n[0]}')">${I(n[1])}<span style="flex:1">${t(n[0])}</span>${n[0] === 'notifs' ? '<span class="tag lime" id="sideBadge"></span>' : ''}</button>`).join('')}`).join('')}`;
   $('#bnav').innerHTML = BNAV.map((n) => `<button data-v="${n[0]}" onclick="go('${n[0]}')" aria-label="${t(n[0])}">${I(n[1])}${t(n[0])}</button>`).join('');
   $('#tbTitle').textContent = ST.E.entry.name; $('#tbAv').textContent = (ST.E.entry.name || ST.user.name || '?').trim()[0].toUpperCase();
