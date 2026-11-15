@@ -160,3 +160,28 @@ html .mx td.tn,html .mx th:first-child{position:sticky;left:0;z-index:3;backgrou
 /* يغطي حشوة البطاقة على اليسار + يمنع ارتداد السحب */
 html .scroll-x:has(>.mx){overscroll-behavior-x:none}
 html .mx td.tn{clip-path:inset(-2px -30px -2px -12px)}
+
+/* ===== بطاقة نبض الجولة: خلفية هادئة احترافية وتناسق الأحجام ===== */
+html.v2 .hero.pu-hero{padding:16px!important;
+  background:radial-gradient(120% 70% at 85% -10%,rgba(var(--acc-rgb),.16),transparent 60%),linear-gradient(180deg,#121826,#0A0E17)!important;
+  border:1px solid rgba(255,255,255,.08)!important;box-shadow:0 24px 48px -30px rgba(0,0,0,.9)!important}
+html.v2 .hero.pu-hero::after{background:none!important}
+html.v2 .pu2-vs{grid-template-columns:1fr auto 1fr;gap:8px;border:0;border-radius:0;overflow:visible;margin-top:12px;align-items:stretch}
+html.v2 .pu2-s{padding:14px 8px 12px!important;border-radius:20px;gap:4px;justify-content:center}
+html.v2 .pu2-s.me{background:linear-gradient(180deg,rgba(var(--acc-rgb),.14),rgba(var(--acc-rgb),.03))!important;box-shadow:inset 0 0 0 1px rgba(var(--acc-rgb),.22)}
+html.v2 .pu2-s.rv{background:linear-gradient(180deg,rgba(248,113,113,.13),rgba(248,113,113,.03))!important;box-shadow:inset 0 0 0 1px rgba(248,113,113,.2)}
+html.v2 .pu2-av{width:36px;height:36px;font-size:15px}
+html.v2 .pu2-s.rv .pu2-av{background:linear-gradient(145deg,#F87171,#B91C1C);color:#fff}
+html.v2 .pu2-s b{font:700 38px/1.05 Inter,sans-serif!important;margin-top:4px}
+html.v2 .pu2-s.me.win b{color:var(--acc);text-shadow:none}
+html.v2 .pu2-s.rv.win b{color:#FCA5A5;text-shadow:none}
+html.v2 .pu2-s.lose b{color:rgba(255,255,255,.78)}
+html.v2 .pu2-mid{align-self:center;width:60px;height:60px;min-width:0;padding:0;border-radius:50%!important;background:#0A0E17!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 8px 20px -10px #000}
+html.v2 .pu2-mid span{font-size:17px}
+html.v2 .pu2-mid small{font-size:10px;margin-top:3px}
+html.v2 .pu2-tug{height:6px!important;margin:14px 4px 0;background:rgba(248,113,113,.38)}
+html.v2 .pu2-tug i{background:linear-gradient(90deg,var(--acc),#22D3EE);box-shadow:none}
+html.v2 .pu2-tug::after{top:-3px;bottom:-3px;background:rgba(255,255,255,.7)}
+html.v2 .pu2-rank{margin-top:12px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.05)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+html.v2 .pu2-rk b{font-size:20px}
+html.v2 .pu-hero svg:last-child{opacity:.75}
