@@ -1,15 +1,15 @@
 /* =========================================================
    مقترح التشكيلات — للوايلد كارد والفري هيت
-   يبني 3 تشكيلات كاملة (15 لاعب) ضمن ميزانيتك وقواعد اللعبة،
+   يبني 5 تشكيلات كاملة (15 لاعب) من مسارات تحليل مختلفة ضمن ميزانيتك،
    مخصصة لأسلوب كل مدرب (المخاطرة، التشكيل المفضل، النجوم، الولاء
    للاعبيه)، وكل ضغطة تطلع مجموعة جديدة. وبعدها تشكيلة رابعة
-   تجمع أفضل لاعبين من الثلاث.
+   تجمع أفضل لاعبين منهن، وقائمة لاعبين ممكن يتألقون.
 ========================================================= */
 import { ST, PM, tShort } from '../store.js';
 import { tt } from '../i18n.js';
 import { esc, I, r1, fmt } from '../ui.js';
-import { pShirt } from './common.js';
-import { xp } from '../engine.js';
+import { pShirt, playerRow } from './common.js';
+import { xp, avgFdr, avail } from '../engine.js';
 import { coachReady, ensureCoach, sustain, ARCH, coachHistory } from '../coach.js';
 import { sellPrice10 } from '../solver.js';
 
@@ -29,70 +29,120 @@ function styleOf() {
 }
 const entrySeed = () => { const id = +(ST.E?.entry?.id || 1); return (id * 2654435761) >>> 0; };
 
-/** القيمة الأساسية — تنحسب مرة وحدة لأنها ثقيلة.
-   الوايلد كارد: مستوى اللاعب على المدى الطويل (نقاط/مباراة + أرقامه الحقيقية لكل 90 + ضمان الدقائق)
-   ويا المتوقع على الجولات الجاية بوزن أعلى للقريبة.
-   الفري هيت: الجولة الجاية بس — المباراة نفسها، الفورمة الحالية، وإمكانية الانفجار */
+/* =========================================================
+   مسارات التحليل — كل لاعب ينقيّم بخمس طرق مختلفة (كلها بوحدة نقاط):
+   proj: المتوقع على الجولات الجاية (المباريات + الدقائق)
+   qual: مستواه الحقيقي على طول الموسم (نقاط/مباراة + أرقامه لكل 90)
+   brk : مرشح للتألق — أرقامه الحقيقية (xG/xA) أعلى من نقاطه، أو صار يلعب أساسي
+   fix : الجدول — يكبر قيمته إذا مبارياته الجاية سهلة
+   mom : الفورمة الحالية — نقاطه بآخر الجولات
+   كل اقتراح يخلط المسارات بنسب مختلفة، وأسلوب المدرب يغيّر النسب
+========================================================= */
 let BASE = { k: '', m: null };
 function baseValues(mode, gws) {
   const k = mode + gws.join(',') + '|' + ST.G.finished + '|' + (coachReady() ? 1 : 0);
   if (BASE.k === k) return BASE.m;
   const m = new Map(), fin = Math.max(1, ST.G.finished), hist = coachHistory();
   const PF = { GK: 0, DEF: 6, MID: 5, FWD: 4 }, CSF = { GK: 4, DEF: 4, MID: 1, FWD: 0 };
+  let W = 0; gws.forEach((g, i) => (W += Math.pow(0.93, i)));
   for (const p of ST.G.players) {
     if (p.st === 'u' || p.st === 'n') continue;
     if (p.min <= 0 && !ST.plan?.squad.includes(p.id)) continue;
     const n90 = p.min / 90, startR = p.starts != null ? p.starts / fin : Math.min(1, p.min / (90 * fin));
     const under = n90 >= 2 ? ((p.xg || 0) * PF[p.pos] + (p.xa || 0) * 3) / n90 + 2 + CSF[p.pos] * (p.cs || 0) / Math.max(1, n90) : 0;
-    const quality = (0.55 * p.ppg + 0.45 * Math.max(p.ppg * 0.7, under)) * Math.min(1, 0.35 + startR);
-    let v;
-    if (mode === 'wc') {
-      let hz = 0, W = 0; gws.forEach((g, i) => { const w = Math.pow(0.93, i); hz += w * xp(p, g); W += w; });
-      v = 0.62 * hz * sustain(p).k + 0.38 * quality * W;
-    } else {
-      const g = gws[0], x = xp(p, g);
-      const rec = hist.hasPts ? hist.recent(p.id, 3) : null, recAvg = rec ? rec.reduce((a, y) => a + y, 0) / rec.length : p.form;
-      const hot = Math.max(-1.2, Math.min(2.2, (recAvg - p.ppg) * 0.35)); // فورمة حالية فوق مستواه
-      const boom = n90 >= 2 ? Math.min(1.6, ((p.xgi || 0) / n90) * 1.6) : 0; // إمكانية الانفجار
-      v = x <= 0 ? 0 : x + hot * (x / 4) + boom * (x / 5);
-    }
-    if (v > 0) m.set(p.id, v);
+    const a = avail(p, gws[0]);
+    let proj = 0; gws.forEach((g, i) => (proj += Math.pow(0.93, i) * xp(p, g)));
+    if (mode === 'wc') proj *= sustain(p).k;
+    if (proj <= 0) continue;
+    const qual = (0.55 * p.ppg + 0.45 * Math.max(p.ppg * 0.7, under)) * Math.min(1, 0.35 + startR) * W * a;
+    const rec = hist.hasPts ? hist.recent(p.id, 4) : null;
+    const recAvg = rec ? rec.reduce((x, y) => x + y, 0) / rec.length : p.form;
+    // مرشح للتألق: الفرق بين أرقامه الحقيقية ونقاطه + زيادة دقائقه بالجولات الأخيرة
+    const gap = Math.max(0, under - p.ppg);
+    const minsUp = rec && rec.length >= 3 ? Math.max(0, (rec.slice(0, 2).filter((x) => x >= 2).length - rec.slice(2).filter((x) => x >= 2).length) * 0.35) : 0;
+    const brk = (p.ppg + gap * 0.9 + minsUp) * W * a * Math.min(1, 0.45 + startR);
+    const ease = 3 - avgFdr(p.team, gws[0], gws.length); // موجب = جدول سهل
+    const fix = proj * (1 + ease * 0.22);
+    const mom = Math.max(0, recAvg) * W * a * Math.min(1, 0.4 + startR);
+    m.set(p.id, { proj, qual, brk, fix, mom, gap, ease, recAvg, minsUp });
   }
   BASE = { k, m }; return m;
 }
 
-/** قيمة اللاعب لهالمدرب: الأساس × بصمته (المخاطرة، ولاءه، صفقاته، وتنويع خاص بيه) */
+/** نسب المسارات حسب نوع الاقتراح + أسلوب المدرب */
+function mixFor(kind, st, mode) {
+  const M = {
+    bal: { proj: 0.4, qual: 0.3, brk: 0.1, fix: 0.1, mom: 0.1 },
+    fix: { proj: 0.45, qual: 0.15, brk: 0.05, fix: 0.35, mom: 0 },
+    brk: { proj: 0.3, qual: 0.1, brk: 0.4, fix: 0.05, mom: 0.15 },
+    mom: { proj: 0.45, qual: 0.05, brk: 0.1, fix: 0.05, mom: 0.35 },
+  }[kind] || {};
+  const w = { ...M };
+  if (mode === 'fh') { w.qual *= 0.4; w.proj += 0.15; } // الفري هيت: الجولة نفسها أهم من الموسم
+  const a = st.arch;
+  if (a === 'chaser') { w.mom *= 0.5; w.qual *= 1.25; } // اللي يطارد التألق نحميه بالأرقام الحقيقية
+  if (a === 'maverick') { w.brk *= 1.3; }
+  if (a === 'template') { w.qual *= 1.2; w.brk *= 0.8; }
+  if (a === 'strategist') { w.fix *= 1.3; }
+  if (a === 'gambler') { w.mom *= 1.1; w.proj *= 1.05; }
+  const t = Object.values(w).reduce((x, y) => x + y, 0); Object.keys(w).forEach((k) => (w[k] /= t));
+  return w;
+}
+
+/** قيمة اللاعب لهالمدرب: مزيج المسارات × بصمته (المخاطرة، ولاءه، صفقاته، وتنويع خاص بيه) */
 function valueMap(mode, st, opt) {
   const G = ST.G, g0 = G.next, gws = []; const H = mode === 'fh' ? 1 : st.H;
   for (let g = g0; g < g0 + H && g <= G.lastGW; g++) gws.push(g);
   const mine = new Set(ST.plan?.squad || []), hist = coachHistory();
   const lastGW = G.finished || 0, soldRecent = new Set((ST.E.transfers || []).filter((t) => t.event >= lastGW - 2).map((t) => t.element_out));
   const boughtRecent = new Set((ST.E.transfers || []).filter((t) => t.event >= lastGW - 4).map((t) => t.element_in));
-  const mgr = rng(entrySeed()), mgrNoise = new Map(), tap = rng(entrySeed() ^ (opt.seed * 2246822519));
-  const riskB = (st.risk - 50) / 50; // -1 (آمن) .. +1 (جريء)
+  const mgr = rng(entrySeed()), tap = rng(entrySeed() ^ (opt.seed * 2246822519));
+  const riskB = Math.max(-1, Math.min(1, (st.risk - 50) / 50 + (opt.diff || 0))); // -1 (آمن) .. +1 (جريء)
+  const w = mixFor(opt.kind || 'bal', st, mode);
   const V = new Map(), base = baseValues(mode, gws);
-  const ids = [...base.keys()].sort((a, b) => a - b); ids.forEach((id) => mgrNoise.set(id, mgr()));
+  const ids = [...base.keys()].sort((a, b) => a - b), mgrNoise = new Map(); ids.forEach((id) => mgrNoise.set(id, mgr()));
   for (const id of ids) {
-    const v = base.get(id), p = PM(id);
+    const b = base.get(id), p = PM(id);
+    const v = w.proj * b.proj + w.qual * b.qual + w.brk * b.brk + w.fix * b.fix + w.mom * b.mom;
     let m = 1;
-    // بصمة ثابتة لكل مدرب: نفس اللاعب ياخذ وزن مختلف عند كل مدرب
-    m *= 1 + (mgrNoise.get(id) - 0.5) * (mode === 'fh' ? 0.12 : 0.14);
-    // المخاطرة
+    m *= 1 + (mgrNoise.get(id) - 0.5) * (mode === 'fh' ? 0.12 : 0.14); // بصمة ثابتة لكل مدرب
     const rk = mode === 'fh' ? 0.2 : 0.15;
     if (p.own < 10) m *= 1 + rk * riskB; else if (p.own > 30) m *= 1 - rk * 0.8 * riskB;
     if (mode === 'wc') {
-      if (mine.has(id)) m *= 1.10; // لاعبينك الحاليين
-      else if ((hist.owned.get(id) || 0) >= 2) m *= 1.04; // لاعب امتلكته قبل وتعرفه
-      if (boughtRecent.has(id) && mine.has(id)) m *= 1.03; // صفقتك الأخيرة — خطة بدأتها
-      if (soldRecent.has(id)) m *= 0.9; // بعته قريب — ما نرجعه إلا إذا يستاهل فعلاً
+      if (mine.has(id)) m *= 1.10;
+      else if ((hist.owned.get(id) || 0) >= 2) m *= 1.04;
+      if (boughtRecent.has(id) && mine.has(id)) m *= 1.03;
+      if (soldRecent.has(id)) m *= 0.9;
     } else if (mine.has(id)) m *= 1.02;
     if (opt.prem === 'stars' && p.price >= 10) m *= 1.07;
     if (opt.prem === 'spread' && p.price >= 10) m *= 0.92;
     if (opt.avoid?.has(id)) m *= 1 - opt.avoidW;
-    m *= 1 + (tap() - 0.5) * 0.07; // تنويع لكل ضغطة
-    V.set(id, v * m);
+    m *= 1 + (tap() - 0.5) * 0.07;
+    if (v > 0) V.set(id, v * m);
   }
   return { V, gws };
+}
+
+/** لاعبين ممكن يتألقون: أرقامهم الحقيقية تسبق نقاطهم، أو دقائقهم صاعدة، أو جدولهم سهل — مرتبين على مقاس المدرب */
+function breakouts(mode, st, n = 6) {
+  const G = ST.G, H = mode === 'fh' ? 1 : st.H, gws = []; for (let g = G.next; g < G.next + H && g <= G.lastGW; g++) gws.push(g);
+  const base = baseValues(mode, gws), mine = new Set(ST.plan?.squad || []), mgr = rng(entrySeed() ^ 0x9e3779b9);
+  const L = [];
+  for (const [id, b] of base) {
+    const p = PM(id); if (mine.has(id) || p.min < 270) continue;
+    const why = [];
+    if (b.gap >= 0.8) why.push(tt('أرقامه أعلى من نقاطه', 'Underlying > points'));
+    if (b.minsUp > 0) why.push(tt('دقائقه صاعدة', 'Minutes rising'));
+    if (b.ease >= 0.5) why.push(tt('جدول سهل جاي', 'Easy fixtures'));
+    if (b.recAvg >= p.ppg + 1.5) why.push(tt('متألق هالفترة', 'In form'));
+    if (!why.length) continue;
+    const sc = (b.brk + b.fix * 0.3) / Math.max(4, p.price) * (1 + (p.own < 10 ? 0.15 * Math.max(0, (st.risk - 40) / 60) : 0)) * (0.92 + mgr() * 0.16);
+    L.push({ p, why, sc });
+  }
+  // توزيع على المراكز: وسط وهجوم أكثر (هم اللي ينفجرون)
+  const Q = { MID: 2, FWD: 2, DEF: 1, GK: 1 }, out = [];
+  for (const k of ['MID', 'FWD', 'DEF', 'GK']) out.push(...L.filter((x) => x.p.pos === k).sort((a, b) => b.sc - a.sc).slice(0, Q[k]));
+  return out.slice(0, n);
 }
 
 const FORMS = []; for (let d = 3; d <= 5; d++) for (let m = 2; m <= 5; m++) { const f = 10 - d - m; if (f >= 1 && f <= 3) FORMS.push(`${d}-${m}-${f}`); }
@@ -170,27 +220,31 @@ function generate() {
   const prevA = PREV && PREV.mode === mode ? PREV.a : null;
   const mk = (opt, force, label, why) => { const { V } = valueMap(mode, st, opt); const sq = build(V, budget, mode, st.favF, { start: own, force }); if (!sq) return null; return { sq, label, why, ...summary(sq, DISP, st.favF, budget, force || xiOf(sq, V, st.favF).f) }; };
   const fh = mode === 'fh';
-  const A = mk(prevA ? { seed, avoid: prevA, avoidW: 0.07 } : { seed }, null, fh ? tt('الأقوى للجولة', 'Strongest this GW') : tt('الأفضل لك', 'Best for you'),
-    fh ? tt('أعلى متوقع للجولة الجاية حسب المباريات والفورمة الحالية', 'Highest projection for the next GW') : tt('مستوى اللاعبين على المدى البعيد + الجدول الجاي، على مقاس أسلوبك وفريقك', 'Long-term level + fixtures, fitted to your style and squad'));
+  const A = mk(prevA ? { seed, avoid: prevA, avoidW: 0.07, kind: 'bal' } : { seed, kind: 'bal' }, null, fh ? tt('الأقوى للجولة', 'Strongest this GW') : tt('الأفضل لك', 'Best for you'),
+    fh ? tt('كل المسارات سوية: المباراة، الفورمة، والأرقام الحقيقية — على مقاسك', 'All paths combined, fitted to you') : tt('كل المسارات سوية: المستوى، الجدول، الأرقام الحقيقية والفورمة — على مقاس أسلوبك وفريقك', 'All paths combined, fitted to your style and squad'));
   if (!A) return null;
-  // تشكيلات مختلفة للاقتراحين الثانيين
   const order = [st.favF, '4-4-2', '3-4-3', '4-3-3', '3-5-2', '5-3-2', '4-5-1', '5-4-1'].filter(Boolean);
   const fs = []; for (const f of order) if (f !== A.f && !fs.includes(f)) fs.push(f);
   const aXI = new Set(A.xi);
-  let B = null; for (const w of [0.15, 0.24, 0.34]) { B = mk({ seed: seed + 1, avoid: new Set([...aXI, ...(prevA || [])]), avoidW: w }, fs[0], tt('البديلة', 'The alternative'), tt('نص التشكيلة تقريباً مختلف وبرسم ثاني — خيارات بنفس القوة', 'About half different with another shape')); if (B && B.sq.filter((id) => !A.sq.includes(id)).length >= 4) break; }
+  let B = null; for (const w of [0.15, 0.24, 0.34]) { B = mk({ seed: seed + 1, kind: 'fix', avoid: new Set([...aXI, ...(prevA || [])]), avoidW: w }, fs[0], fh ? tt('المباراة الأسهل', 'Easiest fixtures') : tt('مسار الجدول', 'Fixtures path'), fh ? tt('لاعبين مباراتهم هالجولة سهلة', 'Players with the easiest match this GW') : tt('لاعبين جدولهم الجاي سهل ومتوقعهم عالي', 'Players with the kindest run of fixtures')); if (B && B.sq.filter((id) => !A.sq.includes(id)).length >= 4) break; }
   const starsHeavy = st.prem >= 3;
   const C = fh
-    ? mk({ seed: seed + 2, avoid: aXI, avoidW: 0.1 }, fs[1], tt('المفاجآت', 'Differentials'), tt('لاعبين قليلين الملكية بمباريات حلوة — تكسب بيهم نقاط على الأغلبية', 'Low-owned players with good fixtures'))
-    : mk({ seed: seed + 2, avoid: aXI, avoidW: 0.08, prem: starsHeavy ? 'spread' : 'stars' }, fs[1], starsHeavy ? tt('التوزيع المتوازن', 'Balanced spread') : tt('هيكل النجوم', 'Star-heavy'),
+    ? mk({ seed: seed + 2, kind: 'bal', diff: 0.6, avoid: aXI, avoidW: 0.1 }, fs[1], tt('المفاجآت', 'Differentials'), tt('لاعبين قليلين الملكية بمباريات حلوة — تكسب بيهم نقاط على الأغلبية', 'Low-owned players with good fixtures'))
+    : mk({ seed: seed + 2, kind: 'bal', avoid: aXI, avoidW: 0.08, prem: starsHeavy ? 'spread' : 'stars' }, fs[1], starsHeavy ? tt('التوزيع المتوازن', 'Balanced spread') : tt('هيكل النجوم', 'Star-heavy'),
       starsHeavy ? tt('بدل التركيز على النجوم، فلوس موزعة على لاعبين أكثر', 'Money spread across more players') : tt('نجوم أكثر بالأمام ودكة أرخص', 'More stars, cheaper bench'));
-  const L = [A, B, C].filter(Boolean);
+  const abXI = new Set([...aXI, ...(B?.xi || [])]);
+  const D = mk({ seed: seed + 3, kind: fh ? 'mom' : 'brk', avoid: abXI, avoidW: 0.1 }, fs[2], fh ? tt('المتألقين هسه', 'In form now') : tt('مرشحين للتألق', 'Breakout picks'),
+    fh ? tt('لاعبين بفورمة عالية بآخر الجولات', 'Players in hot form') : tt('لاعبين أرقامهم الحقيقية أعلى من نقاطهم أو دقائقهم صاعدة — ممكن ينفجرون قريب', 'Underlying numbers ahead of points or rising minutes'));
+  const E = mk({ seed: seed + 4, kind: fh ? 'brk' : 'mom', diff: fh ? 0.3 : 0.45, avoid: new Set([...abXI, ...(D?.xi || [])]), avoidW: 0.08 }, fs[3], fh ? tt('الأرقام الحقيقية', 'Underlying numbers') : tt('الجريئة', 'The bold one'),
+    fh ? tt('لاعبين فرصهم الحقيقية عالية حتى لو نقاطهم قليلة', 'High xG/xA even if points lag') : tt('فورمة حالية + لاعبين قليلين الملكية — مخاطرة أعلى ومكسب أكبر', 'Current form + low-owned — higher risk, higher reward'));
+  const L = [A, B, C, D, E].filter(Boolean);
   const poolU = new Set(L.flatMap((x) => x.sq));
   const start = [...L].sort((x, y) => objective(y.sq, pure.V, mode, st.favF) - objective(x.sq, pure.V, mode, st.favF))[0].sq;
   // التقييم المشترك: مستوى اللاعب + نقاطه المتوقعة
   const VB = new Map(); pure.V.forEach((v, id) => VB.set(id, (v + (DISP.get(id) || 0)) / 2));
   const built = build(VB, budget, mode, st.favF, { pool: poolU, start });
   let best = [built, ...L.map((x) => x.sq)].filter(Boolean).sort((a, b) => objective(b, VB, mode, st.favF) - objective(a, VB, mode, st.favF))[0];
-  const BEST = { sq: best, label: tt('الأفضل من الثلاث', 'Best of the three'), why: tt('جمعنا أقوى اللاعبين من الاقتراحات الثلاثة بتشكيلة وحدة ضمن ميزانيتك، وبأفضل رسم', 'Strongest players from all three in one squad, best shape'), best: true, ...summary(best, DISP, st.favF, budget, xiOf(best, pure.V, st.favF).f) };
+  const BEST = { sq: best, label: tt('الأفضل من الكل', 'Best of all'), why: tt('جمعنا أقوى اللاعبين من كل الاقتراحات بتشكيلة وحدة ضمن ميزانيتك، وبأفضل رسم', 'Strongest players from all suggestions in one squad, best shape'), best: true, ...summary(best, DISP, st.favF, budget, xiOf(best, pure.V, st.favF).f) };
   const topL = [...L].sort((a, b) => b.xpT - a.xpT)[0];
   if (BEST.xpT < topL.xpT - 0.05) Object.assign(BEST, summary(topL.sq, DISP, st.favF, budget, topL.f), { sq: topL.sq });
   PREV = { mode, a: new Set(A.xi) };
@@ -226,8 +280,8 @@ export function vSquads() {
   const who = `<div class="card" style="display:flex;gap:12px;align-items:center"><div class="pbig" style="background:rgba(139,124,255,.14);color:#C4B5FD;width:42px;height:42px;border-radius:13px;display:grid;place-items:center;flex:none">${I('i-user')}</div><div style="flex:1;min-width:0"><b style="font-size:14px">${st.ready ? arch[0] : tt('نحلل أسلوبك…', 'Analysing your style…')}</b><div class="mut" style="font-size:12px;line-height:1.6;margin-top:2px">${st.ready ? [st.favF ? tt(`تشكيلك المفضل ${st.favF}`, `Fav formation ${st.favF}`) : '', st.risk >= 60 ? tt('تحب الخيارات المختلفة', 'You like differentials') : st.risk <= 32 ? tt('تفضّل الخيارات الآمنة', 'You prefer safe picks') : tt('توازن بين الآمن والمختلف', 'Safe/differential balance')].filter(Boolean).join(' · ') : tt('الاقتراحات راح تتخصص أكثر بعد التحليل', 'Suggestions get more personal after analysis')}</div></div><div style="text-align:center"><small class="mut" style="font-size:11px">${tt('الميزانية', 'Budget')}</small><b class="num" style="display:block;font-size:17px">£${b.toFixed(1)}</b></div></div>`;
   const used = MODE === 'wc' ? chips.includes('wildcard') : chips.includes('freehit');
   const note = used ? `<div class="note" style="margin-top:8px">${tt('ملاحظة: استخدمت هالورقة بالنص الأول — الاقتراح يفيدك للنص الثاني أو للتخطيط', 'Note: chip already used this half — useful for planning')}</div>` : '';
-  const btn = `<button class="btn btn-p" style="width:100%;margin-top:12px" onclick="sqGo()" ${BUSY ? 'disabled' : ''}>${I('i-sparkle')}${BUSY ? tt('نبني التشكيلات…', 'Building…') : RES ? tt('اقترح 3 تشكيلات جديدة', 'Suggest 3 new squads') : tt('اقترح 3 تشكيلات', 'Suggest 3 squads')}</button>`;
-  if (!RES || RES.mode !== MODE) return head + seg + who + note + btn + `<div class="card mut" style="margin-top:12px;font-size:13px;line-height:1.8;text-align:center">${tt('كل ضغطة تطلع 3 تشكيلات مختلفة (مو شرط كلها تتغير)، ورابعة تجمع أفضل لاعبين منهن', 'Each tap gives 3 different squads plus a 4th combining the best of them')}</div>`;
+  const btn = `<button class="btn btn-p" style="width:100%;margin-top:12px" onclick="sqGo()" ${BUSY ? 'disabled' : ''}>${I('i-sparkle')}${BUSY ? tt('نبني التشكيلات…', 'Building…') : RES ? tt('اقترح تشكيلات جديدة', 'Suggest new squads') : tt('اقترح 5 تشكيلات', 'Suggest 5 squads')}</button>`;
+  if (!RES || RES.mode !== MODE) return head + seg + who + note + btn + `<div class="card mut" style="margin-top:12px;font-size:13px;line-height:1.8;text-align:center">${tt('كل ضغطة تطلع 5 تشكيلات من مسارات تحليل مختلفة (المستوى، الجدول، المرشحين للتألق، الفورمة، المختلفين) وبرسوم مختلفة، وسادسة تجمع أفضل لاعبين منهن', 'Each tap gives 5 squads from different analysis paths plus a 6th combining the best')}</div>`;
   const R = RES.list[SEL] || RES.list[0];
   PV.clear(); R.sq.forEach((id) => PV.set(id, RES.gws.reduce((a, g) => a + xp(PM(id), g), 0)));
   const tabs = `<div class="sq-tabs">${RES.list.map((x, i) => `<button class="${i === SEL ? 'on' : ''}${x.best ? ' best' : ''}" onclick="sqSel(${i})"><b>${x.best ? '★' : String.fromCharCode(65 + i)}</b><span>${esc(x.label)}</span><small class="num">${x.f} · ${x.xpT}</small></button>`).join('')}</div>`;
@@ -235,9 +289,13 @@ export function vSquads() {
   const diffA = prev ? R.sq.filter((id) => !prev.sq.includes(id)).length : null;
   const stats = `<div class="sq-stats"><div><small>${tt('المتوقع', 'Projected')}</small><b class="num">${R.xpT}</b><em>${RES.mode === 'fh' ? 'GW' + G.next : tt(`${RES.gws.length} جولات`, `${RES.gws.length} GWs`)}</em></div><div><small>${tt('التشكيل', 'Formation')}</small><b class="num">${R.f}</b></div><div><small>${tt('الكلفة', 'Cost')}</small><b class="num">£${R.cost.toFixed(1)}</b><em>${tt('يبقى', 'Bank')} <bdi dir="ltr">£${R.bank.toFixed(1)}</bdi></em></div><div><small>${tt('من فريقك', 'Kept')}</small><b class="num">${R.keep}/15</b>${diffA != null ? `<em>${tt(`${diffA} مختلفين عن A`, `${diffA} differ from A`)}</em>` : ''}</div></div>`;
   return head + seg + who + note + btn + tabs + `<div class="card" style="margin-top:10px"><b style="font-size:14.5px">${esc(R.label)}</b><div class="mut" style="font-size:12.5px;margin-top:3px;line-height:1.6">${esc(R.why)}</div>${stats}</div>` + pitch(R) +
-    `<p class="mut" style="font-size:11.5px;text-align:center;margin-top:10px;line-height:1.7">${tt('الرقم تحت كل لاعب = نقاطه المتوقعة', 'Number under each player = projected points')}${RES.mode === 'wc' ? tt(` لـ ${RES.gws.length} جولات`, ` over ${RES.gws.length} GWs`) : ''} · ${tt('اللاعب المميز ما موجود بفريقك', 'Highlighted = not in your team')}</p>`;
+    breakoutHTML() + `<p class="mut" style="font-size:11.5px;text-align:center;margin-top:10px;line-height:1.7">${tt('الرقم تحت كل لاعب = نقاطه المتوقعة', 'Number under each player = projected points')}${RES.mode === 'wc' ? tt(` لـ ${RES.gws.length} جولات`, ` over ${RES.gws.length} GWs`) : ''} · ${tt('اللاعب المميز ما موجود بفريقك', 'Highlighted = not in your team')}</p>`;
 }
 
+function breakoutHTML() {
+  const L = breakouts(RES.mode, RES.st, 6); if (!L.length) return '';
+  return `<div class="sec" style="margin-top:20px"><h2>${I('i-fire')}${RES.mode === 'fh' ? tt('ممكن يتألقون هالجولة', 'Could haul this GW') : tt('لاعبين ممكن يتألقون', 'Potential breakouts')}</h2></div><div class="list">${L.map(({ p, why }) => playerRow(p, `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">${why.slice(0, 2).map((w) => `<span class="tag" style="font-size:10px;white-space:nowrap">${w}</span>`).join('')}</div>`)).join('')}</div>`;
+}
 window.sqMode = (m) => { MODE = m; SEL = 0; window.render(); };
 window.sqSel = (i) => { SEL = i; window.render(); };
 window.sqGo = () => {
