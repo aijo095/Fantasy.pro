@@ -209,3 +209,19 @@ html.v2 .hero.pu-hero::after{content:""!important;inset:0 0 auto 0!important;hei
 .pz-rank .pu-spark{width:42%;height:44px;flex:none;opacity:.9}
 
 .pz-mini.z i{background:rgba(255,255,255,.12)!important}
+/* نبض الجولة — نسخة مدمجة ومتناسقة */
+.pz{margin-top:12px;gap:8px}
+.pz-av{width:40px;height:40px;font-size:16px}
+.pz-nm{font-size:12.5px}
+.pz-sb{gap:8px;padding:6px 12px;border-radius:16px}
+.pz-sb b{font-size:30px;min-width:38px}
+.pz-sb i{width:5px;height:5px;box-shadow:0 10px 0 rgba(255,255,255,.35);transform:translateY(-5px)}
+.pz-st{margin-top:10px;padding:4px 12px;font-size:11.5px}
+.pz-bar{margin-top:10px;gap:8px}.pz-bar>div{height:5px}
+.pz-cmp{margin-top:12px;padding:2px 12px;border-radius:16px}
+.pz-row{grid-template-columns:36px 1fr 36px;padding:7px 0;gap:8px}
+.pz-row>b{font-size:15px}
+.pz-mid{gap:4px}.pz-mid span{font-size:11px}.pz-mini{height:3px}
+.pz-rank{margin-top:10px;padding:10px 12px;border-radius:16px}
+.pz-rank b{font-size:18px}.pz-rank .pu-spark{height:36px}
+html.v2 .hero.pu-hero{padding:14px 14px 12px!important}
