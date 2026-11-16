@@ -135,7 +135,7 @@ html input,html textarea,html select{background:var(--fp-carbon);border:1px soli
 html input:focus,html textarea:focus,html select:focus{border-color:rgba(var(--acc-rgb),.7);box-shadow:0 0 0 3px rgba(var(--acc-rgb),.14)}
 html select{appearance:none;-webkit-appearance:none;padding-inline-end:34px;background-image:linear-gradient(45deg,transparent 50%,var(--fp-steel) 50%),linear-gradient(135deg,var(--fp-steel) 50%,transparent 50%);background-position:left 16px center,left 11px center;background-size:5px 5px;background-repeat:no-repeat}
 /* النوافذ المنبثقة (bottom sheets) */
-html.v2 .sheet,html.v2 .ov .box,html.v2 .modal{background:linear-gradient(180deg,#141821,#0C0F14);border:1px solid var(--fp-edge-2);box-shadow:0 -20px 60px -20px rgba(0,0,0,.9)}
+html.v2 .sheet,html.v2 .modal{background:linear-gradient(180deg,#141821,#0C0F14);border:1px solid var(--fp-edge-2);box-shadow:0 -20px 60px -20px rgba(0,0,0,.9)}
 html.v2 .ov{background:rgba(3,4,6,.66);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 /* شارات ووسوم */
 html.v2 .tag,html.v2 .chip,html.v2 .pill{border-radius:var(--rd-pill);font-weight:600;letter-spacing:.01em}
@@ -175,7 +175,7 @@ html.v2 .cz-idea{align-items:flex-start;gap:10px}
   #view.fx-first>*:nth-child(2){animation-delay:40ms}#view.fx-first>*:nth-child(3){animation-delay:80ms}#view.fx-first>*:nth-child(4){animation-delay:120ms}#view.fx-first>*:nth-child(n+5){animation-delay:160ms}
   html.v2 .pl{transition:transform var(--mo-fast) var(--mo-ease)}
   html.v2 .pl.sel{animation:fpSelect var(--mo-base) var(--mo-out)}
-  html.v2 .sheet,html.v2 .ov .box{animation:fpSheet var(--mo-slow) var(--mo-out) both}
+  html.v2 .sheet{animation:fpSheet var(--mo-slow) var(--mo-out) both}
   html.v2 .tap,html.v2 .row.tap,html.v2 .card.tap{transition:transform var(--mo-fast) var(--mo-ease),background var(--mo-base)}
   html.v2 .tap:active{transform:scale(.985)}
 }
