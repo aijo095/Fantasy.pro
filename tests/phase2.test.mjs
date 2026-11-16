@@ -165,3 +165,47 @@ test('sequence: الخطط تنبني من الحلّال وتنشال المك�
   assert.equal(r.plans.filter((p) => JSON.stringify(p.steps.map((s) => s.tr)) === '[[[1,3]]]').length, 1); // nohit و hit نفس الخطة
   assert.equal(r.cls.best.k, 'now');
 });
+
+/* ---------- (5) سلوك المدرب ---------- */
+const MB = await import('../js/intel/manager.js');
+function mgrHist(n, f) {
+  const current = [], events = [];
+  for (let g = 1; g <= n; g++) { const o = f(g); current.push({ event: g, points: o.pts, event_transfers: o.tr, event_transfers_cost: o.cost || 0, overall_rank: o.rank || 1e6 }); events.push({ id: g, avg: 50, cap: 99 }); }
+  return { hist: { current, chips: [] }, events };
+}
+test('manager: يتعلم إنه ياخذ ضربة بعد الجولات السيئة', () => {
+  // جولة سيئة كل جولتين، وبعدها ضربة دائماً
+  const { hist, events } = mgrHist(16, (g) => ({ pts: g % 2 ? 35 : 60, tr: g % 2 ? 1 : 2, cost: g % 2 ? 0 : 4 }));
+  const rows = MB.behaviourRows({ hist, events, picks: {} });
+  const M = MB.fit(rows);
+  assert.ok(M.hitBad.p > 0.7, JSON.stringify(M.hitBad)); assert.ok(M.trOk.p < 0.3 === false);
+  assert.ok(MB.predict(M, { bad: true }).hit > MB.predict(M, { bad: false }).hit);
+});
+test('manager: عينة صغيرة تبقى قريبة من القيمة العامة', () => {
+  const { hist, events } = mgrHist(3, () => ({ pts: 50, tr: 0 }));
+  const M = MB.fit(MB.behaviourRows({ hist, events, picks: {} }));
+  assert.ok(M.tr.p > 0.4); // جولتين بدون انتقال ما تخلي الاحتمال صفر
+});
+test('manager: الاختبار التاريخي بدون تسرب ويقارن بخط أساس', () => {
+  const { hist, events } = mgrHist(20, (g) => ({ pts: g % 3 === 0 ? 30 : 60, tr: g % 3 === 1 ? 1 : 0 }));
+  const bt = MB.backtest(MB.behaviourRows({ hist, events, picks: {} }));
+  assert.ok(bt.n >= 10); assert.equal(typeof bt.useful, 'boolean'); assert.ok(bt.model != null && bt.base != null);
+});
+test('manager: كابتن الأغلبية', () => {
+  const { hist, events } = mgrHist(8, () => ({ pts: 50, tr: 1 }));
+  const picks = Object.fromEntries([2, 3, 4, 5, 6, 7, 8].map((g) => [g, { p: [[99, 2, 1, 1]] }]));
+  assert.ok(MB.fit(MB.behaviourRows({ hist, events, picks })).tpl.p > 0.8);
+});
+
+/* ---------- (10) الفرص بين المدربين ---------- */
+const CR = await import('../js/intel/cross.js');
+test('cross: فرصة النخبة لازم تنفع للمدرب نفسه (ميزانية، نادي، توقع)', () => {
+  const pl = { 1: { id: 1, pos: 'MID', team: 1, price: 6 }, 2: { id: 2, pos: 'MID', team: 2, price: 5 }, 10: { id: 10, pos: 'MID', team: 3, price: 7, own: 10, st: 'a', min: 900, x: 30 }, 11: { id: 11, pos: 'MID', team: 4, price: 15, own: 8, st: 'a', min: 900, x: 40 }, 12: { id: 12, pos: 'MID', team: 5, price: 6, own: 5, st: 'a', min: 900, x: 10 } };
+  pl[1].x = 20; pl[2].x = 15;
+  const ctx = { plan: { squad: [1, 2], bank: 1.5 }, PM: (id) => pl[id], sell10: (id) => Math.round(pl[id].price * 10), xpN: (p) => p.x, players: [pl[10], pl[11], pl[12]], avail: () => 1 };
+  const elite = { own: [{ id: 10, o: 45 }, { id: 11, o: 50 }, { id: 12, o: 40 }] }, prev = { own: [{ id: 10, o: 30 }] };
+  const r = CR.opportunities(elite, prev, ctx);
+  assert.equal(r.edge.length, 1); assert.equal(r.edge[0].p.id, 10); // 11 غالي، 12 توقعه أقل
+  assert.equal(r.edge[0].fit.out.id, 1); // بيع 1 (6م) + بنك 1.5 = 7.5 ≥ 7، بيع 2 ما يكفي
+  assert.equal(r.rising[0].d, 15);
+});

@@ -14,6 +14,8 @@ const DEFAULTS = {
   seasonal: true,       // 12: الأنماط الموسمية
   timing: true,         // 3: أفضل توقيت للقرار
   sequential: true,     // 9: مقارنة خطط متعددة الجولات
+  managerModel: true,   // 5: توقع سلوك المدرب
+  crossManager: true,   // 10: الفرص من مقارنة المدربين (أفضل 10,000)
 };
 
 let cache = null;

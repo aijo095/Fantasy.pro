@@ -21,10 +21,12 @@ import { detect as detectChange, startShare } from './intel/change.js';
 import { posMeans, hiddenGems, overvalued } from './intel/value.js';
 import { patterns as seasonPatterns, upcomingRest } from './intel/season.js';
 import { decideTiming } from './intel/timing.js';
+import { behaviourRows, fit as fitBehaviour, predict as predictBehaviour, backtest as backtestBehaviour } from './intel/manager.js';
+import { opportunities as crossOpps } from './intel/cross.js';
 
 const VER = 2, WIN = 10; // نحلل آخر 10 جولات منتهية
 const key = () => `fp_coach_v${VER}_${ST.E?.entry?.id}`;
-let MEM = null, BUSY = null;
+let MEM = null, BUSY = null, ELITE = { cur: null, prev: null };
 
 /* ---------- البيانات: تشكيلات المدرب + نقاط كل لاعب بالجولات (تنحفظ مضغوطة) ---------- */
 function loadCache() { try { return JSON.parse(localStorage.getItem(key()) || 'null') || { picks: {}, pts: {} }; } catch { return { picks: {}, pts: {} }; } }
@@ -52,7 +54,15 @@ export async function ensureCoach(onProgress) {
     if (flag('changeDetector')) { try { await PS.ensure(G, FPL.loadLive); CHG.clear(); } catch {} }
     // ذاكرة القرارات: نقيّم توصيات الجولات اللي خلصت (جودة القرار، الندم، دقة التوقع)
     if (flag('decisionMemory')) { try { DM.evaluateDue({ entryId: id, isFinished: (g) => !!G.events.find((e) => e.id === g)?.fin, pts: c.pts, picks: c.picks, transfers: ST.E.transfers || [], lastGW: G.lastGW, ftBefore }); } catch {} }
+    // بيانات أفضل 10,000 (عامة ومجمّعة) لكاشف الفرص بين المدربين
+    if (flag('crossManager')) {
+      ELITE = { cur: null, prev: null };
+      const getE = async (g) => { if (g < 1) return null; try { const r = await fetch(`/data/captains/gw${g}.json`, { cache: 'no-store' }); const d = r.ok ? await r.json() : null; return d?.own?.length ? d : null; } catch { return null; } };
+      for (const g of [G.cur, G.cur - 1]) { const d = await getE(g); if (d) { ELITE.cur = d; ELITE.prev = await getE(g - 1); break; } } // آخر ملف محسوب، والجولة اللي قبله للمقارنة
+    }
     MEM = { entry: id, fin: G.finished, gws, ...profile(c, gws) };
+    // نموذج سلوك المدرب (من سجله هو بس) + اختباره على تاريخه
+    if (flag('managerModel')) { try { const rows = behaviourRows({ hist: ST.E.hist, events: G.events, picks: c.picks }); const f = flag('decisionMemory') ? DM.summary(id)?.follow : null; MEM.beh = { M: fitBehaviour(rows, f ? { yes: f.yes, n: f.n } : null), bt: backtestBehaviour(rows) }; } catch {} }
     return MEM;
   })();
   try { return await BUSY; } finally { BUSY = null; }
@@ -335,6 +345,22 @@ export function coachPlan(plan) {
     if (tdrop) ideas.push({ ic: '📉', t: tt(`نمط ${tdrop.level === 'confirmed' ? 'مؤكد' : 'محتمل'}: ${tName(tdrop.team)} تراجع — فرق أهدافه بآخر 6 مباريات ${tdrop.to} مقابل ${tdrop.from} قبلها، وعندك منه لاعبين`, `${tName(tdrop.team)} has declined over the last 6`) });
     if (tired.length >= 2) ideas.push({ ic: '⏱', t: tt(`ضغط مباريات: هذا الموسم الفريق اللي يرتاح أقل من خصمه بيومين أو أكثر فرق أهدافه أقل بـ${Math.abs(cong.effect)} بالمعدل (${cong.level === 'confirmed' ? 'نمط مؤكد' : 'نمط محتمل'})، وعندك ${tired.length} أساسيين بهالوضع: ${tired.slice(0, 3).map((p) => p.name).join('، ')}`, `Short rest hurts this season; ${tired.length} of your starters are affected`) });
   }
+  if (flag('managerModel') && M.beh?.M?.n >= 5) {
+    // نتوقع شنو ممكن تسوي، ونصيغ النصيحة على هالأساس — بدون ما نغيّر القرار التحليلي
+    const H = ST.E.hist?.current || [], lh = H[H.length - 1], lh2 = H[H.length - 2], la = lh ? G.events.find((e) => e.id === lh.event)?.avg : null;
+    const ctxB = { bad: lh && la != null ? lh.points - la <= -8 : null, falling: lh && lh2 && lh.overall_rank && lh2.overall_rank ? lh.overall_rank > lh2.overall_rank : null };
+    const pr = predictBehaviour(M.beh.M, ctxB), useful = M.beh.bt?.useful !== false;
+    if (transfer.kind !== 'go' && pr.hit >= 0.35 && ft <= 0) ideas.unshift({ ic: '🧠', t: tt(`من سجلك${ctxB.bad ? ' بعد الجولات السيئة' : ''}: تاخذ ضربة (−4) بنسبة ${Math.round(pr.hit * 100)}% — بس هالمرة أفضل انتقال يرجع ${top ? top.g : 0} نقطة بخمس جولات، أقل من الـ${hitBar} اللي تحتاجها الضربة. لا تاخذها`, `You often take hits (${Math.round(pr.hit * 100)}%); this one does not pay back`) });
+    else if (transfer.kind === 'roll' && pr.tr >= 0.8) ideas.unshift({ ic: '🧠', t: tt(`عادةً تسوي انتقال ${Math.round(pr.tr * 100)}% من الجولات، بس هالجولة الاحتفاظ أفضل: يصير عندك ${Math.min(5, ft + 1)} انتقالات للجولة الجاية`, `You usually transfer (${Math.round(pr.tr * 100)}%), but rolling is better this week`) });
+    if (useful && pr.tpl >= 0.7 && M.beh.M.tpl.n >= 4) { const mc = G.events.find((e) => e.id === G.cur)?.cap; if (mc && mc !== cap.p.id && plan.xi.includes(mc)) { const alt = capL.find((x) => x.p.id === mc); if (alt && cap.v - alt.v >= 0.5) ideas.push({ ic: '🧠', t: tt(`أغلب الجولات تختار كابتن الأغلبية (${Math.round(pr.tpl * 100)}%). هالمرة ${cap.p.name} متوقعه أعلى من ${alt.p.name} بـ${r1(cap.v - alt.v)} — الفرق يستاهل تختلف`, `You usually captain the template; this week the gap justifies differing`) }); } }
+  }
+  if (flag('crossManager') && ELITE.cur?.own?.length) {
+    const CX = crossMemo(plan, () => crossOpps(ELITE.cur, ELITE.prev, { plan, PM, sell10: sellPrice10, xpN: (p) => rx(p, gw, 5), players: G.players, avail: (p) => avail(p, gw) }));
+    const pick = CX.rising[0] ? ['rising', CX.rising[0]] : CX.edge[0] ? ['edge', CX.edge[0]] : CX.ignored[0] ? ['ignored', CX.ignored[0]] : null;
+    if (pick) { const [k, x] = pick, n90 = (x.p.min || 0) / 90, why = n90 >= 3 ? tt(`${r1((x.p.xgi || 0) / n90)} xGI بالمباراة و${Math.round((x.p.min || 0) / Math.max(1, G.finished))} دقيقة بالمعدل`, `${r1((x.p.xgi || 0) / n90)} xGI/90`) : '';
+      const head = k === 'rising' ? tt(`أفضل 10,000 مدرب اشتروا ${x.p.name} مؤخراً (ملكيتهم صعدت +${x.d}% إلى ${x.eo}%)`, `Top 10k managers are buying ${x.p.name}`) : k === 'edge' ? tt(`أفضل 10,000 مدرب يمتلكون ${x.p.name} بنسبة ${x.eo}% مقابل ${x.own}% عند كل المدربين`, `Top 10k own ${x.p.name} at ${x.eo}% vs ${x.own}% overall`) : tt(`${x.p.name} متجاهل تقريباً من الكل (${x.own}%)`, `${x.p.name} is ignored by almost everyone`);
+      opp.push({ ic: '🔍', t: `${head}${why ? ' — ' + why : ''}. ${tt(`يناسب فريقك بدل ${x.fit.out.name} (+${x.fit.g} نقطة متوقعة بخمس جولات، ضمن ميزانيتك)`, `Fits your squad for ${x.fit.out.name} (+${x.fit.g})`)}`, act: `openPlayer(${x.p.id})` }); }
+  }
   const ideasAll = [...opp, ...ideas];
   const seq = flag('sequential') ? seqMemo(plan, transfer.kind === 'go' ? [[transfer.m.o.id, transfer.m.c.id]] : null) : null;
   // فحص نهائي للتوصية كاملة (الانتقال + الكابتن + الورقة) — التحذيرات تنحفظ ويا القرار
@@ -361,6 +387,9 @@ function seqMemo(plan, firstMove) {
     .catch(() => { SEQ.busy = false; });
   return null;
 }
+
+let CXM = { k: null, v: null };
+function crossMemo(plan, f) { const k = (ST.G.fetchedAt || 0) + ':' + plan.squad.join(',') + ':' + plan.bank; if (CXM.k !== k) { let v = { edge: [], rising: [], ignored: [] }; try { v = f(); } catch {} CXM = { k, v }; } return CXM.v; }
 
 let SPM = null;
 function seasonMemo(plan) {
