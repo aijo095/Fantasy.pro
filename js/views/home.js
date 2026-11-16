@@ -94,7 +94,7 @@ function vHome2() {
   const stat = (lbl, val, sub = '') => `<div class="h2-st"><small>${lbl}</small><b class="num">${val}</b>${sub}</div>`;
   return `<div class="h2">
     ${ck}
-    <section class="h2-hero">
+    <section class="h2-hero"><span class="gw-mark" aria-hidden="true">${G.cur}</span>
       <div class="h2-top"><span>${t('gw')} ${G.cur}${livePts != null ? `<i class="h2-live">${tt('مباشر', 'Live')}</i>` : ''}</span><div class="h2-acts"><button onclick="openShareCard(${G.cur})" aria-label="share">${I('i-send', 'i')}</button><button onclick="seasonGo(${G.cur})">${tt('التفاصيل', 'Details')}${I('i-chev', 'chev')}</button></div></div>
       <div class="h2-pts"><b class="num count" data-v="${gwPts ?? ''}">${gwPts ?? '—'}</b><span>${tt('نقطة هالجولة', 'pts this GW')}</span></div>
       ${diff != null ? `<div class="h2-avg ${diff >= 0 ? 'up' : 'down'}"><bdi dir="ltr">${diff >= 0 ? '+' : ''}${diff}</bdi> ${tt('عن المعدل', 'vs avg')} <span>(${ev.avg})</span></div>` : ''}

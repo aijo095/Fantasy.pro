@@ -78,6 +78,9 @@ function pitch(P) {
 /* ---------- المدرب الذكي: أسلوبك وقراراتك  ---------- */
 const COACH = () => true; // صار للكل
 let coachProg = 0, coachErr = false;
+// رموز Fantasy Pro التحليلية — نفس المعنى بكل التطبيق
+const MS = { '🔍': 'ms-risk', '💎': 'ms-opp', '📈': 'ms-up', '⚠️': 'ms-risk', '📅': 'ms-opp', '✌️': 'ms-opp', '∅': 'ms-nodata', '⇅': 'ms-vol', '🎈': 'ms-vol', '🧊': 'ms-stable', '▼': 'ms-down', '📉': 'ms-down' };
+const MSL = () => ({ 'ms-risk': tt('خطورة', 'Risk'), 'ms-opp': tt('فرصة', 'Opportunity'), 'ms-up': tt('تطور', 'Rising'), 'ms-down': tt('تراجع', 'Declining'), 'ms-vol': tt('تذبذب', 'Volatile'), 'ms-stable': tt('استقرار', 'Stable'), 'ms-nodata': tt('بيانات ناقصة', 'Incomplete data') });
 const confChip = (c) => `<span class="cz-conf ${c}">${c === 'high' ? tt('ثقة عالية', 'High confidence') : c === 'low' ? tt('ثقة قليلة', 'Low confidence') : tt('ثقة متوسطة', 'Medium confidence')}</span>`;
 function scenHTML(C) {
   if (!C.scen || C.scen.length < 2) return '';
@@ -121,7 +124,7 @@ function coachCard(P) {
     <div class="cz-sec"><h4>${I('i-gauge', 'i')}${tt('تقييمك من 100', 'Your scores out of 100')}</h4><div class="cz-tr">${TR.map(([k, l, h]) => `<div class="cz-t"><div class="cz-tl"><span>${l}</span><b class="num" style="color:${col(T[k])}">${T[k] ?? '—'}</b></div><div class="meter"><i style="width:${T[k] ?? 0}%;background:${col(T[k])}"></i></div><small>${h}</small></div>`).join('')}</div></div>
     <div class="cz-sec"><h4>${I('i-swap', 'i')}${tt('الانتقال المقترح لهالجولة', 'Suggested transfer this GW')}${confChip(C.trConf)}</h4>${trHTML}${scenHTML(C)}</div>
     <div class="cz-sec"><h4>${I('i-star', 'i')}${tt('الكابتن المقترح', 'Suggested captain')}${confChip(C.capConf)}</h4>${capHTML}${capRiskHTML(C)}</div>
-    ${C.ideas.length ? `<div class="cz-sec"><h4>${I('i-sparkle', 'i')}${tt('ملاحظات ونصائح إلك', 'Notes and tips for you')}</h4><div class="cz-ideas">${C.ideas.map((x) => `<div class="cz-idea${x.act ? ' tap' : ''}"${x.act ? ` onclick="${x.act}"` : ''}><span>${x.ic}</span><p>${esc(x.t)}</p></div>`).join('')}</div></div>` : ''}
+    ${C.ideas.length ? `<div class="cz-sec"><h4>${I('i-sparkle', 'i')}${tt('ملاحظات ونصائح إلك', 'Notes and tips for you')}</h4><div class="cz-ideas">${C.ideas.map((x) => `<div class="cz-idea${x.act ? ' tap' : ''}"${x.act ? ` onclick="${x.act}"` : ''}><span class="ms ${MS[x.ic] || 'ms-opp'}" role="img" aria-label="${MSL()[MS[x.ic] || 'ms-opp']}"></span><p>${esc(x.t)}</p></div>`).join('')}</div></div>` : ''}
   </div>`;
 }
 function insight(P) {

@@ -309,6 +309,8 @@ window.__canPull = () => ['home', 'team', 'live', 'season', 'leagues', 'prices']
 let lastPainted = null;
 export function render() {
   if (!ST.G) return;
+  // توقيع الجولة: زاوية ونمط البصمة الهندسية يتغيرون مع رقم الجولة
+  { const R = document.documentElement, g = ST.G.next || ST.G.cur || 1; if (R.dataset.gw !== String(g)) { R.dataset.gw = g; R.style.setProperty('--gwa', ((g * 37) % 180) + 'deg'); R.style.setProperty('--gws', 64 + (g % 5) * 8 + 'px'); } }
   $$('.nb').forEach((b) => b.classList.toggle('on', b.dataset.v === ST.view));
   const inMore = !['home', 'team', 'players', 'season'].includes(ST.view);
   $$('#bnav button').forEach((b) => b.classList.toggle('on', b.dataset.v === ST.view || (b.dataset.v === 'more' && inMore)));
