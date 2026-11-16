@@ -209,3 +209,59 @@ test('cross: فرصة النخبة لازم تنفع للمدرب نفسه (مي
   assert.equal(r.edge[0].fit.out.id, 1); // بيع 1 (6م) + بنك 1.5 = 7.5 ≥ 7، بيع 2 ما يكفي
   assert.equal(r.rising[0].d, 15);
 });
+
+/* ---------- (8) اكتشاف التحيز ---------- */
+const BI = await import('../js/intel/bias.js');
+const MEM = await import('../js/memory.js');
+function evalsWith(nGw, popOver) {
+  // كل جولة: 60 لاعب، 15 منهم شعبيين؛ المحرك يبالغ بالشعبيين بـ popOver نقطة
+  const E = [];
+  for (let g = 1; g <= nGw; g++) {
+    const preds = {}, act = {};
+    for (let i = 1; i <= 60; i++) { const pop = i <= 15, a = ((i * 7 + g * 3) % 9); preds[i] = [a + (pop ? popOver : 0) + ((i + g) % 3 - 1) * 0.5, 1, 4, 4, 1, pop ? 40 : 5, 6, 3, 2, 0.4]; act[i] = [a, 90]; }
+    E.push({ gw: g, seg: MEM.segStats(preds, act), hauls: MEM.haulStats(preds, act) });
+  }
+  return E;
+}
+test('bias: يكشف مبالغة بتوقع اللاعبين الشعبيين', () => {
+  const r = BI.detectBias(evalsWith(8, 1.5));
+  const f = r.flags.find((x) => x.seg === 'popular');
+  assert.ok(f, JSON.stringify(r)); assert.equal(f.dir, 'over'); assert.ok(f.d > 1);
+  assert.ok(f.proposal && f.proposal.m < 1 && f.proposal.passed); // التعديل ينجح على الجولات الأحدث
+});
+test('bias: ما يطلع انحياز إذا ما موجود', () => {
+  assert.equal(BI.detectBias(evalsWith(8, 0)).flags.length, 0);
+});
+test('bias: جولتين بس = بدري', () => {
+  assert.equal(BI.detectBias(evalsWith(2, 3)).enough, false);
+});
+test('bias: تكرار نفس الكابتن والبديل قريب', () => {
+  const recs = {}; for (let g = 1; g <= 5; g++) recs[g] = { cap: { id: 7, v: 6 }, capAlts: [{ id: 7, v: 6 }, { id: 8, v: 5.9 }] };
+  assert.equal(BI.captainRepeat(recs).n, 5);
+  recs[3].capAlts[1].v = 4; assert.equal(BI.captainRepeat(recs), null);
+});
+
+/* ---------- (15) التعلم من النجاح ---------- */
+const PO = await import('../js/intel/positive.js');
+test('positive: نمط نجاح حقيقي ينكشف، والعشوائي لا', () => {
+  const E = [];
+  for (let g = 1; g <= 6; g++) {
+    const preds = {}, act = {};
+    for (let i = 1; i <= 80; i++) { const easy = i <= 25; preds[i] = [4, 1, 4, 4, 1, 10, 6, easy ? 2 : 3, 2, 0.4]; act[i] = [easy ? (i % 2 ? 9 : 3) : (i % 8 ? 2 : 9), 90]; }
+    E.push({ gw: g, hauls: MEM.haulStats(preds, act) });
+  }
+  const r = PO.successPatterns(E);
+  assert.equal(r.list[0].k, 'easyFix'); assert.ok(r.list[0].lift > 2);
+  assert.ok(!r.list.find((x) => x.k === 'popular'));
+});
+test('positive: نجاح بتحليل صحيح مقابل حظ', () => {
+  MEM._reset(); LSD.clear();
+  const preds = { 1: [7, 1, 5, 5, 1], 2: [6, 1, 5, 5, 1], 3: [2, 1, 2, 2, 1], 4: [1.5, 1, 2, 2, 1], 5: [1, 1, 2, 2, 1], 6: [1, 1, 2, 2, 1], 7: [1, 1, 2, 2, 1] };
+  MEM.record({ entryId: 50, gw: 10, deadline: '2099-01-01', now: 1 }, { cap: { id: 1, v: 7 }, capAlts: [], preds });
+  const act = { 1: [12, 90], 3: [11, 90], 7: [13, 90] };
+  const picks = [1, 2, 3, 4, 5, 6, 7].map((id, i) => [id, 1, i + 1, 0]);
+  const ev = MEM.evaluateGW({ entryId: 50, gw: 10, act, picks, transfers: [], under: { 1: { xg: 0.6, xa: 0.3 }, 3: { xg: 0.05, xa: 0.1 }, 7: { xg: 0.7, xa: 0.2 } } });
+  const v = Object.fromEntries(ev.wins.map((w) => [w.id, w.verdict]));
+  assert.equal(v[1], 'skill'); assert.equal(v[3], 'luck'); assert.equal(v[7], 'mixed');
+  const w = PO.wins([ev]); assert.equal(w.surprise[0].id, 7); // ما جان متوقع بس أداؤه يسند
+});

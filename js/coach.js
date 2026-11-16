@@ -23,6 +23,8 @@ import { patterns as seasonPatterns, upcomingRest } from './intel/season.js';
 import { decideTiming } from './intel/timing.js';
 import { behaviourRows, fit as fitBehaviour, predict as predictBehaviour, backtest as backtestBehaviour } from './intel/manager.js';
 import { opportunities as crossOpps } from './intel/cross.js';
+import { detectBias, captainRepeat } from './intel/bias.js';
+import { wins as winsOf, successPatterns } from './intel/positive.js';
 
 const VER = 2, WIN = 10; // نحلل آخر 10 جولات منتهية
 const key = () => `fp_coach_v${VER}_${ST.E?.entry?.id}`;
@@ -53,7 +55,12 @@ export async function ensureCoach(onProgress) {
     // إحصاءات الجولات الأخيرة لكل اللاعبين (لكاشف تغير الدور) — مشتركة وتنجلب مرة وحدة
     if (flag('changeDetector')) { try { await PS.ensure(G, FPL.loadLive); CHG.clear(); } catch {} }
     // ذاكرة القرارات: نقيّم توصيات الجولات اللي خلصت (جودة القرار، الندم، دقة التوقع)
-    if (flag('decisionMemory')) { try { DM.evaluateDue({ entryId: id, isFinished: (g) => !!G.events.find((e) => e.id === g)?.fin, pts: c.pts, picks: c.picks, transfers: ST.E.transfers || [], lastGW: G.lastGW, ftBefore }); } catch {} }
+    if (flag('decisionMemory')) {
+      const under = (g) => { const S = PS.load().gws[g]; if (!S) return null; const o = {}; for (const [pid, r] of Object.entries(S)) o[pid] = { xg: r[3] == null ? null : r[3] / 100, xa: r[4] == null ? null : r[4] / 100, min: r[1] }; return o; };
+      try { DM.evaluateDue({ entryId: id, isFinished: (g) => !!G.events.find((e) => e.id === g)?.fin, pts: c.pts, picks: c.picks, transfers: ST.E.transfers || [], lastGW: G.lastGW, ftBefore, under }); } catch {}
+      // (8) اكتشاف التحيز واختبار التعديل زمنياً — المقترحات تنحفظ بس، ما تنطبق
+      if (flag('biasDetect')) { try { const bd = detectBias(DM.load(id).evals); if (bd.flags.length) DM.saveProposals(id, bd.flags.filter((f) => f.proposal).map((f) => ({ seg: f.seg, d: f.d, t: f.t, n: f.n, ...f.proposal }))); } catch {} }
+    }
     // بيانات أفضل 10,000 (عامة ومجمّعة) لكاشف الفرص بين المدربين
     if (flag('crossManager')) {
       ELITE = { cur: null, prev: null };
@@ -370,6 +377,12 @@ export function coachPlan(plan) {
   try { LR.snapshot({ cap: cap.p.id, tr: transfer.kind === 'go' ? { in: transfer.m.c.id, out: transfer.m.o.id } : null }); } catch {}
   if (flag('decisionMemory')) { try { recordDecision(plan, { transfer, moves, blockedMoves, capL, blockedCaps, cap, capConf, trConf, hitBar, ftBar, arch: A, guard }); } catch {} }
   const dm = flag('decisionMemory') ? (() => { try { return DM.summary(ST.E.entry.id); } catch { return null; } })() : null;
+  if (dm) {
+    try { const b = DM.load(ST.E.entry.id);
+      if (flag('biasDetect')) { const bd = detectBias(b.evals); dm.bias = { ...bd, capRepeat: captainRepeat(b.recs) }; }
+      if (flag('positiveLearn')) dm.pos = { wins: winsOf(b.evals), patterns: successPatterns(b.evals) };
+    } catch {}
+  }
   return { transfer, cap, capAlt, capL: capL.slice(0, 3), capSafe, capRisk, capConf, scen, bestScen, timing, trConf, focus, ideas: ideasAll.slice(0, 6), hitBar, ftBar, learn: LR.summary(), dm, guard, seq, at: ST.G.fetchedAt || Date.now() };
 }
 
@@ -411,7 +424,11 @@ function recordDecision(plan, X) {
   // التوقعات للتقييم الإحصائي (MAE/Brier) — تنحسب بس إذا القرار تغيّر
   const preds = () => {
     const all = new Set(ids); [...G.players].filter((p) => p.st !== 'u').sort((a, b) => xp(b, gw) - xp(a, gw)).slice(0, 60).forEach((p) => all.add(p.id));
-    const o = {}; all.forEach((id) => { const p = PM(id); if (p) o[id] = [xp(p, gw), +avail(p, gw).toFixed(2), p.ppg, p.form, fixturesN(p.team, gw)]; }); return o;
+    const cm = loadCacheMem(), lg = Math.max(0, ...Object.keys(cm.pts || {}).map(Number));
+    const fdr = (team) => { const f = (G.fx[gw] || []).find((m) => m.h === team || m.a === team); return f ? (f.h === team ? f.hd : f.ad) : null; };
+    const o = {}; all.forEach((id) => { const p = PM(id); if (!p) return; const n90 = (p.min || 0) / 90;
+      o[id] = [xp(p, gw), +avail(p, gw).toFixed(2), p.ppg, p.form, fixturesN(p.team, gw), p.own, p.price, fdr(p.team), lg ? (cm.pts[lg]?.[id]?.[0] ?? 0) : null, n90 >= 3 && p.pos !== 'GK' ? +((p.xgi || 0) / n90).toFixed(2) : null]; });
+    return o;
   };
   DM.record({ entryId: ST.E.entry.id, gw, deadline: ev?.deadline }, {
     cap: { id: X.cap.p.id, v: X.cap.v, conf: X.capConf, risk: X.cap.risk, why: X.cap === X.capL[0] ? 'top_xp' : 'style_tilt' },

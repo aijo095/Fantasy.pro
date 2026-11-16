@@ -16,6 +16,8 @@ const DEFAULTS = {
   sequential: true,     // 9: مقارنة خطط متعددة الجولات
   managerModel: true,   // 5: توقع سلوك المدرب
   crossManager: true,   // 10: الفرص من مقارنة المدربين (أفضل 10,000)
+  biasDetect: true,     // 8: اكتشاف تحيز المحرك (مقترحات فقط)
+  positiveLearn: true,  // 15: التعلم من النجاح
 };
 
 let cache = null;

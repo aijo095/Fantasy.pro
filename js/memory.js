@@ -16,7 +16,7 @@ import { ENGINE_VER } from './flags.js';
 const r1 = (n) => Math.round(n * 10) / 10, r2 = (n) => Math.round(n * 100) / 100;
 const KEEP_RECS = 8, KEEP_EVALS = 38, KEEP_REGRET = 60;
 const keyOf = (entryId) => `fp_dm_v1_${entryId}`;
-const blank = (entryId) => ({ v: 1, entry: entryId, recs: {}, evals: [], regret: [], guard: {}, byVer: {} });
+const blank = (entryId) => ({ v: 1, entry: entryId, recs: {}, evals: [], regret: [], guard: {}, byVer: {}, proposals: [] });
 
 /* ---------- التخزين (مستقل لكل مدرب) ---------- */
 let MEMO = null;
@@ -100,6 +100,54 @@ export function predMetrics(preds, act) {
   };
 }
 
+/* ---------- مقاطع للتحيز (8) والتعلم من النجاح (15) ----------
+   صف التوقع: [xp, احتمال المشاركة, ppg, form, عدد المباريات, ملكية, سعر, صعوبة المباراة, نقاط آخر جولة, xGI لكل 90]
+   نخزن مجاميع مضغوطة بس (مو كل لاعب)، تكفي لحساب الانحياز واختبار تعديله لاحقاً */
+export const SEGS = {
+  all: () => true,
+  popular: (r) => r[5] != null && r[5] >= 30, unpopular: (r) => r[5] != null && r[5] < 10,
+  premium: (r) => r[6] != null && r[6] >= 9, budget: (r) => r[6] != null && r[6] <= 5.5,
+  hotForm: (r) => r[2] != null && r[3] - r[2] >= 2, coldForm: (r) => r[2] != null && r[3] - r[2] <= -2,
+  afterHaul: (r) => r[8] != null && r[8] >= 10,
+  easyFix: (r) => r[7] != null && r[7] <= 2, hardFix: (r) => r[7] != null && r[7] >= 4,
+  lowQuality: (r) => r[9] != null && r[2] >= 5 && r[9] < 0.3,
+};
+export function segStats(preds, act) {
+  const o = {};
+  for (const [id, r] of Object.entries(preds || {})) {
+    if ((r[4] ?? 1) === 0) continue; // ما عنده مباراة
+    const p = r[0], a = ptsOf(act, id);
+    for (const [k, f] of Object.entries(SEGS)) { if (!f(r)) continue; const x = (o[k] = o[k] || [0, 0, 0, 0, 0, 0]); x[0]++; x[1] += p; x[2] += a; x[3] += p * p; x[4] += a * a; x[5] += p * a; }
+  }
+  Object.values(o).forEach((x) => { for (let i = 1; i < 6; i++) x[i] = r2(x[i]); });
+  return o;
+}
+/** نسبة "الجولات الكبيرة" (8+ نقاط) لكل سمة — لاكتشاف أنماط النجاح */
+export const HAUL = 8;
+export function haulStats(preds, act) {
+  const o = {};
+  for (const [id, r] of Object.entries(preds || {})) {
+    if ((r[4] ?? 1) === 0 || minOf(act, id) < 1) continue;
+    const h = ptsOf(act, id) >= HAUL ? 1 : 0;
+    for (const [k, f] of Object.entries(SEGS)) { if (!f(r)) continue; const x = (o[k] = o[k] || [0, 0]); x[0]++; x[1] += h; }
+  }
+  return o;
+}
+/** نجاحات تشكيلة المدرب: تحليل صحيح لو حظ؟ */
+function winsOf(R, act, picks, under) {
+  const xi = picks.filter((x) => x[2] <= 11).map((x) => x[0]);
+  const ranked = xi.map((id) => [id, R.preds?.[id]?.[0] ?? null]).filter((x) => x[1] != null).sort((a, b) => b[1] - a[1]).map((x) => x[0]);
+  return xi.filter((id) => ptsOf(act, id) >= 10).slice(0, 4).map((id) => {
+    const xp = R.preds?.[id]?.[0] ?? null, rank = ranked.indexOf(id) + 1 || null, u = under?.[id] || null;
+    const und = u && u.xg != null && u.xa != null ? r2(u.xg + u.xa) : null;
+    // تحليل صحيح: كان من أعلى 3 توقعات بتشكيلته أو توقعه 5+، والأداء الحقيقي يسند (xGI ≥ 0.5) إذا متوفر
+    let verdict = 'unknown';
+    if (und != null) verdict = und >= 0.5 && (rank && rank <= 3 || (xp ?? 0) >= 5) ? 'skill' : und < 0.3 ? 'luck' : 'mixed';
+    else if (xp != null) verdict = rank && rank <= 3 ? 'expected' : 'unexpected';
+    return { id, pts: ptsOf(act, id), xp, rank, und, verdict, unexpected: rank != null && rank > 5 };
+  });
+}
+
 /* ---------- (4) + (13) تقييم الجولة بعد ما تخلص ---------- */
 /**
  * @param ctx {entryId, gw, act:{id:[pts,min]}, actNext:{gw:{id:[pts,min]}}, picks:[[id,mult,pos,capFlag]], chip, transfers:[{event,element_in,element_out}], ftBefore}
@@ -107,7 +155,7 @@ export function predMetrics(preds, act) {
 export function evaluateGW(ctx) {
   const { entryId, gw, act } = ctx; const b = load(entryId); const R = b?.recs[gw];
   if (!R || !act || b.evals.find((x) => x.gw === gw)) return null;
-  const ev = { gw, ver: R.ver, at: Date.now(), m: predMetrics(R.preds, act) };
+  const ev = { gw, ver: R.ver, at: Date.now(), m: predMetrics(R.preds, act), seg: segStats(R.preds, act), hauls: haulStats(R.preds, act) };
   const regrets = [];
   const picks = ctx.picks || null, xiIds = picks ? picks.filter((x) => x[2] <= 11).map((x) => x[0]) : null;
   const mineCap = picks?.find((x) => x[3] === 1)?.[0] ?? null, mult = picks?.find((x) => x[3] === 1)?.[1] || 2;
@@ -147,6 +195,7 @@ export function evaluateGW(ctx) {
   if (ctx.ftBefore != null && ctx.ftBefore >= 5 && !(ctx.transfers || []).some((t) => t.event === gw) && !['wildcard', 'freehit'].includes(ctx.chip)) {
     regrets.push({ gw, who: 'manager', type: 'ft_wasted', size: 1, avoidable: true, cause: 'cap_reached' });
   }
+  if (picks) ev.wins = winsOf(R, act, picks, ctx.under || null);
   ev.regret = regrets.length;
   b.evals.push(ev); b.regret.push(...regrets);
   accumulateVersion(b, ev);
@@ -203,7 +252,7 @@ export function evaluateDue(ctx) {
     const act = ctx.pts?.[g]; if (!act) return;
     const actNext = {}; [g + 1, g + 2].forEach((x) => { if (ctx.isFinished(x) && ctx.pts?.[x]) actNext[x] = ctx.pts[x]; });
     const full = g + 2 > (ctx.lastGW || 38) || (ctx.lastGW && g >= ctx.lastGW - 1 && ctx.isFinished(ctx.lastGW));
-    const c = { entryId: ctx.entryId, gw: g, act, actNext, picks: ctx.picks?.[g]?.p, chip: ctx.picks?.[g]?.chip, transfers: ctx.transfers, ftBefore: ctx.ftBefore?.(g), full };
+    const c = { entryId: ctx.entryId, gw: g, act, actNext, picks: ctx.picks?.[g]?.p, chip: ctx.picks?.[g]?.chip, transfers: ctx.transfers, ftBefore: ctx.ftBefore?.(g), full, under: ctx.under?.(g) || null };
     const old = b.evals.find((x) => x.gw === g);
     if (!old) { const e = evaluateGW(c); if (e) out.push(e); return; }
     if (old.trPending && b.recs[g]?.tr && (full || (actNext[g + 1] && actNext[g + 2]))) {
@@ -213,6 +262,14 @@ export function evaluateDue(ctx) {
     }
   });
   return out;
+}
+
+/** (8) مقترحات تعديل النموذج بعد اختبارها — تنحفظ بس، وما تنطبق (الاعتماد بالمرحلة الثالثة) */
+export function saveProposals(entryId, list) {
+  const b = load(entryId); if (!b) return;
+  b.proposals = b.proposals || [];
+  list.forEach((p) => { const i = b.proposals.findIndex((x) => x.seg === p.seg && x.ver === ENGINE_VER); const row = { ...p, ver: ENGINE_VER, at: Date.now(), applied: false }; if (i >= 0) b.proposals[i] = row; else b.proposals.push(row); });
+  b.proposals = b.proposals.slice(-20); save(b);
 }
 
 /* ---------- الملخص: ملف المدرب التحليلي ---------- */
@@ -237,6 +294,6 @@ export function summary(entryId) {
     cap: caps.length ? { n: caps.length, cells, confCal } : null,
     follow: followed.length ? { n: followed.length, yes: fy, ignoredN: ign.length, ignoredWorse: ignWorse } : null,
     regret: Object.values(byType).sort((a, c) => c.size - a.size).map((t) => ({ ...t, size: r1(t.size) })),
-    recurring, guard: b.guard, byVer: b.byVer, last: E[n - 1] || null, pending: Object.keys(b.recs).map(Number).filter((g) => !E.find((e) => e.gw === g)),
+    recurring, guard: b.guard, byVer: b.byVer, proposals: b.proposals || [], last: E[n - 1] || null, pending: Object.keys(b.recs).map(Number).filter((g) => !E.find((e) => e.gw === g)),
   };
 }
