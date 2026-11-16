@@ -6,7 +6,8 @@
   "description": "فانتازي برو — تطبيق تحليل الفانتازي مع بيانات حقيقية وتسجيل دخول Firebase",
   "scripts": {
     "dev": "node dev/server.mjs",
-    "demo": "node dev/server.mjs --mock"
+    "demo": "node dev/server.mjs --mock",
+    "test": "node --test tests/phase1.test.mjs"
   },
   "engines": { "node": ">=18" }
 }

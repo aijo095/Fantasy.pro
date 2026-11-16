@@ -91,14 +91,30 @@ function capRiskHTML(C) {
   const box = (x, k) => x ? `<div class="cz-cr ${k}"><small>${k === 'safe' ? tt('الخيار الآمن', 'Safe pick') : tt('الخيار الجريء', 'High-risk pick')}</small><b>${esc(x.p.name)}</b><span dir="ltr">${x.v} xP · ${tt('سقف', 'ceiling')} ${x.ceil} · ${x.own}%</span><p>${k === 'safe' ? tt(`مخاطرة ${x.risk}% — دقائقه مضمونة وأغلب المدربين عنده، يحمي ترتيبك`, `Risk ${x.risk}% — nailed and popular`) : tt(`ملكيته ${x.own}% وسقفه عالي — إذا جاب نقاط تتقدم على الأغلبية، بس مخاطرة ${x.risk}%`, `Low-owned with a high ceiling, risk ${x.risk}%`)}</p></div>` : '';
   return `<div class="cz-crs">${box(C.capSafe, 'safe')}${C.capRisk ? box(C.capRisk, 'risk') : ''}</div>`;
 }
-function learnHTML(L) {
+function learnHTML(L, D, GU) {
   if (!L) return '';
   const notes = L.notes.map((n) => n[0] === 'form-' ? tt(`قللت وزن الفورمة ${n[1]}% لأن التوقعات المبنية عليها طلعت مبالغ بيها`, `Lowered form weight ${n[1]}%`) : n[0] === 'form+' ? tt(`زدت وزن الفورمة ${n[1]}% لأنها طلعت مؤشر صحيح`, `Raised form weight ${n[1]}%`) : n[0] === 'pos-' ? tt(`خفضت توقعات ${n[1]} ${n[2]}% لأنها جانت أعلى من الواقع`, `Lowered ${n[1]} by ${n[2]}%`) : tt(`رفعت توقعات ${n[1]} ${n[2]}% لأنها جانت أقل من الواقع`, `Raised ${n[1]} by ${n[2]}%`));
   const body = L.n ? tt(`قيّمت ${L.n} جولات: ${L.acc}% من توقعاتي جانت ضمن ±2 نقطة${L.capRate != null ? ` · الكابتن اللي اقترحته جان صح ${L.capRate}%` : ''}`, `Evaluated ${L.n} GWs`)
     : L.err ? tt(`من تاريخك: التوقع من الفورمة وحدها يخطي ${L.err.form} نقطة باللاعب، والمعدل الطويل ${L.err.long} — عدّلت الأوزان على هالأساس`, `From your history: form-only error ${L.err.form}, long-run ${L.err.long}`)
     : tt('أحفظ توقعاتي لكل جولة وأقارنها بالنتيجة حتى أتعلم وأعدّل', 'Saving predictions each GW to learn from results');
   const last = L.last?.cap ? tt(`الجولة ${L.last.gw}: اقترحت ${(ST.G.PM?.[L.last.cap.id] || {}).name || ''} كابتن وجاب ${L.last.cap.pts}${L.last.cap.followed != null ? (L.last.cap.followed ? ' (نفذتها)' : ' (ما نفذتها)') : ''}`, `GW${L.last.gw}: captain pick scored ${L.last.cap.pts}`) : '';
-  return `<div class="cz-learn"><small>${I('i-bot', 'i')}${tt('ذاكرة المدرب والتعلّم', 'Memory & learning')}</small><p>${body}</p>${last ? `<p>${esc(last)}</p>` : ''}${notes.length ? `<ul>${notes.slice(0, 3).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}</div>`;
+  const dm = dmLines(D, GU);
+  return `<div class="cz-learn"><small>${I('i-bot', 'i')}${tt('ذاكرة المدرب والتعلّم', 'Memory & learning')}</small><p>${body}</p>${last ? `<p>${esc(last)}</p>` : ''}${dm.map((x) => `<p>${esc(x)}</p>`).join('')}${notes.length ? `<ul>${notes.slice(0, 3).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}</div>`;
+}
+/** ذاكرة القرارات: جودة القرار بعيداً عن الحظ، دقة التوقع مقابل خط أساس، الأخطاء المتكررة، والتوصيات اللي استبعدها كاشف التضارب */
+const RG_T = () => ({ captain: tt('الكابتن', 'captain'), transfer: tt('الانتقالات', 'transfers'), hold: tt('تجاهل انتقال مقترح', 'ignored transfer'), roll: tt('الاحتفاظ بالانتقال', 'rolling'), missed_hit: tt('رفض ضربة', 'skipped hit'), sold_before_haul: tt('بيع لاعب قبل جولة قوية', 'selling before a haul'), ft_wasted: tt('ضياع انتقال مجاني', 'wasted free transfer') });
+function dmLines(D, GU) {
+  const out = [];
+  const nm = (id) => ST.G.PM?.[id]?.name || '';
+  const bl = (GU?.issues || []).filter((x) => x.sev === 'block' && x.ids?.length);
+  if (bl.length) out.push(tt(`استبعدت ${[...new Set(bl.map((x) => nm(x.ids[0])))].filter(Boolean).slice(0, 3).join('، ')} من التوصيات: ${bl[0].msg}`, `Excluded ${bl.length} option(s) that broke a rule or were doubtful`));
+  if (!D) return out;
+  if (D.cap && D.cap.n >= 2) { const c = D.cap.cells; out.push(tt(`جودة قرارات الكابتن بعيداً عن الحظ (${D.cap.n} جولات): ${c.earned} قرار صحيح ونجح، ${c.unlucky} صحيح بس الحظ ما خدم، ${c.lucky} نجح بالحظ، ${c.mistake} خطأ`, `Captain decision quality: ${c.earned} sound & good, ${c.unlucky} unlucky, ${c.lucky} lucky, ${c.mistake} mistakes`)); }
+  if (D.pred && D.n >= 2) out.push(tt(`دقة توقعاتي: الخطأ بالمعدل ${D.pred.mae} نقطة للاعب، مقابل ${D.pred.ppg} لو اعتمدنا معدل النقاط وحده`, `Prediction error ${D.pred.mae} pts/player vs ${D.pred.ppg} for points-per-game alone`));
+  if (D.follow && D.follow.ignoredN >= 2) out.push(tt(`من ${D.follow.ignoredN} مرات اخترت كابتن غير المقترح، المقترح جاب أكثر ${D.follow.ignoredWorse} مرات`, `When you picked a different captain (${D.follow.ignoredN}x), the suggested one scored more ${D.follow.ignoredWorse}x`));
+  const rc = D.recurring?.[0]; if (rc) out.push(tt(`خطأ يتكرر: ${RG_T()[rc.type] || rc.type} — ${rc.recentN} مرات بآخر 8 جولات، خسارة ${rc.size} نقطة`, `Recurring: ${rc.type} (${rc.recentN}x, ${rc.size} pts)`));
+  if (!D.n && D.pending?.length) out.push(tt(`حفظت توصيات الجولة ${D.pending[D.pending.length - 1]} ويا البدائل اللي درستها، وراح أقيّمها بعد ما تخلص`, `Saved GW${D.pending[D.pending.length - 1]} decisions with alternatives; will review after the GW`));
+  return out;
 }
 function coachCard(P) {
   const M = CO.coachReady();
@@ -119,7 +135,7 @@ function coachCard(P) {
     <div class="cz-h"><span class="cz-ic">${I('i-bot', 'i')}</span><div><b>${tt('مدربك الذكي', 'Your smart coach')}</b><small>${tt(`تحليل آخر ${S.N} جولات لعبتها`, `Analysis of your last ${S.N} gameweeks`)}</small></div></div>
     <div class="cz-style"><small>${tt('أسلوبك بالاختيار', 'Your style')}</small><b>${an}</b><p>${ad}</p></div>
     ${C.focus ? `<div class="cz-focus"><small>${tt('أهم شي تشتغل عليه', 'Your #1 fix')}</small><b>${esc(C.focus.t)}</b></div>` : ''}
-    ${learnHTML(C.learn)}
+    ${learnHTML(C.learn, C.dm, C.guard)}
     <div class="cz-st"><span><b class="${S.vsAvg >= 0 ? 'up' : 'down'}" dir="ltr">${S.vsAvg >= 0 ? '+' : ''}${S.vsAvg}</b><small>${tt('فرقك عن معدل الجولة', 'Vs GW average')}</small></span><span><b dir="ltr">${S.hitsN}</b><small>${tt('عدد الضربات (−4)', 'Hits (−4)')}</small></span><span><b dir="ltr">${S.benchPts}</b><small>${tt('نقاط ضاعت على الدكة بالجولة', 'Bench pts lost / GW')}</small></span><span><b>${S.favF || '—'}</b><small>${tt('التشكيل اللي تلعب بيه أكثر', 'Most used formation')}</small></span></div>
     <div class="cz-sec"><h4>${I('i-gauge', 'i')}${tt('تقييمك من 100', 'Your scores out of 100')}</h4><div class="cz-tr">${TR.map(([k, l, h]) => `<div class="cz-t"><div class="cz-tl"><span>${l}</span><b class="num" style="color:${col(T[k])}">${T[k] ?? '—'}</b></div><div class="meter"><i style="width:${T[k] ?? 0}%;background:${col(T[k])}"></i></div><small>${h}</small></div>`).join('')}</div></div>
     <div class="cz-sec"><h4>${I('i-swap', 'i')}${tt('الانتقال المقترح لهالجولة', 'Suggested transfer this GW')}${confChip(C.trConf)}</h4>${trHTML}${scenHTML(C)}</div>

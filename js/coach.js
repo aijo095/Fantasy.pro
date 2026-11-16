@@ -11,6 +11,10 @@ import * as FPL from './fpl.js';
 import { xp, xpN, avail, avgFdr, teamCount, dgwBgw, r1, clamp } from './engine.js';
 import { pricePredict } from './predict.js';
 import * as LR from './learn.js';
+import * as DM from './memory.js';
+import { checkRecommendation, transferBlocks, captainBlocks } from './guard.js';
+import { flag } from './flags.js';
+import { sellPrice10 } from './solver.js';
 
 const VER = 2, WIN = 10; // نحلل آخر 10 جولات منتهية
 const key = () => `fp_coach_v${VER}_${ST.E?.entry?.id}`;
@@ -38,10 +42,18 @@ export async function ensureCoach(onProgress) {
     saveCache(c);
     // التعلّم: أول مرة من التاريخ، وبعدين من كل جولة تخلص (مقارنة توقعاتنا بالنتيجة)
     try { LR.bootstrap(c); await LR.evaluate(c); } catch {}
+    // ذاكرة القرارات: نقيّم توصيات الجولات اللي خلصت (جودة القرار، الندم، دقة التوقع)
+    if (flag('decisionMemory')) { try { DM.evaluateDue({ entryId: id, isFinished: (g) => !!G.events.find((e) => e.id === g)?.fin, pts: c.pts, picks: c.picks, transfers: ST.E.transfers || [], lastGW: G.lastGW, ftBefore }); } catch {} }
     MEM = { entry: id, fin: G.finished, gws, ...profile(c, gws) };
     return MEM;
   })();
   try { return await BUSY; } finally { BUSY = null; }
+}
+/** الانتقالات المجانية اللي جانت عند المدرب قبل جولة معينة (نفس منطق التقدير الرسمي بالتطبيق) */
+function ftBefore(g) {
+  const hist = ST.E?.hist || {}, chips = {}; (hist.chips || []).forEach((c) => (chips[c.event] = c.name));
+  let ft = 1; (hist.current || []).forEach((h, i) => { if (h.event >= g) return; if (i === 0) { ft = 1; return; } if (chips[h.event] !== 'wildcard' && chips[h.event] !== 'freehit') ft = Math.max(0, ft - (h.event_transfers || 0)); ft = Math.min(5, ft + 1); });
+  return ft;
 }
 export const coachReady = () => (MEM && MEM.entry === ST.E?.entry?.id ? MEM : null);
 
@@ -170,6 +182,14 @@ export function coachPlan(plan) {
     if (best && best.g > 0.8) moves.push({ o, c: best.c, g: r1(best.g), su: best.su, so });
   });
   moves.sort((a, b) => b.g - a.g);
+  // كاشف التضارب: أي انتقال أو كابتن مخالف ينشال قبل الاختيار، وينحفظ سبب رفضه
+  const useGuard = flag('guard'), gIss = [], blockedMoves = [], blockedCaps = [];
+  let GC = null;
+  if (useGuard) {
+    let chipsLeft = null; try { chipsLeft = Object.fromEntries(FPL.chipStatus(G, ST.E.hist || {}).map((c) => [c.name, c.open ? c.left : 0])); } catch {}
+    GC = { G, PM, sell10: sellPrice10, chipsLeft, maxHits: 1 };
+    for (let i = moves.length - 1; i >= 0; i--) { const bl = transferBlocks(plan, [{ out: moves[i].o.id, in: moves[i].c.id }], GC); if (bl.length) { blockedMoves.push({ ...moves[i], blocked: bl[0].code }); gIss.push(...bl); moves.splice(i, 1); } }
+  }
   const ft = plan.ft ?? 1, top = moves[0];
   let transfer;
   if (!top || top.g < ftBar) transfer = { kind: 'roll', why: A === 'chaser' ? tt('ما أكو بديل أرقامه ثابتة يستاهل. لا تشتري لاعب لأن سجل هالجولة بس.', 'No sustained upgrade. Do not buy on one haul.') : tt('ما أكو انتقال يرجع ربح واضح. احتفظ بالانتقال وخليه لجولة جاية.', 'No clear gain. Roll the transfer.') };
@@ -183,6 +203,10 @@ export function coachPlan(plan) {
     const ceil = r1(v * (1.5 + Math.min(1, thr * 1.4)) + (p.pen === 1 ? 1 : 0));
     const risk = clamp(Math.round((1 - a * Math.min(1, su.start * 1.1)) * 100 + (su.spike ? 15 : 0) + (su.note === 'over' ? 8 : 0)), 0, 100);
     return { p, v, own: p.own, ceil, risk }; }).sort((a, b) => b.v - a.v);
+  if (useGuard) {
+    for (let i = capL.length - 1; i >= 0; i--) { const bl = captainBlocks(plan, capL[i].p.id, GC, capL[i].risk); if (bl.length) { blockedCaps.push({ ...capL[i], blocked: bl[0].code }); gIss.push(...bl); capL.splice(i, 1); } }
+    if (!capL.length) { capL.push(...blockedCaps.splice(0).sort((a, b) => b.v - a.v)); gIss.push({ code: 'no_valid_captain', sev: 'warn', msg: 'ما أكو كابتن مضمون بالتشكيلة' }); }
+  }
   let cap = capL[0], capAlt = null;
   if (A === 'template' || (T.captain != null && T.captain < 55)) { const safe = capL.slice(0, 3).filter((x) => x.v >= capL[0].v - 0.6).sort((a, b) => b.v + b.own / 40 - (a.v + a.own / 40))[0]; if (safe) cap = safe; }
   if (A === 'maverick') capAlt = capL.slice(1, 4).find((x) => x.own < 15 && x.v >= cap.v - 1.2) || null;
@@ -201,6 +225,7 @@ export function coachPlan(plan) {
     if (m1.c.price + m2.c.price > plan.bank + m1.o.price + m2.o.price + 1e-9) continue;
     const sq2 = plan.squad.map((x) => (x === m1.o.id ? m1.c.id : x === m2.o.id ? m2.c.id : x));
     if ([m1.c.team, m2.c.team].some((tm) => sq2.filter((x) => PM(x).team === tm).length > 3)) continue;
+    if (useGuard && transferBlocks(plan, [{ out: m1.o.id, in: m1.c.id }, { out: m2.o.id, in: m2.c.id }], GC).length) continue;
     const net = m1.g + m2.g - Math.max(0, 2 - ft) * 4; if (!pair || net > pair.g) pair = { k: 'two', g: r1(net), m: [m1, m2], t: `${m1.o.name} → ${m1.c.name} + ${m2.o.name} → ${m2.c.name}` };
   }
   if (pair) scen.push(pair);
@@ -255,10 +280,41 @@ export function coachPlan(plan) {
   if (doubt.length >= 2) opp.push({ ic: '⚠️', t: tt(`مخاطرة مخفية: ${doubt.map((p) => p.name).join('، ')} مشكوك بمشاركتهم — جهز بدلاء بالدكة يلعبون`, `Hidden risk: ${doubt.length} doubtful starters`) });
   if (hardT) opp.push({ ic: '⚠️', t: tt(`عندك ${hardT[1]} أساسيين من ${tName(+hardT[0])} ومباراتهم صعبة هالجولة — مخاطرة مركزة`, `Concentrated risk in one hard fixture`) });
   const ideasAll = [...opp, ...ideas];
+  // فحص نهائي للتوصية كاملة (الانتقال + الكابتن + الورقة) — التحذيرات تنحفظ ويا القرار
+  let guard = null;
+  if (useGuard) { const fin = checkRecommendation(plan, { transfers: transfer.kind === 'go' ? [{ out: transfer.m.o.id, in: transfer.m.c.id }] : [], cap: cap.p.id, vc: cap.p.id === plan.vc ? plan.cap : plan.vc, capRisk: cap.risk, chip: plan.chip || '' }, GC); guard = { ok: fin.ok, issues: [...gIss, ...fin.issues] }; }
   // نحفظ التوصية حتى نقيّمها بعد الجولة (ونتعلم منها)
   try { LR.snapshot({ cap: cap.p.id, tr: transfer.kind === 'go' ? { in: transfer.m.c.id, out: transfer.m.o.id } : null }); } catch {}
-  return { transfer, cap, capAlt, capL: capL.slice(0, 3), capSafe, capRisk, capConf, scen, bestScen, timing, trConf, focus, ideas: ideasAll.slice(0, 6), hitBar, ftBar, learn: LR.summary(), at: ST.G.fetchedAt || Date.now() };
+  if (flag('decisionMemory')) { try { recordDecision(plan, { transfer, moves, blockedMoves, capL, blockedCaps, cap, capConf, trConf, hitBar, ftBar, arch: A, guard }); } catch {} }
+  const dm = flag('decisionMemory') ? (() => { try { return DM.summary(ST.E.entry.id); } catch { return null; } })() : null;
+  return { transfer, cap, capAlt, capL: capL.slice(0, 3), capSafe, capRisk, capConf, scen, bestScen, timing, trConf, focus, ideas: ideasAll.slice(0, 6), hitBar, ftBar, learn: LR.summary(), dm, guard, at: ST.G.fetchedAt || Date.now() };
 }
+
+/* ---------- (1) حفظ القرار مع كل البدائل اللي درسها المحرك ---------- */
+function recordDecision(plan, X) {
+  const G = ST.G, gw = G.next, ev = G.events.find((e) => e.id === gw);
+  const capAlts = [...X.capL, ...X.blockedCaps].map((x) => ({ id: x.p.id, v: x.v, risk: x.risk, own: x.own, why: x.p.id === X.cap.p.id ? 'chosen' : x.blocked ? 'guard' : x.v < X.cap.v ? 'lower_xp' : 'style_tilt', ...(x.blocked ? { blocked: x.blocked } : {}) }));
+  const t = X.transfer, chosen = t.kind === 'go' ? t.m : null;
+  const trAlts = [...X.moves.filter((m) => m !== chosen).slice(0, 5).map((m) => ({ out: m.o.id, in: m.c.id, g: m.g, why: t.kind === 'go' ? 'lower_gain' : 'below_bar' })), ...X.blockedMoves.slice(0, 3).map((m) => ({ out: m.o.id, in: m.c.id, g: m.g, why: 'guard', blocked: m.blocked }))];
+  const ids = new Set([...plan.squad, ...capAlts.map((x) => x.id), ...trAlts.flatMap((x) => [x.out, x.in])]);
+  if (chosen) { ids.add(chosen.o.id); ids.add(chosen.c.id); }
+  const trIds = new Set([...trAlts.flatMap((x) => [x.out, x.in]), ...(chosen ? [chosen.o.id, chosen.c.id] : [])]);
+  const trXp = {}; trIds.forEach((id) => { const p = PM(id); if (p) trXp[id] = [0, 1, 2].map((k) => (gw + k <= G.lastGW ? r1(xp(p, gw + k)) : 0)); });
+  // التوقعات للتقييم الإحصائي (MAE/Brier) — تنحسب بس إذا القرار تغيّر
+  const preds = () => {
+    const all = new Set(ids); [...G.players].filter((p) => p.st !== 'u').sort((a, b) => xp(b, gw) - xp(a, gw)).slice(0, 60).forEach((p) => all.add(p.id));
+    const o = {}; all.forEach((id) => { const p = PM(id); if (p) o[id] = [xp(p, gw), +avail(p, gw).toFixed(2), p.ppg, p.form, fixturesN(p.team, gw)]; }); return o;
+  };
+  DM.record({ entryId: ST.E.entry.id, gw, deadline: ev?.deadline }, {
+    cap: { id: X.cap.p.id, v: X.cap.v, conf: X.capConf, risk: X.cap.risk, why: X.cap === X.capL[0] ? 'top_xp' : 'style_tilt' },
+    capAlts,
+    tr: { kind: t.kind, out: chosen?.o.id ?? null, in: chosen?.c.id ?? null, g: chosen?.g ?? t.m?.g ?? null, conf: X.trConf, why: t.kind === 'go' ? 'top_gain' : t.kind === 'roll' ? 'below_ft_bar' : 'below_hit_bar' },
+    trAlts,
+    constraints: { ft: plan.ft ?? 1, bank: plan.bank, hitBar: X.hitBar, ftBar: X.ftBar, chip: plan.chip || '', arch: X.arch },
+    guard: X.guard?.issues || [], preds, trXp,
+  });
+}
+const fixturesN = (team, gw) => (ST.G.fx[gw] || []).filter((m) => m.h === team || m.a === team).length;
 
 /* ---------- جواب مختصر للمحرك المحلي (للأسئلة) ---------- */
 export function coachAnswer(kind) {
