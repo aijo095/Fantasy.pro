@@ -138,11 +138,12 @@ function dcBlock(p, s) {
   return `<div class="dc-gw ${ok ? 'ok' : ''}"><div class="flex between" style="margin-bottom:6px"><span style="font-size:13px">${I('i-shield', 'i', 'width:15px;height:15px;vertical-align:-3px')} ${tt('المساهمات الدفاعية', 'Defensive contributions')}</span><b><span class="num" dir="ltr">${v}/${T}</span>${ok ? ' · <span class="up">+2</span>' : ''}</b></div><div class="dc-bar"><i style="width:${Math.min(100, (v / T) * 100)}%"></i></div></div>`;
 }
 
-/* ---------- تصميم بطاقة اللاعب بالجولة (v2) ----------
-   فكرة التصميم: "شريط تكوين النقاط" — كل مصدر نقاط (دقائق، أهداف، صناعة، شباك، بونص…) شريحة
-   بلونها وحجمها الحقيقي، والتفصيل تحته بنفس الألوان. فوكه شريط المباراة ويا خط زمني يبين
-   دقائق اللاعب (أساسي من البداية، أو بديل لآخر المباراة). وتحت: أرقامه الحقيقية مجمّعة. */
-const SEG = { minutes: '#94A3B8', goals_scored: '#34D399', assists: '#38BDF8', clean_sheets: '#A78BFA', bonus: '#FBBF24', defensive_contribution: '#2DD4BF', saves: '#60A5FA', penalties_saved: '#22D3EE' };
+/* ---------- بطاقة اللاعب بالجولة ----------
+   ثلاث طبقات واضحة:
+   1) المباراة: النتيجة بأسماء الأندية العربية + مسار دقائق اللاعب (من 0 لـ 90) ودوره (أساسي/بديل)
+   2) كشف النقاط: مثل كشف حساب — المكاسب، وتحتها الخصومات بقسم منفصل، والمجموع بخط مزدوج
+   3) أداؤه بالمباراة مقارنة بمعدله: كل مؤشر شريط لقيمته بالمباراة وعلامة لمعدله لكل 90 دقيقة
+   كل التسميات بالعربي. */
 const NEG = new Set(['goals_conceded', 'yellow_cards', 'red_cards', 'own_goals', 'penalties_missed']);
 /** تقدير نقاط السطر إذا الفانتازي ما رجّع التفصيل (نفس قوانين اللعبة) */
 function estPts(k, v, p, s) {
@@ -158,63 +159,71 @@ function estPts(k, v, p, s) {
     default: return 0;
   }
 }
-/** ترتيب اللاعب بنقاط البونص (BPS) بين لاعبي مباراته */
+/** ترتيب اللاعب بمؤشر البونص بين لاعبي مباراته */
 function bpsRank(fxs, id) {
   for (const f of fxs) {
     const st = (f.stats || []).find((x) => x.identifier === 'bps'); if (!st) continue;
     const all = [...(st.h || []), ...(st.a || [])].sort((a, b) => b.value - a.value);
-    const i = all.findIndex((x) => x.element === id); if (i >= 0) return { r: i + 1, n: all.length, v: all[i].value };
+    const i = all.findIndex((x) => x.element === id); if (i >= 0) return { r: i + 1, n: all.length };
   }
   return null;
 }
-function pgwMatch(f, p, s, gw) {
-  const live = f.started && !f.fin, st = f.fin ? tt('انتهت', 'Full time') : live ? fxMin(f) : (f.ko ? new Date(f.ko).toLocaleString(document.documentElement.lang === 'en' ? 'en-GB' : 'ar-IQ', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '—');
+const nAr = (v) => { const x = +v; return Number.isInteger(x) ? String(x) : x.toFixed(2).replace(/0$/, ''); };
+function pgMatch(f, p, s, gw) {
+  const live = f.started && !f.fin;
+  const st = f.fin ? tt('انتهت', 'Full time') : live ? fxMin(f) : (f.ko ? new Date(f.ko).toLocaleString(document.documentElement.lang === 'en' ? 'en-GB' : 'ar-IQ', { weekday: 'long', hour: 'numeric', minute: '2-digit' }) : '—');
   const min = Math.min(90, s.minutes || 0), sub = s.starts === 0 && min > 0, from = sub ? 90 - min : 0;
-  const role = !min ? (f.started ? tt('ما شارك', 'Did not play') : '') : s.starts === 1 ? tt('أساسي', 'Started') : sub ? tt('دخل بديل', 'Came on') : '';
-  return `<button class="pg-match" onclick="closeSheet();setTimeout(()=>openMatchC&&openMatchC(${f.id},${gw}),200)">
-    <span class="pg-tm">${crest(tShort(f.h), 28)}<b>${tShort(f.h)}</b></span>
-    <span class="pg-sc">${f.started ? `<b class="num" dir="ltr">${f.hs ?? 0}<i>–</i>${f.as ?? 0}</b>` : '<b class="mut">VS</b>'}<small class="${live ? 'live' : ''}">${st}</small></span>
-    <span class="pg-tm a"><b>${tShort(f.a)}</b>${crest(tShort(f.a), 28)}</span>
-    ${f.started ? `<span class="pg-tl" aria-label="${min} ${tt('دقيقة', 'minutes')}"><i class="pg-tl-bar" style="--a:${from / 0.9}%;--w:${min / 0.9}%"></i><i class="pg-tl-ht"></i></span><span class="pg-tl-l"><span>${role}</span><b class="num">${min}′</b></span>` : ''}
+  const role = !f.started ? '' : !min ? tt('ما شارك', 'Did not play') : s.starts === 1 ? tt('أساسي', 'Started') : sub ? tt('دخل بديل', 'Came on') : tt('شارك', 'Played');
+  const side = (t, home) => `<span class="pq-club ${home ? '' : 'a'}">${crest(tShort(t), 34)}<b>${tName(t)}</b><small>${home ? tt('صاحب الأرض', 'Home') : tt('الضيف', 'Away')}</small></span>`;
+  return `<button class="pq-match" onclick="closeSheet();setTimeout(()=>openMatchC&&openMatchC(${f.id},${gw}),200)">
+    <span class="pq-teams">${side(f.h, true)}<span class="pq-score">${f.started ? `<b class="num" dir="ltr">${f.hs ?? 0} : ${f.as ?? 0}</b>` : `<b class="pq-vs">${tt('ضد', 'vs')}</b>`}<small class="${live ? 'live' : ''}">${st}</small></span>${side(f.a, false)}</span>
+    ${f.started ? `<span class="pq-time"><span class="pq-time-h"><span>${tt('وقت اللاعب بالمباراة', 'Time on pitch')}</span><b>${role}${min ? ` · <bdi class="num">${min}</bdi> ${tt('دقيقة', 'min')}` : ''}</b></span><span class="pq-track"><i style="--a:${(from / 90) * 100}%;--w:${(min / 90) * 100}%"></i></span><span class="pq-scale"><span>0</span><span>45</span><span>90</span></span></span>` : ''}
   </button>`;
 }
-function pgwView({ p, id, gw, s, fxs, rows, total, shown, mult, pb }) {
+function pgwView({ p, id, gw, s, fxs, rows, total, shown, mult }) {
   const X = EXPL();
   const R = rows.map((r) => ({ ...r, pp: r.p == null ? estPts(r.k, r.v, p, s) : r.p, est: r.p == null }));
-  const pos = R.filter((r) => r.pp > 0), neg = R.filter((r) => r.pp < 0);
-  const sumPos = pos.reduce((a, r) => a + r.pp, 0), sumNeg = neg.reduce((a, r) => a + r.pp, 0);
-  const col = (k) => (NEG.has(k) ? '#F87171' : SEG[k] || '#94A3B8');
-  const bar = sumPos ? `<div class="pg-bar" role="img" aria-label="${tt('تكوين النقاط', 'Points composition')}">${pos.map((r, i) => `<i style="--c:${col(r.k)};flex:${r.pp};--d:${i * 70}ms"></i>`).join('')}</div>` : '';
-  const ppg = p.ppg || 0, diff = Math.round((total - ppg) * 10) / 10, br = bpsRank(fxs, id);
-  const xgi = s.expected_goal_involvements != null ? +s.expected_goal_involvements : (s.expected_goals != null || s.expected_assists != null ? +(+(s.expected_goals || 0) + +(s.expected_assists || 0)).toFixed(2) : null);
-  const facts = [
-    s.minutes ? [diff > 0 ? `+${diff}` : `${diff}`, tt('عن معدله بالموسم', 'vs season average'), diff > 0 ? 'up' : diff < 0 ? 'down' : ''] : null,
-    br ? [`${br.r}<small>/${br.n}</small>`, tt('ترتيبه بالبونص بالمباراة', 'BPS rank in match'), br.r <= 3 ? 'gold' : ''] : null,
-    xgi != null && s.minutes ? [xgi.toFixed(2), tt('فرص حقيقية xGI', 'xGI'), ''] : null,
-  ].filter(Boolean);
-  const T = { DEF: 10, MID: 12, FWD: 12 }[p.pos], dc = s.defensive_contribution;
-  const rowHTML = (r) => {
-    const isDc = r.k === 'defensive_contribution' && T;
-    return `<li class="${r.pp < 0 ? 'neg' : r.pp === 0 ? 'z' : ''}"><span class="pg-sw" style="--c:${col(r.k)}">${ICO[r.k] || ICO.tot}</span><span class="pg-lb"><b>${X[r.k] || r.k}${r.prov ? ` <em class="pg-tag">${tt('مؤقت', 'provisional')}</em>` : ''}</b><small><bdi dir="ltr">${r.k === 'minutes' ? r.v + '′' : isDc ? `${r.v}/${T}` : '×' + r.v}</bdi></small>${isDc ? `<span class="pg-dc"><i style="width:${Math.min(100, (r.v / T) * 100)}%"></i></span>` : ''}</span><span class="pg-pt num" dir="ltr">${r.pp > 0 ? '+' : ''}${r.pp}</span></li>`;
-  };
-  // المساهمات الدفاعية إذا ما وصل العتبة: تنعرض كتقدم بدون نقاط
-  const dcRow = T && dc != null && s.minutes && !R.some((r) => r.k === 'defensive_contribution') ? `<li class="z"><span class="pg-sw" style="--c:#2DD4BF">${ICO.defensive_contribution}</span><span class="pg-lb"><b>${X.defensive_contribution}</b><small><bdi dir="ltr">${dc}/${T}</bdi></small><span class="pg-dc"><i style="width:${Math.min(100, (dc / T) * 100)}%"></i></span></span><span class="pg-pt num">0</span></li>` : '';
-  const G1 = [['xG', s.expected_goals], ['xA', s.expected_assists], [tt('تهديد', 'Threat'), s.threat], [tt('صناعة الفرص', 'Creativity'), s.creativity]];
-  const G2 = [[tt('مساهمات دفاعية', 'Def. contributions'), s.defensive_contribution], [tt('تدخلات', 'Tackles'), s.tackles], [tt('استرجاع', 'Recoveries'), s.recoveries], [tt('قطع وتشتيت', 'CBI'), s.clearances_blocks_interceptions], [tt('تصديات', 'Saves'), p.pos === 'GK' ? s.saves : null]];
-  const G3 = [['BPS', s.bps], ['ICT', s.ict_index], [tt('تأثير', 'Influence'), s.influence]];
-  const grp = (t, L) => { const v = L.filter(([, x]) => x != null && x !== '' && +x !== 0); return v.length ? `<div class="pg-grp"><h4>${t}</h4><dl>${v.map(([l, x]) => `<div><dt>${l}</dt><dd class="num" dir="ltr">${x}</dd></div>`).join('')}</dl></div>` : ''; };
-  const stats = grp(tt('بالهجوم', 'Attack'), G1) + grp(tt('بالدفاع', 'Defence'), G2) + grp(tt('التأثير والبونص', 'Influence'), G3);
+  const T = { DEF: 10, MID: 12, FWD: 12 }[p.pos];
+  const qty = (r) => (r.k === 'minutes' ? `${r.v} ${tt('دقيقة', 'min')}` : r.k === 'defensive_contribution' && T ? `${r.v} ${tt('من', 'of')} ${T}` : String(r.v));
+  const gain = R.filter((r) => !NEG.has(r.k) && r.pp >= 0), loss = R.filter((r) => NEG.has(r.k) || r.pp < 0);
+  if (T && s.minutes && s.defensive_contribution != null && !gain.some((r) => r.k === 'defensive_contribution')) gain.push({ k: 'defensive_contribution', v: s.defensive_contribution, pp: 0 });
+  const line = (r) => `<li class="${r.pp > 0 ? 'p' : r.pp < 0 ? 'n' : 'z'}"><span class="pq-ic">${ICO[r.k] || ICO.tot}</span><span class="pq-nm">${X[r.k] || r.k}${r.prov ? `<em>${tt('مؤقت', 'provisional')}</em>` : ''}</span><span class="pq-dots"></span><span class="pq-q">${qty(r)}</span><span class="pq-v num" dir="ltr">${r.pp > 0 ? '+' : ''}${r.pp}</span></li>`;
+  const sumG = gain.reduce((a, r) => a + r.pp, 0), sumL = loss.reduce((a, r) => a + r.pp, 0);
   const tier = shown >= 10 ? 't3' : shown >= 6 ? 't2' : shown > 0 ? 't1' : 't0';
-  return `<div class="pg">
-   ${fxs.length ? fxs.map((f) => pgwMatch(f, p, s, gw)).join('') : `<div class="note">${I('i-info', 'i', 'color:var(--info)')}<span>${tt('فريقه ما عنده مباراة بهالجولة', 'No fixture this gameweek')}</span></div>`}
-   <section class="pg-card ${tier}">
-     <div class="pg-head"><div class="pg-tot"><b class="num count">${shown}</b><span>${tt('نقطة', 'points')}${mult > 1 ? `<em class="pg-cap">${mult === 3 ? tt('كابتن ثلاثي <bdi dir="ltr">×3</bdi>', 'Triple captain ×3') : tt('كابتن <bdi dir="ltr">×2</bdi>', 'Captain ×2')}</em>` : ''}</span></div>
-     ${facts.length ? `<dl class="pg-facts">${facts.map(([v, l, c]) => `<div class="${c}"><dd class="num"><bdi dir="ltr">${v}</bdi></dd><dt>${l}</dt></div>`).join('')}</dl>` : ''}</div>
-     ${bar}${sumNeg ? `<div class="pg-negbar"><i style="flex:${-sumNeg}"></i><span class="num" dir="ltr">${sumNeg}</span></div>` : ''}
-     ${R.length || dcRow ? `<ul class="pg-bd">${R.map(rowHTML).join('')}${dcRow}<li class="pg-sum"><span class="pg-lb"><b>${tt('المجموع', 'Total')}</b>${mult > 1 ? `<small><bdi dir="ltr">${total} × ${mult}</bdi></small>` : ''}</span><span class="pg-pt num" dir="ltr">${shown}</span></li></ul>` : `<p class="pg-empty">${fxs.some((f) => f.started) ? tt('ما شارك بالمباراة', 'Did not play') : tt('مباراته بعد ما بدت — النقاط تطلع هنا أول ما يلعب', 'Points appear here once he plays')}</p>`}
-     ${R.some((r) => r.est) ? `<p class="pg-note">${tt('النقاط محسوبة من قوانين اللعبة لحد ما الفانتازي ينشر التفصيل الرسمي', 'Estimated from game rules until FPL publishes the breakdown')}</p>` : ''}
+  const verdict = !s.minutes ? '' : shown >= 10 ? tt('جولة كبيرة', 'Big haul') : shown >= 6 ? tt('جولة زينة', 'Good return') : shown >= 3 ? tt('جولة عادية', 'Steady') : tt('جولة ضعيفة', 'Quiet game');
+  const diff = Math.round((total - (p.ppg || 0)) * 10) / 10, br = bpsRank(fxs, id);
+  // أداؤه بالمباراة مقارنة بمعدله لكل 90 دقيقة بالموسم
+  const n90 = (p.min || 0) / 90, avg = (tot) => (n90 >= 1 && tot != null ? tot / n90 : null);
+  const M = [
+    [tt('الأهداف المتوقعة', 'Expected goals'), s.expected_goals, avg(p.xg), 2],
+    [tt('الصناعة المتوقعة', 'Expected assists'), s.expected_assists, avg(p.xa), 2],
+    [tt('الخطورة على المرمى', 'Threat'), s.threat, avg(p.threat), 0],
+    [tt('صناعة الفرص', 'Creativity'), s.creativity, avg(p.creativity), 0],
+    [tt('التأثير على المباراة', 'Influence'), s.influence, null, 0],
+    [tt('المساهمات الدفاعية', 'Defensive actions'), s.defensive_contribution, p.dc90 || null, 1],
+    [tt('التصديات', 'Saves'), p.pos === 'GK' ? s.saves : null, p.pos === 'GK' ? avg(p.saves) : null, 1],
+    [tt('مؤشر البونص', 'Bonus points system'), s.bps, avg(p.bps), 0],
+    [tt('مؤشر الأداء العام', 'ICT index'), s.ict_index, avg(p.ict), 1],
+  ].filter(([, v]) => v != null && v !== '' && !isNaN(+v) && (+v !== 0 || false));
+  const metric = ([l, v, a, d]) => { const x = +v, m = Math.max(x, a || 0) * 1.2 || 1, cmp = a == null ? '' : x >= a * 1.15 ? 'up' : x <= a * 0.85 ? 'down' : 'eq';
+    return `<li class="${cmp}"><span class="pq-ml">${l}</span><span class="pq-mv num" dir="ltr">${nAr(x)}</span><span class="pq-mbar"><i style="width:${(x / m) * 100}%"></i>${a != null ? `<em style="inset-inline-start:${(a / m) * 100}%" title="${tt('معدله', 'avg')}"></em>` : ''}</span>${a != null ? `<span class="pq-ma">${tt('معدله', 'avg')} <bdi class="num">${a.toFixed(d)}</bdi></span>` : '<span class="pq-ma"></span>'}</li>`; };
+  return `<div class="pq">
+   ${fxs.length ? fxs.map((f) => pgMatch(f, p, s, gw)).join('') : `<div class="note">${I('i-info', 'i', 'color:var(--info)')}<span>${tt('فريقه ما عنده مباراة بهالجولة', 'No fixture this gameweek')}</span></div>`}
+   <section class="pq-led ${tier}">
+     <header class="pq-led-h">
+       <div class="pq-big"><b class="num count">${shown}</b><span>${tt('نقطة', 'points')}</span></div>
+       <div class="pq-meta">${verdict ? `<strong>${verdict}</strong>` : ''}${mult > 1 ? `<span class="pq-cap">${mult === 3 ? tt('كابتن ثلاثي — النقاط مضروبة بثلاثة', 'Triple captain — points ×3') : tt('كابتن — النقاط مضروبة باثنين', 'Captain — points ×2')}</span>` : ''}
+         ${s.minutes ? `<span class="pq-f ${diff > 0 ? 'up' : diff < 0 ? 'down' : ''}">${diff >= 0 ? tt(`أعلى من معدله بـ <bdi class="num">${diff}</bdi>`, `+${diff} vs his average`) : tt(`أقل من معدله بـ <bdi class="num">${Math.abs(diff)}</bdi>`, `${diff} vs his average`)}</span>` : ''}
+         ${br ? `<span class="pq-f ${br.r <= 3 ? 'gold' : ''}">${tt(`المركز <bdi class="num">${br.r}</bdi> من <bdi class="num">${br.n}</bdi> بمؤشر البونص`, `#${br.r} of ${br.n} in bonus system`)}</span>` : ''}</div>
+     </header>
+     ${R.length ? `<div class="pq-cols"><span>${tt('البند', 'Item')}</span><span>${tt('العدد', 'Count')}</span><span>${tt('النقاط', 'Pts')}</span></div>
+     <ul class="pq-list">${gain.map(line).join('')}</ul>
+     ${loss.length ? `<h5 class="pq-sub">${tt('الخصومات', 'Deductions')}</h5><ul class="pq-list">${loss.map(line).join('')}</ul>` : ''}
+     <div class="pq-total">${loss.length ? `<span class="pq-tr"><span>${tt('المكاسب', 'Gained')}</span><b class="num" dir="ltr">+${sumG}</b></span><span class="pq-tr"><span>${tt('الخصومات', 'Deducted')}</span><b class="num n" dir="ltr">${sumL}</b></span>` : ''}${mult > 1 ? `<span class="pq-tr"><span>${tt('قبل الكابتن', 'Before captaincy')}</span><b class="num" dir="ltr">${total}</b></span>` : ''}<span class="pq-tr big"><span>${tt('المجموع', 'Total')}</span><b class="num" dir="ltr">${shown}</b></span></div>
+     ${R.some((r) => r.est) ? `<p class="pq-note">${tt('النقاط محسوبة من قوانين اللعبة لحد ما الفانتازي ينشر التفصيل الرسمي', 'Estimated from game rules until FPL publishes the breakdown')}</p>` : ''}`
+     : `<p class="pq-empty">${fxs.some((f) => f.started) ? tt('ما شارك بالمباراة، فما أكو نقاط', 'Did not play') : tt('مباراته بعد ما بدت — النقاط تطلع هنا أول ما يلعب', 'Points appear here once he plays')}</p>`}
    </section>
-   ${stats ? `<section class="pg-stats">${stats}</section>` : ''}
+   ${M.length && s.minutes ? `<section class="pq-perf"><header><h4>${tt('أداؤه بالمباراة', 'Match performance')}</h4><span class="pq-key"><i></i>${tt('بالمباراة', 'this match')}<em></em>${tt('معدله لكل 90 دقيقة', 'his per-90 average')}</span></header><ul>${M.map(metric).join('')}</ul></section>` : ''}
    <button class="btn btn-g btn-b" style="margin-top:14px" onclick="closeSheet();setTimeout(()=>openPlayer(${id}),200)">${I('i-user', 'i', 'width:16px;height:16px')}${tt('صفحة اللاعب الكاملة', 'Full player page')}</button>
   </div>`;
 }
@@ -235,6 +244,6 @@ window.playerGW = async (id, gw, mult = 1) => {
   if (!rows.length && (s.minutes || 0) > 0) Object.keys(EXPL()).forEach((k) => { if (k !== 'bonus' && +s[k]) rows.push({ k, v: s[k], p: null }); });
   if (!rows.some((r) => r.k === 'bonus') && s.bonus) rows.push({ k: 'bonus', v: s.bonus, p: s.bonus });
   if (pb) rows.push({ k: 'bonus', v: pb, p: pb, prov: true });
-  box.outerHTML = pgwView({ p, id, gw, s, fxs, rows, total, shown, mult, pb });
+  box.outerHTML = pgwView({ p, id, gw, s, fxs, rows, total, shown, mult });
   import('../motion.js').then((m) => { const b = document.querySelector('#sheetRoot .sh-body'); if (b) { m.countAll(b, true); m.decorate(b, true); } }).catch(() => {});
 };
