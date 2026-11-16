@@ -9,9 +9,7 @@
    4. Typography + Data numbers
    5. Editorial dividers (عناوين الأقسام)
    6. Components (أزرار، تبويبات، حقول، قوائم، نوافذ، جداول، شارات…)
-   7. Adaptive borders (حالة اللاعب)
    8. Micro-signatures (رموز تحليلية)
-   9. Data confidence (حقيقة / توقع / تقدير / ناقص / قديم)
    10. Motion language
    11. Mobile refinements
 ===================================================================== */
@@ -109,11 +107,6 @@ html.v2 .h2-pts b,html.v2 .big-num,html.v2 .pz-sb b{text-shadow:0 1px 0 rgba(255
 /* ---------- 4. TYPOGRAPHY + DATA ---------- */
 html body{font-family:var(--fp-font);letter-spacing:0}
 .num,.v,.score,.big-num,.pbig,.kv b,.h2-st b,.pz-sb b,.sq-stats b,.lb,.gwstrip b,.mx td{font-family:var(--fp-num);font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1}
-/* سلّم أهمية: رقم رئيسي / رقم ثانوي / وسم */
-html.v2 .h2-pts b{font-size:var(--fs-4xl);font-weight:700;letter-spacing:-.045em;color:#fff}
-html.v2 .big-num{font-weight:700;letter-spacing:-.035em}
-html.v2 .h2-st b,html.v2 .live-side b{font-size:var(--fs-lg)!important;font-weight:650;color:var(--fp-chrome)}
-html.v2 .h2-st small,html.v2 .live-side small,html.v2 .sq-stats small{font-size:var(--fs-xs)!important;letter-spacing:.02em;color:var(--fp-steel);text-transform:uppercase}
 html.v2 .mut{color:var(--fp-steel)}
 
 /* ---------- 5. EDITORIAL DIVIDERS ---------- */
@@ -166,24 +159,6 @@ html.v2 .empty{border:1px dashed var(--fp-edge-2);background:transparent;border-
 html{scrollbar-color:var(--fp-slate) transparent}
 ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--fp-slate);border-radius:8px}
 
-/* ---------- 7. ADAPTIVE BORDERS (حالة اللاعب) ---------- */
-/* أساسي: إطار كروم ناعم · احتياطي: مطفي ومتقطع · مصاب: حافة حمراء بزاوية مقطوعة · مهدد: حافة صفرة · استثنائي: نيون */
-html.v2 .pitch .pl .nm{border:1px solid rgba(255,255,255,.08);border-bottom:0;background:rgba(7,9,12,.9)}
-html.v2 .pitch .pl .lb{border:1px solid rgba(255,255,255,.12);border-top:0}
-html.v2 .benchbox .pl .nm{background:rgba(20,24,32,.92);border:1px dashed rgba(255,255,255,.16);border-bottom:0;color:var(--fp-titan)}
-html.v2 .benchbox .pl .lb{opacity:.85}
-html.v2 .pl.st-out .nm{border-color:var(--fp-danger);box-shadow:inset 0 2px 0 var(--fp-danger)}
-html.v2 .pl.st-out .sh{filter:grayscale(.75) brightness(.7) drop-shadow(0 4px 6px rgba(0,0,0,.4))}
-html.v2 .pl.st-doubt .nm{border-color:var(--fp-warn);box-shadow:inset 0 2px 0 var(--fp-warn)}
-html.v2 .pl.st-hot .nm{border-color:rgba(var(--acc-rgb),.7);box-shadow:inset 0 2px 0 var(--acc)}
-html.v2 .pl.st-hot .sh{filter:drop-shadow(0 0 10px rgba(var(--acc-rgb),.35)) drop-shadow(0 4px 6px rgba(0,0,0,.4))}
-html.v2 .pl.sel .nm{background:var(--acc);color:var(--on-acc);border-color:var(--acc)}
-html.v2 .pl.dim{opacity:.32;filter:saturate(.3)}
-html.v2 .pl.capt .nm{border-color:rgba(255,194,75,.6)}
-/* العناصر المحددة / غير المتاحة عامة */
-html.v2 [aria-selected="true"],html.v2 .on.sel{box-shadow:0 0 0 1.5px var(--acc)}
-html.v2 [disabled],html.v2 .na{opacity:.45}
-
 /* ---------- 8. MICRO-SIGNATURES ---------- */
 .ms{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;flex:none;position:relative;background:var(--fp-graphite);box-shadow:inset 0 0 0 1px var(--fp-edge-2)}
 .ms::before{content:"";width:14px;height:14px;background:currentColor;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
@@ -195,18 +170,6 @@ html.v2 [disabled],html.v2 .na{opacity:.45}
 .ms-down{color:var(--fp-danger);--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 4l4 4 3-3 5 6M10 11h4V7' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
 .ms-nodata{color:var(--fp-pewter);box-shadow:inset 0 0 0 1px var(--fp-edge-2);--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='none' stroke='%23000' stroke-width='1.6' stroke-dasharray='2.4 2'/%3E%3C/svg%3E")}
 html.v2 .cz-idea{align-items:flex-start;gap:10px}
-
-/* ---------- 9. DATA CONFIDENCE ---------- */
-/* حقيقة = رقم صلب · توقع = علامة ≈ وخط سفلي منقط · تقدير = شفافية خفيفة · ناقص = متقطع · قديم = رمادي */
-html.v2 .is-pred{position:relative}
-html.v2 .is-pred::before{content:"≈";font:600 .55em var(--fp-num);color:var(--fp-steel);margin-inline-end:3px;vertical-align:.35em}
-html.v2 .h2-st.is-pred b{text-decoration:underline dotted rgba(255,255,255,.35);text-underline-offset:4px;text-decoration-thickness:1.5px}
-html.v2 .h2-st.is-pred::after{content:"";position:absolute;inset:0;border-radius:inherit;border:1px dashed rgba(255,255,255,.14);pointer-events:none}
-html.v2 .h2-st{position:relative}
-html.v2 .is-est{opacity:.82}
-html.v2 .is-missing{color:var(--fp-pewter)!important;border-style:dashed!important}
-html.v2 .is-stale{filter:saturate(.2);opacity:.7}
-html.v2 .cz-conf{border:1px solid currentColor;background:transparent!important}
 
 /* ---------- 10. MOTION LANGUAGE ---------- */
 @media (prefers-reduced-motion:no-preference){
@@ -233,8 +196,7 @@ html.v2 .h2-top>span:first-child{font:600 11px var(--fp-num);letter-spacing:.12e
 @media (max-width:640px){
   html .app{padding-inline:14px}
   html.v2 .sec{margin:22px 2px 10px}
-  html.v2 .h2-pts b{font-size:48px}
-  html.v2 .btn,html.v2 .tabs2 button,html.v2 .seg button{min-height:42px}
+    html.v2 .btn,html.v2 .tabs2 button,html.v2 .seg button{min-height:42px}
   html.v2 .row{min-height:52px}
   html.v2 .scroll-x{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
   #view{overflow-x:clip}

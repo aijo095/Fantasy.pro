@@ -91,7 +91,7 @@ function vHome2() {
   let ck = '';
   try { const C = runChecks(), bad = C.filter((c) => c.lvl === 'bad').length, warn = C.filter((c) => c.lvl === 'warn').length;
     if (bad || warn) ck = `<button class="h2-ck ${bad ? 'bad' : 'warn'}" onclick="go('check')">${I('i-alert', 'i')}<span>${bad ? tt(`${bad} مشاكل بفريقك قبل الإغلاق`, `${bad} issues before deadline`) : tt(`${warn} تنبيهات بفريقك`, `${warn} warnings`)}</span>${I('i-chev', 'chev')}</button>`; } catch {}
-  const stat = (lbl, val, sub = '', pred = false) => `<div class="h2-st${pred ? ' is-pred' : ''}"><small>${lbl}</small><b class="num">${val}</b>${sub}</div>`;
+  const stat = (lbl, val, sub = '') => `<div class="h2-st"><small>${lbl}</small><b class="num">${val}</b>${sub}</div>`;
   return `<div class="h2">
     ${ck}
     <section class="h2-hero"><span class="gw-mark" aria-hidden="true">${G.cur}</span>
@@ -101,7 +101,7 @@ function vHome2() {
       <div class="h2-stats">
         ${stat(t('total'), fmt(en.summary_overall_points))}
         ${stat(t('overall'), R0.rank ? fmt(R0.rank) : '—', R0.move ? `<em class="${R0.move > 0 ? 'up' : 'down'}">${R0.move > 0 ? '▲' : '▼'} ${fmt(Math.abs(R0.move))}</em>` : '')}
-        ${stat(`${tt('متوقع', 'Proj.')} GW${G.next}`, plan ? projected(plan) : '—', '', true)}
+        ${stat(`${tt('متوقع', 'Proj.')} GW${G.next}`, plan ? projected(plan) : '—')}
       </div>
     </section>
 

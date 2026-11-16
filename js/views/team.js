@@ -40,8 +40,6 @@ function card(id, i = 0) {
   let cls = 'pl'; if (sel) cls += ' sel'; else if (swapFrom) cls += canSwap(swapFrom, id) ? ' can' : ' dim';
   if (P.transfers.some((x) => x.in === id)) cls += ' new';
   if (P.cap === id) cls += ' capt';
-  // حالة اللاعب تنعكس على حدود البطاقة
-  if (a === 0 || p.st === 's') cls += ' st-out'; else if (a < 1) cls += ' st-doubt'; else if ((p.form || 0) >= 6.5) cls += ' st-hot';
   const badge = a < 1 || p.st === 's' ? `<span class="rk inj ${a === 0 || p.st === 's' ? 'r2' : 'r1'}" title="${esc(p.news || '')}">${a > 0 && a < 1 ? Math.round(a * 100) : '!'}</span>` : '';
   return `<div class="${cls}" data-pid="${id}" style="--d:${i * 35}ms" onclick="pitchTap(${id})" role="button" aria-label="${esc(p.name)}">${P.cap === id ? `<span class="cb">${P.chip === '3xc' ? '3×' : 'C'}</span>` : P.vc === id ? '<span class="cb v">V</span>' : ''}${badge}<div class="sh">${pShirt(p)}</div><div class="nm">${esc(p.name)}</div>${label(p)}</div>`;
 }
@@ -53,7 +51,7 @@ function hero(P) {
   return `<section class="team-hero">
     <div class="flex between" style="align-items:flex-start">
       <div><div class="mut" style="font-size:12.5px">${t('gw')} ${G.next} · ${tt('الإغلاق', 'Deadline')} ${G.deadline && new Date(G.deadline) > new Date() ? fmtTime(G.deadline) : tt('انتهى', 'passed')}</div>
-        <div class="flex" style="gap:8px;align-items:baseline"><span class="big-num count is-pred" data-v="${proj}" style="font-size:40px">${proj}</span><span class="mut" style="font-size:13px">${tt('نقطة متوقعة', 'projected pts')}</span></div>
+        <div class="flex" style="gap:8px;align-items:baseline"><span class="big-num count" data-v="${proj}" style="font-size:40px">${proj}</span><span class="mut" style="font-size:13px">${tt('نقطة متوقعة', 'projected pts')}</span></div>
         ${a.opt - a.cur >= 0.5 ? `<button class="hint-chip" onclick="bestLineup()">${I('i-sparkle', 'i', 'width:13px;height:13px')}${tt(`+${(a.opt - a.cur).toFixed(1)} نقطة بالتشكيلة الأفضل`, `+${(a.opt - a.cur).toFixed(1)} with best XI`)}</button>` : `<span class="hint-chip ok">${I('i-check', 'i', 'width:13px;height:13px')}${tt('تشكيلتك هي الأفضل', 'Optimal lineup')}</span>`}
       </div>
       <button class="score-ring" onclick="teamTab('insight')" aria-label="rating"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" stroke="rgba(255,255,255,.08)" stroke-width="6" fill="none"/><circle cx="32" cy="32" r="26" stroke="url(#rg)" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - ring / 100)}" style="--c:${C}" class="ring-arc" transform="rotate(-90 32 32)"/><defs><linearGradient id="rg"><stop offset="0" stop-color="#34D399"/><stop offset="1" stop-color="#60A5FA"/></linearGradient></defs></svg><b>${ring}</b><small>${tt('تقييم', 'Rating')}</small></button>
