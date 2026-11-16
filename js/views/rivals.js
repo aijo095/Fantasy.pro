@@ -383,7 +383,7 @@ function sheetBody(entry, gw = S.gw) {
   const xi = ps.filter((p) => p.position <= 11), bench = ps.filter((p) => p.position > 11);
   const lines = ['GK', 'DEF', 'MID', 'FWD'].map((pos) => xi.filter((p) => PM(p.element)?.pos === pos)).filter((l) => l.length);
   const pitch = `<div class="rvp"><div class="rvp-lines"><i class="box t"></i><i class="six t"></i><i class="mid"></i><i class="circle"></i><i class="box b"></i><i class="six b"></i></div>${lines.map((l) => `<div class="rvp-row">${l.map((p) => card(p)).join('')}</div>`).join('')}</div>
-    <div class="rvp-bench"><span class="rvp-bl">${tt('الدكة', 'Bench')}</span><div class="rvp-row">${bench.map((p) => card(p, true)).join('')}</div></div>
+    <div class="rvp-bench"><span class="rvp-bl">${tt('الدكة', 'Bench')}</span><div class="rvp-row" dir="ltr">${bench.map((p) => card(p, true)).join('')}</div></div>
     ${!isMe ? `<div class="rvp-legend"><span><i class="rvp-dot" style="position:static"></i>${tt('مو موجود بفريقك', 'Not in your team')}</span><span><i class="lg-live"></i>${tt('يلعب هسة', 'Playing now')}</span></div>` : ''}`;
   let dif = '';
   if (!isMe) {
