@@ -17,7 +17,9 @@ import { flag } from './flags.js';
 import { sellPrice10 } from './solver.js';
 import * as PS from './intel/stats.js';
 import { detect as detectChange, startShare } from './intel/change.js';
-import { posMeans, hiddenGems, overvalued, valueOf } from './intel/value.js';
+import { posMeans, hiddenGems, overvalued } from './intel/value.js';
+import { patterns as seasonPatterns, upcomingRest } from './intel/season.js';
+import { decideTiming } from './intel/timing.js';
 
 const VER = 2, WIN = 10; // نحلل آخر 10 جولات منتهية
 const key = () => `fp_coach_v${VER}_${ST.E?.entry?.id}`;
@@ -247,7 +249,21 @@ export function coachPlan(plan) {
   scen.forEach((x) => (x.g = r1(x.g)));
   const bestScen = [...scen].sort((a, b) => b.g - a.g)[0];
   let timing = null;
-  if (top) {
+  const mvT = transfer.kind === 'go' ? transfer.m : top;
+  if (flag('timing') && mvT) {
+    const ev = G.events.find((e) => e.id === gw);
+    const d = decideTiming({ now: Date.now(), deadline: ev?.deadline, gain: mvT.g, inP: mvT.c, outP: mvT.o, bank10: Math.round(plan.bank * 10), sell10: sellPrice10(mvT.o.id), avail: (p) => avail(p, gw) });
+    const R = d.reason || {}, nm = mvT.c.name;
+    const TXT = {
+      deadline_close: tt(`باقي ${R.left} ساعة للديدلاين — قرر هسه`, `${R.left}h to deadline — decide now`),
+      price_lock_out: tt(`سعر ${nm} قريب يتغير وميزانيتك ما تتحمل فرق 0.1م — إذا ناوي، سوّها قبل تحديث الأسعار الجاي`, `Price change would price you out — act before the next update`),
+      in_doubtful: tt(`${nm} مشاركته ${Math.round(R.aIn * 100)}% بس — انتظر الأخبار وقرر قبل الديدلاين بـ3 ساعات (قيمة الانتظار ${R.info} نقطة مقابل كلفة ${R.cost})`, `${nm} is doubtful — wait for news (value ${R.info} vs cost ${R.cost})`),
+      out_doubtful: tt(`اللاعب اللي تبيعه مشاركته ${Math.round(R.aOut * 100)}% — ممكن يرجع، انتظر الخبر قبل ما تبيعه`, `The player out may return — wait for news`),
+      price_move: tt(`سعر ${R.rIn ? nm : mvT.o.name} متوقع ${R.rIn ? 'يرتفع' : 'ينزل'} قبل الديدلاين وما أكو معلومة تستاهل الانتظار — سوّها هسه`, `Price move expected and nothing to wait for — act now`),
+      no_rush: tt('ما أكو سبب للعجلة ولا للانتظار — تكدر تسويها أي وقت قبل الديدلاين. ملاحظة: التشكيلات الرسمية تطلع بعد الديدلاين، فانتظارها مو ممكن', 'No rush either way. Official lineups come after the deadline.'),
+    };
+    if (TXT[R.code]) timing = { k: d.k, t: TXT[R.code], why: R };
+  } else if (top) {
     const pp = pricePredict(top.c), near = avgFdr(top.c.team, gw, 2), later = avgFdr(top.c.team, gw + 2, 3);
     if (pp?.prog >= 80) timing = { k: 'now', t: tt(`${top.c.name} قريب يرتفع سعره — إذا ناوي عليه، اشتريه هسه`, `${top.c.name} likely to rise — buy now`) };
     else if (near - later >= 0.6 && ft < 2) timing = { k: 'wait', t: tt(`مباريات ${top.c.name} الجاية صعبة وبعدها تسهل — ممكن تنتظر جولة وتجمع انتقال`, `Tough fixtures first — consider waiting a week`) };
@@ -305,6 +321,19 @@ export function coachPlan(plan) {
   const hardT = Object.entries(hard).find(([, n]) => n >= 3);
   if (doubt.length >= 2) opp.push({ ic: '⚠️', t: tt(`مخاطرة مخفية: ${doubt.map((p) => p.name).join('، ')} مشكوك بمشاركتهم — جهز بدلاء بالدكة يلعبون`, `Hidden risk: ${doubt.length} doubtful starters`) });
   if (hardT) opp.push({ ic: '⚠️', t: tt(`عندك ${hardT[1]} أساسيين من ${tName(+hardT[0])} ومباراتهم صعبة هالجولة — مخاطرة مركزة`, `Concentrated risk in one hard fixture`) });
+  if (flag('seasonal')) {
+    // الأنماط الموسمية المؤكدة أو المحتملة اللي تخص فريقك وجولتك الجاية بس
+    const SP = seasonMemo(plan);
+    const squadT = new Set(plan.squad.map((id) => PM(id)?.team));
+    const pf = SP.find((x) => x.kind === 'player_fixture' && plan.xi.includes(x.id));
+    const tdrop = SP.find((x) => x.kind === 'team_drop' && squadT.has(x.team));
+    const cong = SP.find((x) => x.kind === 'congestion' && x.effect < 0);
+    const tired = cong ? xi.filter((p) => { const f = (G.fx[gw] || []).find((m) => m.h === p.team || m.a === p.team); if (!f) return false; const r = upcomingRest(G, p.team, gw), ro = upcomingRest(G, f.h === p.team ? f.a : f.h, gw); return r != null && ro != null && ro - r >= 2; }) : [];
+    if (pf) { const p = PM(pf.id), f = (G.fx[gw] || []).find((m) => m.h === p.team || m.a === p.team), fd = f ? (f.h === p.team ? f.hd : f.ad) : null;
+      if (fd != null && (fd >= 4 || fd <= 2)) ideas.push({ ic: '📅', t: tt(`نمط ${pf.level === 'confirmed' ? 'مؤكد' : 'محتمل'}: ${p.name} يجيب ${pf.easy} نقطة أمام الخصوم السهلين و${pf.hard} أمام الصعبين (${pf.n[0]}+${pf.n[1]} مباريات) — ومباراته الجاية ${fd >= 4 ? 'صعبة' : 'سهلة'}`, `${p.name}: ${pf.easy} vs easy, ${pf.hard} vs hard opponents`), act: `openPlayer(${p.id})` }); }
+    if (tdrop) ideas.push({ ic: '📉', t: tt(`نمط ${tdrop.level === 'confirmed' ? 'مؤكد' : 'محتمل'}: ${tName(tdrop.team)} تراجع — فرق أهدافه بآخر 6 مباريات ${tdrop.to} مقابل ${tdrop.from} قبلها، وعندك منه لاعبين`, `${tName(tdrop.team)} has declined over the last 6`) });
+    if (tired.length >= 2) ideas.push({ ic: '⏱', t: tt(`ضغط مباريات: هذا الموسم الفريق اللي يرتاح أقل من خصمه بيومين أو أكثر فرق أهدافه أقل بـ${Math.abs(cong.effect)} بالمعدل (${cong.level === 'confirmed' ? 'نمط مؤكد' : 'نمط محتمل'})، وعندك ${tired.length} أساسيين بهالوضع: ${tired.slice(0, 3).map((p) => p.name).join('، ')}`, `Short rest hurts this season; ${tired.length} of your starters are affected`) });
+  }
   const ideasAll = [...opp, ...ideas];
   // فحص نهائي للتوصية كاملة (الانتقال + الكابتن + الورقة) — التحذيرات تنحفظ ويا القرار
   let guard = null;
@@ -314,6 +343,13 @@ export function coachPlan(plan) {
   if (flag('decisionMemory')) { try { recordDecision(plan, { transfer, moves, blockedMoves, capL, blockedCaps, cap, capConf, trConf, hitBar, ftBar, arch: A, guard }); } catch {} }
   const dm = flag('decisionMemory') ? (() => { try { return DM.summary(ST.E.entry.id); } catch { return null; } })() : null;
   return { transfer, cap, capAlt, capL: capL.slice(0, 3), capSafe, capRisk, capConf, scen, bestScen, timing, trConf, focus, ideas: ideasAll.slice(0, 6), hitBar, ftBar, learn: LR.summary(), dm, guard, at: ST.G.fetchedAt || Date.now() };
+}
+
+let SPM = null;
+function seasonMemo(plan) {
+  const k = (ST.G.fetchedAt || 0) + ':' + plan.squad.join(',');
+  if (SPM?.k !== k) { let v = []; try { v = seasonPatterns(ST.G, { pts: loadCacheMem().pts, ids: plan.xi }); } catch {} SPM = { k, v }; }
+  return SPM.v;
 }
 
 /* ---------- (1) حفظ القرار مع كل البدائل اللي درسها المحرك ---------- */

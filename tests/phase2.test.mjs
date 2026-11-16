@@ -81,3 +81,66 @@ test('value: المدى القصير والمتوسط', () => {
   const p = P({ id: 1 }); const v = VA.valueOf(p, { ...ctx([p]), xp: () => 2 });
   assert.equal(v.short, 6); assert.equal(v.med, 12);
 });
+
+/* ---------- (12) الأنماط الموسمية ---------- */
+const SE = await import('../js/intel/season.js');
+function league(nGw, gdFn) {
+  // 6 فرق، مواجهات تتبدل كل جولة، ومباراة وحدة بكل جولة تنلعب بعد 3 أيام من اللي قبلها (فروقات راحة حقيقية)
+  const R = [[[1, 2], [3, 4], [5, 6]], [[1, 4], [3, 6], [5, 2]], [[1, 6], [3, 2], [5, 4]]];
+  const fx = {}, last = {}; let t = Date.UTC(2026, 7, 1);
+  for (let g = 1; g <= nGw; g++) {
+    t += 7 * 864e5;
+    fx[g] = R[g % 3].map(([h, a], i) => {
+      const ko = t + (i === g % 3 ? -4 : 0) * 864e5; // مباراة وحدة بكل جولة قبل الباقي بـ4 أيام
+      const rh = last[h] ? (ko - last[h]) / 864e5 : null, ra = last[a] ? (ko - last[a]) / 864e5 : null; last[h] = ko; last[a] = ko;
+      const gd = gdFn(g, h, a, rh, ra);
+      return { h, a, hd: 3, ad: 3, ko: new Date(ko).toISOString(), fin: true, hs: Math.max(0, gd) + 1, as: Math.max(0, -gd) + 1 };
+    });
+  }
+  return fx;
+}
+test('season: يكتشف أثر ضغط المباريات إذا موجود فعلاً', () => {
+  // الفريق المضيف يخسر بعد راحة قصيرة، ويفوز بالعادي
+  const fx = league(30, (g, h, a, rh, ra) => (rh != null && ra != null && Math.abs(rh - ra) >= 2 ? (rh < ra ? -2 : 2) : ((g + h) % 3) - 1));
+  const P = SE.patterns({ fx, PM: {} });
+  const c = P.find((x) => x.kind === 'congestion');
+  assert.ok(c, JSON.stringify(P)); assert.ok(c.effect < 0);
+});
+test('season: ما يطلع نمط من بيانات عشوائية متوازنة', () => {
+  const fx = league(30, (g, h) => ((g * 7 + h * 3) % 5) - 2);
+  const P = SE.patterns({ fx, PM: {} });
+  assert.ok(!P.find((x) => x.kind === 'congestion' && x.level === 'confirmed'));
+});
+test('season: عينة صغيرة ما تتعمم', () => {
+  const fx = league(4, (g, h, a, rh, ra) => (rh != null && ra != null && rh < ra ? -3 : 2));
+  assert.equal(SE.patterns({ fx, PM: {} }).filter((x) => x.kind === 'congestion').length, 0);
+});
+test('season: أيام الراحة للمباراة الجاية من الجدول المعلن', () => {
+  const fx = league(8, () => 0); fx[8].forEach((m) => { m.fin = false; m.hs = null; m.as = null; });
+  const r = SE.upcomingRest({ fx, next: 8 }, 1, 8);
+  assert.ok([3, 7, 11].includes(r), String(r));
+});
+
+/* ---------- (3) توقيت القرار ---------- */
+const TI = await import('../js/intel/timing.js');
+const now = Date.UTC(2026, 10, 16, 12);
+const pl = (o) => ({ price: 6, pcp: 10, ...o });
+const base = { now, deadline: new Date(now + 48 * 36e5).toISOString(), gain: 4, bank10: 5, sell10: 60, avail: (p) => p.a ?? 1 };
+test('timing: اللاعب المطلوب مشكوك = انتظر الخبر', () => {
+  const d = TI.decideTiming({ ...base, inP: pl({ a: 0.5 }), outP: pl({}) });
+  assert.equal(d.k, 'wait'); assert.equal(d.reason.code, 'in_doubtful'); assert.ok(d.by);
+});
+test('timing: سعره راح يرتفع والميزانية ضيقة = هسه', () => {
+  const d = TI.decideTiming({ ...base, bank10: 0, inP: pl({ a: 0.5, pcp: 120 }), outP: pl({}) });
+  assert.equal(d.k, 'now'); assert.equal(d.reason.code, 'price_lock_out');
+});
+test('timing: قريب من الديدلاين ما يوصي بالانتظار أبداً', () => {
+  const d = TI.decideTiming({ ...base, deadline: new Date(now + 2 * 36e5).toISOString(), inP: pl({ a: 0.25 }), outP: pl({}) });
+  assert.equal(d.k, 'now');
+});
+test('timing: ما أكو سبب لا للعجلة ولا للانتظار', () => {
+  assert.equal(TI.decideTiming({ ...base, inP: pl({}), outP: pl({}) }).reason.code, 'no_rush');
+});
+test('timing: بعد الديدلاين ما أكو قرار', () => {
+  assert.equal(TI.decideTiming({ ...base, deadline: new Date(now - 1000).toISOString(), inP: pl({}), outP: pl({}) }).k, 'none');
+});

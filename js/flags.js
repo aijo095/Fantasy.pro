@@ -11,6 +11,8 @@ const DEFAULTS = {
   guard: true,          // 6: كاشف تضارب التوصيات
   changeDetector: true, // 2: كاشف تغير دور اللاعب
   hiddenValue: true,    // 7: القيمة المخفية
+  seasonal: true,       // 12: الأنماط الموسمية
+  timing: true,         // 3: أفضل توقيت للقرار
 };
 
 let cache = null;
