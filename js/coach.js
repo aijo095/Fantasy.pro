@@ -14,7 +14,8 @@ import * as LR from './learn.js';
 import * as DM from './memory.js';
 import { checkRecommendation, transferBlocks, captainBlocks } from './guard.js';
 import { flag } from './flags.js';
-import { sellPrice10 } from './solver.js';
+import { sellPrice10, solve } from './solver.js';
+import { buildPlans, describe as describePlan } from './intel/sequence.js';
 import * as PS from './intel/stats.js';
 import { detect as detectChange, startShare } from './intel/change.js';
 import { posMeans, hiddenGems, overvalued } from './intel/value.js';
@@ -335,6 +336,7 @@ export function coachPlan(plan) {
     if (tired.length >= 2) ideas.push({ ic: '⏱', t: tt(`ضغط مباريات: هذا الموسم الفريق اللي يرتاح أقل من خصمه بيومين أو أكثر فرق أهدافه أقل بـ${Math.abs(cong.effect)} بالمعدل (${cong.level === 'confirmed' ? 'نمط مؤكد' : 'نمط محتمل'})، وعندك ${tired.length} أساسيين بهالوضع: ${tired.slice(0, 3).map((p) => p.name).join('، ')}`, `Short rest hurts this season; ${tired.length} of your starters are affected`) });
   }
   const ideasAll = [...opp, ...ideas];
+  const seq = flag('sequential') ? seqMemo(plan, transfer.kind === 'go' ? [[transfer.m.o.id, transfer.m.c.id]] : null) : null;
   // فحص نهائي للتوصية كاملة (الانتقال + الكابتن + الورقة) — التحذيرات تنحفظ ويا القرار
   let guard = null;
   if (useGuard) { const fin = checkRecommendation(plan, { transfers: transfer.kind === 'go' ? [{ out: transfer.m.o.id, in: transfer.m.c.id }] : [], cap: cap.p.id, vc: cap.p.id === plan.vc ? plan.cap : plan.vc, capRisk: cap.risk, chip: plan.chip || '' }, GC); guard = { ok: fin.ok, issues: [...gIss, ...fin.issues] }; }
@@ -342,7 +344,22 @@ export function coachPlan(plan) {
   try { LR.snapshot({ cap: cap.p.id, tr: transfer.kind === 'go' ? { in: transfer.m.c.id, out: transfer.m.o.id } : null }); } catch {}
   if (flag('decisionMemory')) { try { recordDecision(plan, { transfer, moves, blockedMoves, capL, blockedCaps, cap, capConf, trConf, hitBar, ftBar, arch: A, guard }); } catch {} }
   const dm = flag('decisionMemory') ? (() => { try { return DM.summary(ST.E.entry.id); } catch { return null; } })() : null;
-  return { transfer, cap, capAlt, capL: capL.slice(0, 3), capSafe, capRisk, capConf, scen, bestScen, timing, trConf, focus, ideas: ideasAll.slice(0, 6), hitBar, ftBar, learn: LR.summary(), dm, guard, at: ST.G.fetchedAt || Date.now() };
+  return { transfer, cap, capAlt, capL: capL.slice(0, 3), capSafe, capRisk, capConf, scen, bestScen, timing, trConf, focus, ideas: ideasAll.slice(0, 6), hitBar, ftBar, learn: LR.summary(), dm, guard, seq, at: ST.G.fetchedAt || Date.now() };
+}
+
+/* ---------- (9) خطط متعددة الجولات: تنحسب بالخلفية مرة وحدة لكل وضع ---------- */
+let SEQ = { k: null, v: null, busy: false };
+function seqMemo(plan, firstMove) {
+  const k = [ST.G.fetchedAt || 0, plan.squad.join(','), plan.bank, plan.ft, JSON.stringify(firstMove)].join('|');
+  if (SEQ.k === k) return SEQ.v;
+  if (SEQ.busy === k) return null;
+  SEQ.busy = k;
+  buildPlans({ solve, firstMove, xpOf: (id, g) => (PM(id) ? xp(PM(id), g) : 0), availOf: (id, g) => (PM(id) ? avail(PM(id), g) : 0) })
+    .then((v) => { if (SEQ.busy !== k) return; const nm = (id) => PM(id)?.name || '';
+      v.plans.forEach((p) => (p.desc = describePlan(p, nm))); SEQ = { k, v, busy: false };
+      if (ST.view === 'team' && typeof window !== 'undefined') window.render?.(); })
+    .catch(() => { SEQ.busy = false; });
+  return null;
 }
 
 let SPM = null;

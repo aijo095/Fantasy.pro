@@ -20,13 +20,14 @@ export function sellPrice10(id) {
 
 const POSN = { GK: 0, DEF: 1, MID: 2, FWD: 3 };
 
-export function solve({ H = 5, maxHits = 1, beam = 10, movesPerState = 7, ftValue = 1.2 } = {}) {
+export function solve({ H = 5, maxHits = 1, beam = 10, movesPerState = 7, ftValue = 1.2, force0 = null } = {}) {
   const G = ST.G, P = ST.plan; if (!P || !G.next) return null;
   const g0 = G.next, gws = []; for (let g = g0; g < g0 + H && g <= G.lastGW; g++) gws.push(g);
   const PM = G.PM;
   // مجموعة المرشحين: أفضل لاعبين بكل مركز على مدى الخطة + تشكيلتك
   const hz = (p) => gws.reduce((s, g) => s + xp(p, g), 0);
   const pool = new Set(P.squad);
+  if (force0) force0.forEach(([, n]) => pool.add(n));
   for (const pos of ['GK', 'DEF', 'MID', 'FWD']) G.players.filter((p) => p.pos === pos && p.st !== 'u' && p.st !== 'n' && p.min > 0).sort((a, b) => hz(b) - hz(a)).slice(0, pos === 'GK' ? 6 : 16).forEach((p) => pool.add(p.id));
   const ids = [...pool];
   const XP = new Map(ids.map((id) => [id, gws.map((g) => xp(PM[id], g))]));
@@ -78,7 +79,14 @@ export function solve({ H = 5, maxHits = 1, beam = 10, movesPerState = 7, ftValu
   for (let gi = 0; gi < gws.length; gi++) {
     const next = [];
     for (const st of states) {
-      const opts = [{ tr: [], sq: st.squad, bank: st.bank, est: 0 }, ...movesFor(st, gi)];
+      let opts;
+      if (gi === 0 && force0) {
+        // قرار الجولة الأولى محدد مسبقاً (لمقارنة الخطط): [] = احتفظ، أو قائمة انتقالات [[out,in]]
+        let sq = st.squad, bank = st.bank, ok = true;
+        for (const [o, n] of force0) { if (!sq.includes(o) || sq.includes(n) || !PM[n] || PM[n].pos !== PM[o].pos) { ok = false; break; } bank += (st.sell.get(o) ?? price10(o)) - price10(n); sq = sq.map((x) => (x === o ? n : x)); }
+        if (!ok || bank < 0 || !clubOk(sq)) return null;
+        opts = [{ tr: force0, sq, bank, est: 0 }];
+      } else opts = [{ tr: [], sq: st.squad, bank: st.bank, est: 0 }, ...movesFor(st, gi)];
       for (const m of opts) {
         const n = m.tr.length, paid = Math.max(0, n - st.ft), hits = st.hits + paid;
         if (paid && hits > maxHits) continue;
@@ -92,6 +100,7 @@ export function solve({ H = 5, maxHits = 1, beam = 10, movesPerState = 7, ftValu
     for (const s of next.sort((a, b) => b.rank - a.rank)) if (!seen.has(s.key)) seen.set(s.key, s);
     states = [...seen.values()].slice(0, beam);
   }
+  if (!states.length) return null;
   const final = (s) => s.total + s.ft * ftValue;
   const best = states.sort((a, b) => final(b) - final(a))[0];
   // المرجع: بدون أي انتقال

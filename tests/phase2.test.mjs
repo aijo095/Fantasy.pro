@@ -144,3 +144,24 @@ test('timing: ما أكو سبب لا للعجلة ولا للانتظار', () 
 test('timing: بعد الديدلاين ما أكو قرار', () => {
   assert.equal(TI.decideTiming({ ...base, deadline: new Date(now - 1000).toISOString(), inP: pl({}), outP: pl({}) }).k, 'none');
 });
+
+/* ---------- (9) القرارات المتسلسلة ---------- */
+const SQ = await import('../js/intel/sequence.js');
+test('sequence: عدم اليقين يزيد ويا اللاعبين المشكوكين', () => {
+  const steps = [{ gw: 10, squad: [1, 2] }];
+  const a = SQ.planSd(steps, () => 5, () => 1), b = SQ.planSd(steps, () => 5, (id) => (id === 1 ? 0.5 : 1));
+  assert.ok(b > a);
+});
+test('sequence: التصنيف — الأعلى توقع، الأكثر استقرار، الأعلى مخاطرة', () => {
+  const P = [{ k: 'a', total: 100, ftEnd: 1, sd: 20 }, { k: 'b', total: 97, ftEnd: 1, sd: 10 }, { k: 'c', total: 99, ftEnd: 1, sd: 14 }];
+  const c = SQ.classify(P);
+  assert.equal(c.best.k, 'a'); assert.equal(c.stable.k, 'b'); assert.equal(c.risky.k, 'a'); assert.equal(c.balanced.k, 'b');
+});
+test('sequence: الخطط تنبني من الحلّال وتنشال المكررة', async () => {
+  const fake = (o) => ({ total: o.force0 && o.force0.length ? 60 : o.maxHits === 0 ? 58 : 59, hold: 50, holdFt: 3, gain: 0, hits: 0, ftEnd: 1, bankEnd: 0.5, gws: [10],
+    steps: [{ gw: 10, tr: o.force0 ?? (o.maxHits === 0 ? [[1, 3]] : [[1, 3]]), hit: 0, squad: [3, 2] }] });
+  const r = await SQ.buildPlans({ solve: fake, firstMove: [[1, 4]], xpOf: () => 4, availOf: () => 1 });
+  assert.equal(r.plans[0].k, 'hold');
+  assert.equal(r.plans.filter((p) => JSON.stringify(p.steps.map((s) => s.tr)) === '[[[1,3]]]').length, 1); // nohit و hit نفس الخطة
+  assert.equal(r.cls.best.k, 'now');
+});

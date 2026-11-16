@@ -82,9 +82,17 @@ let coachProg = 0, coachErr = false;
 const MS = { '🔍': 'ms-risk', '💎': 'ms-opp', '📈': 'ms-up', '⚠️': 'ms-risk', '📅': 'ms-opp', '✌️': 'ms-opp', '∅': 'ms-nodata', '⇅': 'ms-vol', '🎈': 'ms-vol', '🧊': 'ms-stable', '▼': 'ms-down', '📉': 'ms-down' };
 const MSL = () => ({ 'ms-risk': tt('خطورة', 'Risk'), 'ms-opp': tt('فرصة', 'Opportunity'), 'ms-up': tt('تطور', 'Rising'), 'ms-down': tt('تراجع', 'Declining'), 'ms-vol': tt('تذبذب', 'Volatile'), 'ms-stable': tt('استقرار', 'Stable'), 'ms-nodata': tt('بيانات ناقصة', 'Incomplete data') });
 const confChip = (c) => `<span class="cz-conf ${c}">${c === 'high' ? tt('ثقة عالية', 'High confidence') : c === 'low' ? tt('ثقة قليلة', 'Low confidence') : tt('ثقة متوسطة', 'Medium confidence')}</span>`;
+/** (9) مقارنة الخطط على 5 جولات — داخل نفس قسم الانتقال */
+function seqHTML(C) {
+  const S = C.seq; if (!S?.cls?.best) return '';
+  const L = { best: tt('الأعلى توقعاً', 'Highest expected'), balanced: tt('الأكثر توازناً', 'Most balanced'), stable: tt('الأكثر استقراراً', 'Most stable'), risky: tt('الأعلى مخاطرة', 'Riskiest') };
+  const seen = new Set(), rows = ['best', 'balanced', 'stable', 'risky'].map((k) => [k, S.cls[k]]).filter(([, p]) => p && p.desc && !seen.has(p) && seen.add(p));
+  if (!rows.length) return '';
+  return `<div class="cz-scen" style="margin-top:8px">${rows.map(([k, p]) => `<div class="${k === 'best' ? 'on' : ''}"><span>${L[k]}</span><b dir="ltr">${esc(p.desc)}</b><em class="num ${p.gain > 0 ? 'up' : p.gain < 0 ? 'down' : ''}" dir="ltr">${p.gain > 0 ? '+' : ''}${p.gain}${p.sd != null ? ` ±${p.sd}` : ''}</em></div>`).join('')}</div><p class="cz-why" style="margin-top:4px;opacity:.75">${tt('خطط كاملة على 5 جولات مقارنة بالاحتفاظ بالفريق (بعد الضربات) · ± = مقدار عدم اليقين', 'Full 5-GW plans vs holding (after hits) · ± = uncertainty')}</p>`;
+}
 function scenHTML(C) {
-  if (!C.scen || C.scen.length < 2) return '';
-  return `<div class="cz-scen">${C.scen.map((x) => `<div class="${x === C.bestScen ? 'on' : ''}"><span>${x.k === 'roll' ? tt('احتفظ', 'Roll') : x.k === 'one' ? tt('انتقال واحد', 'One move') : tt('انتقالين', 'Two moves')}</span><b dir="ltr">${esc(x.t)}</b><em class="num ${x.g > 0 ? 'up' : x.g < 0 ? 'down' : ''}" dir="ltr">${x.g > 0 ? '+' : ''}${x.g}</em></div>`).join('')}</div>${C.timing ? `<p class="cz-why" style="margin-top:6px">⏱ ${esc(C.timing.t)}</p>` : ''}<p class="cz-why" style="margin-top:4px;opacity:.75">${tt('الأرقام = الربح المتوقع بخمس جولات بعد خصم الضربات', 'Expected gain over 5 GWs after hits')}</p>`;
+  if (!C.scen || C.scen.length < 2) return seqHTML(C);
+  return `<div class="cz-scen">${C.scen.map((x) => `<div class="${x === C.bestScen ? 'on' : ''}"><span>${x.k === 'roll' ? tt('احتفظ', 'Roll') : x.k === 'one' ? tt('انتقال واحد', 'One move') : tt('انتقالين', 'Two moves')}</span><b dir="ltr">${esc(x.t)}</b><em class="num ${x.g > 0 ? 'up' : x.g < 0 ? 'down' : ''}" dir="ltr">${x.g > 0 ? '+' : ''}${x.g}</em></div>`).join('')}</div>${C.timing ? `<p class="cz-why" style="margin-top:6px">⏱ ${esc(C.timing.t)}</p>` : ''}<p class="cz-why" style="margin-top:4px;opacity:.75">${tt('الأرقام = الربح المتوقع بخمس جولات بعد خصم الضربات', 'Expected gain over 5 GWs after hits')}</p>${seqHTML(C)}`;
 }
 function capRiskHTML(C) {
   if (!C.capSafe) return '';

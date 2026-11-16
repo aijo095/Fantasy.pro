@@ -13,6 +13,7 @@ const DEFAULTS = {
   hiddenValue: true,    // 7: القيمة المخفية
   seasonal: true,       // 12: الأنماط الموسمية
   timing: true,         // 3: أفضل توقيت للقرار
+  sequential: true,     // 9: مقارنة خطط متعددة الجولات
 };
 
 let cache = null;
