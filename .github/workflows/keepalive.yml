@@ -1,0 +1,22 @@
+name: keepalive
+# GitHub يوقف المهام المجدولة بالمستودعات العامة إذا مرت 60 يوم بدون نشاط.
+# هالمهمة تشتغل مرة بالأسبوع وتعيد تفعيل كل المهام المجدولة (ونفسها) عبر واجهة GitHub،
+# وهذا يصفّر عدّاد الـ60 يوم — بدون أي commit وبدون ما يطلع نشر جديد على Vercel.
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+permissions:
+  actions: write
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Re-enable scheduled workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for wf in keepalive.yml notify.yml captains.yml; do
+            gh api -X PUT "repos/${{ github.repository }}/actions/workflows/$wf/enable" && echo "enabled $wf"
+          done
