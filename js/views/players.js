@@ -102,9 +102,11 @@ function donut(p, i) {
 }
 export function vCompare() {
   const ids = LS.get('fp_cmp', []).filter((id) => PM(id));
-  if (ids.length < 2 && ST.plan) { const c = ST.plan.cap; if (!ids.includes(c)) ids.unshift(c); const alt = ST.G.players.filter((p) => p.pos === PM(ids[0]).pos && p.id !== ids[0]).sort((a, b) => b.total - a.total)[0]; if (ids.length < 2 && alt) ids.push(alt.id); }
-  if (LS.get('fp_cmp', []).filter((id) => PM(id)).length < ids.length) LS.set('fp_cmp', ids.slice(0, 3)); // نحفظ الاختيار التلقائي حتى المنتقي يعرف منو معروض
+  const userMode = LS.get('fp_cmp_user', false); // المستخدم اختار بنفسه: ما نضيف أي لاعب تلقائي
+  if (!userMode && ids.length < 2 && ST.plan) { const c = ST.plan.cap; if (!ids.includes(c)) ids.unshift(c); const alt = ST.G.players.filter((p) => p.pos === PM(ids[0]).pos && p.id !== ids[0]).sort((a, b) => b.total - a.total)[0]; if (ids.length < 2 && alt) ids.push(alt.id); }
+  if (!userMode && LS.get('fp_cmp', []).filter((id) => PM(id)).length < ids.length) LS.set('fp_cmp', ids.slice(0, 3)); // نحفظ الاختيار التلقائي حتى المنتقي يعرف منو معروض
   const ps = ids.slice(0, 3).map(PM), G = ST.G, A = axes();
+  if (ps.length < 2) return `<button class="cmp-add" onclick="cmpPick()"><span class="sicon">${I('i-plus')}</span><span>${tt('أضف لاعب للمقارنة', 'Add a player to compare')}</span><small>${tt('بحث · نادي · اقتراحات', 'Search · club · picks')}</small></button>${ps.length ? `<div class="cmp-heads" style="grid-template-columns:1fr"><div class="cmp-h" style="--c:${CC[0]}"><div class="cmp-sh">${pShirt(ps[0])}</div><b>${esc(ps[0].name)}</b><small>${tt('اختار لاعب ثاني حتى تبدي المقارنة', 'Pick one more player to compare')}</small></div></div>` : `<div class="pk-empty" style="margin-top:12px">${tt('اختار لاعبين أو ثلاثة حتى تقارن بينهم', 'Pick 2–3 players to compare')}</div>`}`;
   const fin = Math.max(1, G.finished), per90 = (p, v) => (p.min > 0 ? r1((v / p.min) * 90) : 0);
   const score = (p) => Math.round(A.reduce((s, [, , f]) => s + pctl(p, f), 0) / A.length);
   const ranked = [...ps].sort((a, b) => score(b) - score(a) || xpN(b, G.next, 5) - xpN(a, G.next, 5)), best = ranked[0], bi = ps.indexOf(best);
@@ -210,6 +212,9 @@ function pickBody() {
 function pickRefresh() { const b = document.getElementById('pkBody'); if (b) b.innerHTML = pickBody(); }
 window.cmpPick = () => {
   PK.q = ''; PK.team = 0; PK.pos = 'ALL';
+  // كل بحث جديد يبدي مقارنة جديدة: ما نبقي اللاعبين القدامى
+  if (!PK.keep) { LS.set('fp_cmp', []); LS.set('fp_cmp_user', true); window.render(); }
+  PK.keep = false;
   openSheet(`<div class="pk"><div class="pk-top"><b>${tt('اختار لاعب للمقارنة', 'Pick a player')}</b><button class="icon-btn" onclick="closeSheet()">${I('i-x', 'i')}</button></div>
     <div class="searchbox"><span class="sicon">${I('i-search')}</span><input id="pkq" type="search" placeholder="${tt('اكتب جزء من الاسم أو النادي (عربي أو إنكليزي)', 'Type part of a name or club')}" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
     <div id="pkBody">${pickBody()}</div></div>`, () => {
