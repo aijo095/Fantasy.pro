@@ -4,11 +4,13 @@
    - للإيقاف من جهاز معيّن: localStorage.setItem('fp_flags', '{"guard":false}')
    - ENGINE_VER يتسجل ويا كل توصية حتى نقارن الإصدارات لاحقاً (المرحلة 3)
 ========================================================= */
-export const ENGINE_VER = '3.1.0-p1';
+export const ENGINE_VER = '3.2.0-p2';
 
 const DEFAULTS = {
   decisionMemory: true, // 1 + 4 + 13: حفظ البدائل، الندم، وتقييم جودة القرار
   guard: true,          // 6: كاشف تضارب التوصيات
+  changeDetector: true, // 2: كاشف تغير دور اللاعب
+  hiddenValue: true,    // 7: القيمة المخفية
 };
 
 let cache = null;

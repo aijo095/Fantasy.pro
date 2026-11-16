@@ -15,6 +15,9 @@ import * as DM from './memory.js';
 import { checkRecommendation, transferBlocks, captainBlocks } from './guard.js';
 import { flag } from './flags.js';
 import { sellPrice10 } from './solver.js';
+import * as PS from './intel/stats.js';
+import { detect as detectChange, startShare } from './intel/change.js';
+import { posMeans, hiddenGems, overvalued, valueOf } from './intel/value.js';
 
 const VER = 2, WIN = 10; // نحلل آخر 10 جولات منتهية
 const key = () => `fp_coach_v${VER}_${ST.E?.entry?.id}`;
@@ -36,12 +39,14 @@ export async function ensureCoach(onProgress) {
     const needPicks = gws.filter((g) => !c.picks[g]), needPts = [...new Set([...gws, ...gws.map((g) => g + 1), ...gws.map((g) => g + 2)])].filter((g) => g <= G.finished && G.events.find((e) => e.id === g)?.fin && !c.pts[g]);
     let done = 0; const total = needPicks.length + needPts.length; const tick = () => onProgress && onProgress(total ? ++done / total : 1);
     await pool(needPicks, 3, async (g) => { const d = await FPL.fetchPicks(id, g); c.picks[g] = { chip: d.active_chip || null, p: d.picks.map((x) => [x.element, x.multiplier, x.position, x.is_captain ? 1 : x.is_vice_captain ? 2 : 0]) }; tick(); });
-    await pool(needPts, 2, async (g) => { const l = await FPL.loadLive(g); const o = {}; l.elements.forEach((e) => { const s = e.stats; if (s.total_points || s.minutes) o[e.id] = [s.total_points, s.minutes]; }); c.pts[g] = o; tick(); });
+    await pool(needPts, 2, async (g) => { const l = await FPL.loadLive(g); const o = {}; l.elements.forEach((e) => { const s = e.stats; if (s.total_points || s.minutes) o[e.id] = [s.total_points, s.minutes]; }); c.pts[g] = o; try { PS.put(g, l.elements); } catch {} tick(); });
     // نخلي آخر 14 جولة بس حتى ما يكبر التخزين
     const keepFrom = (G.finished || 0) - 14; Object.keys(c.pts).forEach((g) => { if (+g < keepFrom) delete c.pts[g]; }); Object.keys(c.picks).forEach((g) => { if (+g < keepFrom) delete c.picks[g]; });
     saveCache(c);
     // التعلّم: أول مرة من التاريخ، وبعدين من كل جولة تخلص (مقارنة توقعاتنا بالنتيجة)
     try { LR.bootstrap(c); await LR.evaluate(c); } catch {}
+    // إحصاءات الجولات الأخيرة لكل اللاعبين (لكاشف تغير الدور) — مشتركة وتنجلب مرة وحدة
+    if (flag('changeDetector')) { try { await PS.ensure(G, FPL.loadLive); CHG.clear(); } catch {} }
     // ذاكرة القرارات: نقيّم توصيات الجولات اللي خلصت (جودة القرار، الندم، دقة التوقع)
     if (flag('decisionMemory')) { try { DM.evaluateDue({ entryId: id, isFinished: (g) => !!G.events.find((e) => e.id === g)?.fin, pts: c.pts, picks: c.picks, transfers: ST.E.transfers || [], lastGW: G.lastGW, ftBefore }); } catch {} }
     MEM = { entry: id, fin: G.finished, gws, ...profile(c, gws) };
@@ -57,6 +62,15 @@ function ftBefore(g) {
 }
 export const coachReady = () => (MEM && MEM.entry === ST.E?.entry?.id ? MEM : null);
 
+/* ---------- كاشف تغير الدور (القدرة 2) ---------- */
+const CHG = new Map();
+export function changeOf(p) {
+  if (!flag('changeDetector') || !p) return null;
+  const k = p.id + ':' + (ST.G?.finished || 0); if (CHG.has(k)) return CHG.get(k);
+  let d = null; try { d = detectChange(PS.rows(p.id)); } catch {}
+  CHG.set(k, d); return d;
+}
+
 /* ---------- تقييم اللاعب المستدام (مو فقاعة جولة وحدة) ---------- */
 const POSG = { GK: 6, DEF: 6, MID: 5, FWD: 4 }, POSCS = { GK: 4, DEF: 4, MID: 1, FWD: 0 };
 function recentPts(id, n = 4) {
@@ -70,7 +84,8 @@ let CM = null; function loadCacheMem() { if (!CM || CM.k !== key() || CM.fin !==
 export function sustain(p) {
   const G = ST.G, fin = Math.max(1, G.finished);
   const mins = p.min || 0, n90 = mins / 90;
-  const start = p.starts != null ? p.starts / fin : clamp(mins / (90 * fin), 0, 1);
+  const det = changeOf(p);
+  const start = startShare(p.starts != null ? p.starts / fin : clamp(mins / (90 * fin), 0, 1), det);
   const sec = clamp(0.35 + 0.75 * Math.min(1, start * 1.1), 0.35, 1.05); // ضمان المشاركة
   let reg = 1, note = '';
   if (n90 >= 3 && (p.pos === 'MID' || p.pos === 'FWD' || p.pos === 'DEF')) {
@@ -81,7 +96,7 @@ export function sustain(p) {
   const rp = recentPts(p.id, 5); let spike = false;
   if (rp && rp.length >= 3) { const last = rp[0], rest = rp.slice(1), avg = rest.reduce((a, x) => a + x, 0) / rest.length; if (last >= 10 && avg <= 3 && (p.xgi / Math.max(1, n90)) < 0.45) spike = true; }
   const pen = p.pen === 1 ? 1.05 : 1;
-  return { k: clamp(sec * reg * pen * (spike ? 0.88 : 1), 0.3, 1.2), sec, reg, spike, note, start };
+  return { k: clamp(sec * reg * pen * (spike ? 0.88 : 1), 0.3, 1.2), sec, reg, spike, note, start, det };
 }
 /** النقاط المتوقعة المعدلة على N جولات */
 export function rx(p, from = ST.G.next, n = 5) { let v = 0; for (let g = from; g < from + n && g <= ST.G.lastGW; g++) v += xp(p, g); return r1(LR.adj(p, v) * sustain(p).k); }
@@ -267,12 +282,23 @@ export function coachPlan(plan) {
   // فرص خفية من البيانات
   const opp = [];
   const n90 = (p) => p.min / 90;
-  const over = plan.squad.map(PM).filter((p) => p && p.own >= 20 && n90(p) >= 4 && (sustain(p).note === 'over' || rx(p, gw, 5) < p.price * 1.2)).sort((a, b) => b.own - a.own)[0];
+  const VC = flag('hiddenValue') ? { G, xp, avail, PMn: posMeans(G.players), startShare: (p) => sustain(p).start } : null;
+  const overV = VC ? overvalued(plan.squad.map(PM).filter(Boolean), VC)[0] : null;
+  if (overV) opp.push({ ic: '🔍', t: tt(`${overV.p.name} مملوك عند ${overV.p.own}% بس نقاطه (${overV.p.ppg} بالمباراة) أعلى من أدائه الحقيقي (${overV.v.under}) — متوقع تنزل، وبيعه ممكن يفتح ميزانية`, `${overV.p.name} is scoring above his underlying numbers`), act: `openPlayer(${overV.p.id})` });
+  const over = VC ? null : plan.squad.map(PM).filter((p) => p && p.own >= 20 && n90(p) >= 4 && (sustain(p).note === 'over' || rx(p, gw, 5) < p.price * 1.2)).sort((a, b) => b.own - a.own)[0];
   if (over) opp.push({ ic: '🔍', t: tt(`${over.name} مملوك عند ${over.own}% بس أرقامه الحقيقية ما تبرر سعره (${over.price}م) — بيعه ممكن يفتح ميزانية`, `${over.name} is popular but his underlying numbers don't justify it`) });
-  const gem = G.players.filter((p) => !plan.squad.includes(p.id) && p.own < 7 && n90(p) >= 5 && avail(p) >= 0.9 && p.st === 'a').map((p) => ({ p, s: rx(p, gw, 5) / Math.max(4, p.price) * ((p.xgi || 0) / n90(p) + 0.2) })).sort((a, b) => b.s - a.s)[0];
-  if (gem) opp.push({ ic: '💎', t: tt(`${gem.p.name} (${tShort(gem.p.team)}) ملكيته ${gem.p.own}% بس فرصه الحقيقية قوية ومتوقعه عالي لسعره — فرصة ما ينتبهلها أحد`, `${gem.p.name}: low-owned with strong numbers`), act: `openPlayer(${gem.p.id})` });
+  const hg = VC ? hiddenGems(G.players, VC, { exclude: new Set(plan.squad), limit: 1 })[0] : null;
+  if (hg) opp.push({ ic: '💎', t: tt(`${hg.p.name} (${tShort(hg.p.team)}، ${hg.p.price}م، ملكية ${hg.p.own}%): قيمته مقابل سعره أعلى بـ${Math.round((hg.idx - 1) * 100)}% من معدل مركزه، وأداؤه الحقيقي (${hg.v.under} بالمباراة) أعلى من نقاطه (${hg.p.ppg})${hg.v.priceDir === 'up' ? ' — وسعره قريب يرتفع' : ''}`, `${hg.p.name}: value ${Math.round((hg.idx - 1) * 100)}% above position average`), act: `openPlayer(${hg.p.id})` });
+  const gem = VC ? null : G.players.filter((p) => !plan.squad.includes(p.id) && p.own < 7 && n90(p) >= 5 && avail(p) >= 0.9 && p.st === 'a').map((p) => ({ p, s: rx(p, gw, 5) / Math.max(4, p.price) * ((p.xgi || 0) / n90(p) + 0.2) })).sort((a, b) => b.s - a.s)[0];
+  if (gem && !VC) opp.push({ ic: '💎', t: tt(`${gem.p.name} (${tShort(gem.p.team)}) ملكيته ${gem.p.own}% بس فرصه الحقيقية قوية ومتوقعه عالي لسعره — فرصة ما ينتبهلها أحد`, `${gem.p.name}: low-owned with strong numbers`), act: `openPlayer(${gem.p.id})` });
   const cm = loadCacheMem(), cg = Object.keys(cm.pts || {}).map(Number).sort((a, b) => b - a);
-  if (cg.length >= 4) { const mins = (id, g) => cm.pts[g]?.[id]?.[1] || 0;
+  if (flag('changeDetector') && PS.gws().length >= 5) {
+    // كاشف تغير الدور: لاعب بفريقك خسر مكانه، أو لاعب برا فريقك صار أساسي فعلاً (مو جولة وحدة)
+    const lost = plan.squad.map(PM).filter(Boolean).map((p) => ({ p, d: changeOf(p) })).find((x) => x.d?.role === 'down');
+    if (lost) { const c = lost.d.changes.find((x) => x.k === 'min') || lost.d.changes[0]; opp.push({ ic: '📉', t: tt(`${lost.p.name} دوره تغير: ${c.k === 'min' ? `دقائقه نزلت من ${Math.round(c.from)} إلى ${Math.round(c.to)} بالمباراة` : `صار يبدأ ${Math.round(c.to * 100)}% بس`} بآخر 3 جولات — هذا مو تذبذب، فكّر ببيعه`, `${lost.p.name} lost his role`), act: `openPlayer(${lost.p.id})` }); }
+    const up = G.players.filter((p) => !plan.squad.includes(p.id) && p.st === 'a' && p.pos !== 'GK').map((p) => ({ p, d: changeOf(p) })).filter((x) => x.d?.role === 'up').sort((a, b) => rx(b.p, gw, 4) - rx(a.p, gw, 4))[0];
+    if (up) { const c = up.d.changes.find((x) => x.k === 'min') || up.d.changes[0]; opp.push({ ic: '📈', t: tt(`${up.p.name} صار أساسي فعلاً: ${c.k === 'min' ? `دقائقه ارتفعت من ${Math.round(c.from)} إلى ${Math.round(c.to)}` : `يبدأ ${Math.round(c.to * 100)}% من المباريات`} بآخر 3 جولات${up.d.changes.some((x) => x.k === 'threat90' && x.dir === 'up') ? '، وتهديده على المرمى زاد' : ''}`, `${up.p.name} has become a starter`), act: `openPlayer(${up.p.id})` }); }
+  } else if (cg.length >= 4) { const mins = (id, g) => cm.pts[g]?.[id]?.[1] || 0;
     const role = G.players.filter((p) => !plan.squad.includes(p.id) && p.st === 'a' && p.pos !== 'GK').filter((p) => mins(p.id, cg[0]) >= 60 && mins(p.id, cg[1]) >= 60 && (mins(p.id, cg[2]) + mins(p.id, cg[3])) / 2 < 30).sort((a, b) => rx(b, gw, 4) - rx(a, gw, 4))[0];
     if (role) opp.push({ ic: '📈', t: tt(`${role.name} صار يلعب أساسي آخر جولتين بعد ما جان احتياط — دوره تغير وممكن يطلع قيمة`, `${role.name} just became a starter`), act: `openPlayer(${role.id})` }); }
   const doubt = xi.filter((p) => avail(p, gw) < 0.9), hard = {}; xi.forEach((p) => { if (avgFdr(p.team, gw, 1) >= 4) hard[p.team] = (hard[p.team] || 0) + 1; });
