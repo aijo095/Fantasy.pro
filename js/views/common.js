@@ -137,6 +137,87 @@ function dcBlock(p, s) {
   const v = s.defensive_contribution, ok = v >= T;
   return `<div class="dc-gw ${ok ? 'ok' : ''}"><div class="flex between" style="margin-bottom:6px"><span style="font-size:13px">${I('i-shield', 'i', 'width:15px;height:15px;vertical-align:-3px')} ${tt('المساهمات الدفاعية', 'Defensive contributions')}</span><b><span class="num" dir="ltr">${v}/${T}</span>${ok ? ' · <span class="up">+2</span>' : ''}</b></div><div class="dc-bar"><i style="width:${Math.min(100, (v / T) * 100)}%"></i></div></div>`;
 }
+
+/* ---------- تصميم بطاقة اللاعب بالجولة (v2) ----------
+   فكرة التصميم: "شريط تكوين النقاط" — كل مصدر نقاط (دقائق، أهداف، صناعة، شباك، بونص…) شريحة
+   بلونها وحجمها الحقيقي، والتفصيل تحته بنفس الألوان. فوكه شريط المباراة ويا خط زمني يبين
+   دقائق اللاعب (أساسي من البداية، أو بديل لآخر المباراة). وتحت: أرقامه الحقيقية مجمّعة. */
+const SEG = { minutes: '#94A3B8', goals_scored: '#34D399', assists: '#38BDF8', clean_sheets: '#A78BFA', bonus: '#FBBF24', defensive_contribution: '#2DD4BF', saves: '#60A5FA', penalties_saved: '#22D3EE' };
+const NEG = new Set(['goals_conceded', 'yellow_cards', 'red_cards', 'own_goals', 'penalties_missed']);
+/** تقدير نقاط السطر إذا الفانتازي ما رجّع التفصيل (نفس قوانين اللعبة) */
+function estPts(k, v, p, s) {
+  const G = { GK: 10, DEF: 6, MID: 5, FWD: 4 }[p.pos], CS = { GK: 4, DEF: 4, MID: 1, FWD: 0 }[p.pos];
+  switch (k) {
+    case 'minutes': return v >= 60 ? 2 : v > 0 ? 1 : 0;
+    case 'goals_scored': return v * G; case 'assists': return v * 3;
+    case 'clean_sheets': return (s.minutes || 0) >= 60 ? v * CS : 0;
+    case 'goals_conceded': return p.pos === 'GK' || p.pos === 'DEF' ? -Math.floor(v / 2) : 0;
+    case 'saves': return Math.floor(v / 3); case 'penalties_saved': return v * 5; case 'penalties_missed': return v * -2;
+    case 'yellow_cards': return -v; case 'red_cards': return v * -3; case 'own_goals': return v * -2;
+    case 'defensive_contribution': { const T = { DEF: 10, MID: 12, FWD: 12 }[p.pos]; return T && v >= T ? 2 : 0; }
+    default: return 0;
+  }
+}
+/** ترتيب اللاعب بنقاط البونص (BPS) بين لاعبي مباراته */
+function bpsRank(fxs, id) {
+  for (const f of fxs) {
+    const st = (f.stats || []).find((x) => x.identifier === 'bps'); if (!st) continue;
+    const all = [...(st.h || []), ...(st.a || [])].sort((a, b) => b.value - a.value);
+    const i = all.findIndex((x) => x.element === id); if (i >= 0) return { r: i + 1, n: all.length, v: all[i].value };
+  }
+  return null;
+}
+function pgwMatch(f, p, s, gw) {
+  const live = f.started && !f.fin, st = f.fin ? tt('انتهت', 'Full time') : live ? fxMin(f) : (f.ko ? new Date(f.ko).toLocaleString(document.documentElement.lang === 'en' ? 'en-GB' : 'ar-IQ', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '—');
+  const min = Math.min(90, s.minutes || 0), sub = s.starts === 0 && min > 0, from = sub ? 90 - min : 0;
+  const role = !min ? (f.started ? tt('ما شارك', 'Did not play') : '') : s.starts === 1 ? tt('أساسي', 'Started') : sub ? tt('دخل بديل', 'Came on') : '';
+  return `<button class="pg-match" onclick="closeSheet();setTimeout(()=>openMatchC&&openMatchC(${f.id},${gw}),200)">
+    <span class="pg-tm">${crest(tShort(f.h), 28)}<b>${tShort(f.h)}</b></span>
+    <span class="pg-sc">${f.started ? `<b class="num" dir="ltr">${f.hs ?? 0}<i>–</i>${f.as ?? 0}</b>` : '<b class="mut">VS</b>'}<small class="${live ? 'live' : ''}">${st}</small></span>
+    <span class="pg-tm a"><b>${tShort(f.a)}</b>${crest(tShort(f.a), 28)}</span>
+    ${f.started ? `<span class="pg-tl" aria-label="${min} ${tt('دقيقة', 'minutes')}"><i class="pg-tl-bar" style="--a:${from / 0.9}%;--w:${min / 0.9}%"></i><i class="pg-tl-ht"></i></span><span class="pg-tl-l"><span>${role}</span><b class="num">${min}′</b></span>` : ''}
+  </button>`;
+}
+function pgwView({ p, id, gw, s, fxs, rows, total, shown, mult, pb }) {
+  const X = EXPL();
+  const R = rows.map((r) => ({ ...r, pp: r.p == null ? estPts(r.k, r.v, p, s) : r.p, est: r.p == null }));
+  const pos = R.filter((r) => r.pp > 0), neg = R.filter((r) => r.pp < 0);
+  const sumPos = pos.reduce((a, r) => a + r.pp, 0), sumNeg = neg.reduce((a, r) => a + r.pp, 0);
+  const col = (k) => (NEG.has(k) ? '#F87171' : SEG[k] || '#94A3B8');
+  const bar = sumPos ? `<div class="pg-bar" role="img" aria-label="${tt('تكوين النقاط', 'Points composition')}">${pos.map((r, i) => `<i style="--c:${col(r.k)};flex:${r.pp};--d:${i * 70}ms"></i>`).join('')}</div>` : '';
+  const ppg = p.ppg || 0, diff = Math.round((total - ppg) * 10) / 10, br = bpsRank(fxs, id);
+  const xgi = s.expected_goal_involvements != null ? +s.expected_goal_involvements : (s.expected_goals != null || s.expected_assists != null ? +(+(s.expected_goals || 0) + +(s.expected_assists || 0)).toFixed(2) : null);
+  const facts = [
+    s.minutes ? [diff > 0 ? `+${diff}` : `${diff}`, tt('عن معدله بالموسم', 'vs season average'), diff > 0 ? 'up' : diff < 0 ? 'down' : ''] : null,
+    br ? [`${br.r}<small>/${br.n}</small>`, tt('ترتيبه بالبونص بالمباراة', 'BPS rank in match'), br.r <= 3 ? 'gold' : ''] : null,
+    xgi != null && s.minutes ? [xgi.toFixed(2), tt('فرص حقيقية xGI', 'xGI'), ''] : null,
+  ].filter(Boolean);
+  const T = { DEF: 10, MID: 12, FWD: 12 }[p.pos], dc = s.defensive_contribution;
+  const rowHTML = (r) => {
+    const isDc = r.k === 'defensive_contribution' && T;
+    return `<li class="${r.pp < 0 ? 'neg' : r.pp === 0 ? 'z' : ''}"><span class="pg-sw" style="--c:${col(r.k)}">${ICO[r.k] || ICO.tot}</span><span class="pg-lb"><b>${X[r.k] || r.k}${r.prov ? ` <em class="pg-tag">${tt('مؤقت', 'provisional')}</em>` : ''}</b><small><bdi dir="ltr">${r.k === 'minutes' ? r.v + '′' : isDc ? `${r.v}/${T}` : '×' + r.v}</bdi></small>${isDc ? `<span class="pg-dc"><i style="width:${Math.min(100, (r.v / T) * 100)}%"></i></span>` : ''}</span><span class="pg-pt num" dir="ltr">${r.pp > 0 ? '+' : ''}${r.pp}</span></li>`;
+  };
+  // المساهمات الدفاعية إذا ما وصل العتبة: تنعرض كتقدم بدون نقاط
+  const dcRow = T && dc != null && s.minutes && !R.some((r) => r.k === 'defensive_contribution') ? `<li class="z"><span class="pg-sw" style="--c:#2DD4BF">${ICO.defensive_contribution}</span><span class="pg-lb"><b>${X.defensive_contribution}</b><small><bdi dir="ltr">${dc}/${T}</bdi></small><span class="pg-dc"><i style="width:${Math.min(100, (dc / T) * 100)}%"></i></span></span><span class="pg-pt num">0</span></li>` : '';
+  const G1 = [['xG', s.expected_goals], ['xA', s.expected_assists], [tt('تهديد', 'Threat'), s.threat], [tt('صناعة الفرص', 'Creativity'), s.creativity]];
+  const G2 = [[tt('مساهمات دفاعية', 'Def. contributions'), s.defensive_contribution], [tt('تدخلات', 'Tackles'), s.tackles], [tt('استرجاع', 'Recoveries'), s.recoveries], [tt('قطع وتشتيت', 'CBI'), s.clearances_blocks_interceptions], [tt('تصديات', 'Saves'), p.pos === 'GK' ? s.saves : null]];
+  const G3 = [['BPS', s.bps], ['ICT', s.ict_index], [tt('تأثير', 'Influence'), s.influence]];
+  const grp = (t, L) => { const v = L.filter(([, x]) => x != null && x !== '' && +x !== 0); return v.length ? `<div class="pg-grp"><h4>${t}</h4><dl>${v.map(([l, x]) => `<div><dt>${l}</dt><dd class="num" dir="ltr">${x}</dd></div>`).join('')}</dl></div>` : ''; };
+  const stats = grp(tt('بالهجوم', 'Attack'), G1) + grp(tt('بالدفاع', 'Defence'), G2) + grp(tt('التأثير والبونص', 'Influence'), G3);
+  const tier = shown >= 10 ? 't3' : shown >= 6 ? 't2' : shown > 0 ? 't1' : 't0';
+  return `<div class="pg">
+   ${fxs.length ? fxs.map((f) => pgwMatch(f, p, s, gw)).join('') : `<div class="note">${I('i-info', 'i', 'color:var(--info)')}<span>${tt('فريقه ما عنده مباراة بهالجولة', 'No fixture this gameweek')}</span></div>`}
+   <section class="pg-card ${tier}">
+     <div class="pg-head"><div class="pg-tot"><b class="num count">${shown}</b><span>${tt('نقطة', 'points')}${mult > 1 ? `<em class="pg-cap">${mult === 3 ? tt('كابتن ثلاثي <bdi dir="ltr">×3</bdi>', 'Triple captain ×3') : tt('كابتن <bdi dir="ltr">×2</bdi>', 'Captain ×2')}</em>` : ''}</span></div>
+     ${facts.length ? `<dl class="pg-facts">${facts.map(([v, l, c]) => `<div class="${c}"><dd class="num"><bdi dir="ltr">${v}</bdi></dd><dt>${l}</dt></div>`).join('')}</dl>` : ''}</div>
+     ${bar}${sumNeg ? `<div class="pg-negbar"><i style="flex:${-sumNeg}"></i><span class="num" dir="ltr">${sumNeg}</span></div>` : ''}
+     ${R.length || dcRow ? `<ul class="pg-bd">${R.map(rowHTML).join('')}${dcRow}<li class="pg-sum"><span class="pg-lb"><b>${tt('المجموع', 'Total')}</b>${mult > 1 ? `<small><bdi dir="ltr">${total} × ${mult}</bdi></small>` : ''}</span><span class="pg-pt num" dir="ltr">${shown}</span></li></ul>` : `<p class="pg-empty">${fxs.some((f) => f.started) ? tt('ما شارك بالمباراة', 'Did not play') : tt('مباراته بعد ما بدت — النقاط تطلع هنا أول ما يلعب', 'Points appear here once he plays')}</p>`}
+     ${R.some((r) => r.est) ? `<p class="pg-note">${tt('النقاط محسوبة من قوانين اللعبة لحد ما الفانتازي ينشر التفصيل الرسمي', 'Estimated from game rules until FPL publishes the breakdown')}</p>` : ''}
+   </section>
+   ${stats ? `<section class="pg-stats">${stats}</section>` : ''}
+   <button class="btn btn-g btn-b" style="margin-top:14px" onclick="closeSheet();setTimeout(()=>openPlayer(${id}),200)">${I('i-user', 'i', 'width:16px;height:16px')}${tt('صفحة اللاعب الكاملة', 'Full player page')}</button>
+  </div>`;
+}
 window.playerGW = async (id, gw, mult = 1) => {
   const p = PM(id); if (!p) return;
   openSheet(`${sheetHead(`<div style="width:46px;height:46px">${pShirt(p)}</div>`, esc(p.name), `${t('gw')} ${gw} · ${tName(p.team)}`)}<div id="pgw" class="aiload"><i></i><i></i><i></i><span>${t('loading')}</span></div>`);
@@ -150,27 +231,10 @@ window.playerGW = async (id, gw, mult = 1) => {
   const { provisionalBonus } = await import('../live-engine.js');
   const pb = s.bonus ? 0 : (provisionalBonus(gw)[id] || 0);
   const total = (s.total_points || 0) + pb, shown = total * Math.max(1, mult);
-  const match = (f) => { const home = f.h === p.team, opp = home ? f.a : f.h; const st = f.fin ? tt('انتهت', 'FT') : f.started ? `<span class="livebadge">${fxMin(f)}</span>` : (f.ko ? new Date(f.ko).toLocaleString(document.documentElement.lang === 'en' ? 'en-GB' : 'ar-IQ', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '—');
-    return `<div class="pgw-match" onclick="closeSheet();setTimeout(()=>openMatchC&&openMatchC(${f.id},${gw}),200)"><div class="flex" style="gap:6px">${crest(tShort(f.h), 26)}<b>${tShort(f.h)}</b></div><div style="text-align:center">${f.started ? `${scoreHTML(f.hs, f.as, 'score', 'font-size:20px;font-weight:700')}` : '<b class="mut">VS</b>'}<div style="font-size:11.5px" class="mut">${st}</div></div><div class="flex" style="gap:6px;justify-content:flex-end"><b>${tShort(f.a)}</b>${crest(tShort(f.a), 26)}</div></div>`; };
   const rows = []; (el?.explain || []).forEach((x) => (x.stats || []).forEach((r) => { if (r.identifier === 'bps') return; const ex = rows.find((y) => y.k === r.identifier); if (ex) { ex.v += r.value; ex.p += r.points; } else rows.push({ k: r.identifier, v: r.value, p: r.points }); }));
   if (!rows.length && (s.minutes || 0) > 0) Object.keys(EXPL()).forEach((k) => { if (k !== 'bonus' && +s[k]) rows.push({ k, v: s[k], p: null }); });
   if (!rows.some((r) => r.k === 'bonus') && s.bonus) rows.push({ k: 'bonus', v: s.bonus, p: s.bonus });
   if (pb) rows.push({ k: 'bonus', v: pb, p: pb, prov: true });
-  const X = EXPL();
-  const extra = [['xG', s.expected_goals], ['xA', s.expected_assists], ['BPS', s.bps], ['ICT', s.ict_index], [tt('تأثير', 'Influence'), s.influence], [tt('صناعة الفرص', 'Creativity'), s.creativity], [tt('تهديد', 'Threat'), s.threat], [tt('دفاعية', 'Def. contrib.'), s.defensive_contribution], [tt('استرجاع', 'Recoveries'), s.recoveries], [tt('تدخلات', 'Tackles'), s.tackles]].filter(([, v]) => v != null && v !== '' && +v !== 0);
-  box.outerHTML = `${fxs.length ? fxs.map(match).join('') : `<div class="note">${I('i-info', 'i', 'color:var(--info)')}<span>${tt('فريقه ما عنده مباراة بهالجولة', 'No fixture this gameweek')}</span></div>`}
-   <div class="pgw-hero ${shown >= 10 ? 't3' : shown >= 6 ? 't2' : shown > 0 ? 't1' : 't0'}">
-     <div class="pgw-orb"><svg class="pgw-ring" viewBox="0 0 100 100" width="96" height="96"><circle cx="50" cy="50" r="45" class="trk"/><circle cx="50" cy="50" r="45" class="arc" pathLength="100" style="--p:${Math.min(100, shown * 6)}"/></svg><div class="in"><b class="big-num count">${shown}</b><span>${tt('نقطة', 'pts')}</span></div>${mult > 1 ? `<em class="cap">${mult === 3 ? '×3' : '×2'}</em>` : ''}</div>
-     <div class="pgw-tiles">
-       <div class="${s.minutes ? 'on' : ''} k-min">${ICO.minutes}<b class="num">${s.minutes || 0}′</b><small>${tt('دقائق', 'Minutes')}</small></div>
-       <div class="${s.goals_scored ? 'on' : ''} k-goal">${ICO.goals_scored}<b class="num">${s.goals_scored || 0}</b><small>${tt('أهداف', 'Goals')}</small></div>
-       <div class="${s.assists ? 'on' : ''} k-ast">${ICO.assists}<b class="num">${s.assists || 0}</b><small>${tt('صناعة', 'Assists')}</small></div>
-       <div class="${(s.bonus || pb) ? 'on' : ''} k-bon">${ICO.bonus}<b class="num">${s.bonus || pb || 0}</b><small>${tt('بونص', 'Bonus')}</small></div>
-     </div>
-   </div>
-   ${dcBlock(p, s)}
-   ${rows.length ? `<div class="sec" style="margin-top:12px"><h2 style="font-size:14px">${I('i-list', 'i', 'width:16px;height:16px')}${tt('تفصيل النقاط', 'Points breakdown')}</h2></div><div class="list pgw-bd">${rows.map((r, k) => `<div class="row" style="--k:${k}"><span class="bd-e ${r.k}">${ICO[r.k] || ICO.tot}</span><div class="info"><b style="font-size:13.5px">${X[r.k] || r.k}${r.prov ? ` <span class="tag cyan">${tt('مباشر من الفانتازي', 'live FPL')}</span>` : ''}</b><span>${r.k === 'minutes' ? r.v + '′' : '×' + r.v}</span></div><div class="bd-p ${r.p > 0 ? 'up' : r.p < 0 ? 'down' : 'z'}">${r.p == null ? '' : (r.p > 0 ? '+' : '') + r.p}</div></div>`).join('')}<div class="row bd-tot" style="--k:${rows.length}"><span class="bd-e tot">${ICO.tot}</span><div class="info"><b>${tt('المجموع', 'Total')}</b>${mult > 1 ? `<span>×${mult} = ${shown}</span>` : ''}</div><div class="bd-p tot num">${total}</div></div></div>` : `<p class="mut" style="margin-top:10px">${tt('ما لعب أو مباراته ما بدت بعد', 'Has not played yet')}</p>`}
-   ${extra.length ? `<div class="sec"><h2 style="font-size:14px">${I('i-activity', 'i', 'width:16px;height:16px')}${tt('أرقامه بالمباراة', 'Match stats')}</h2></div><div class="pgw-grid">${extra.map(([l, v]) => `<div><b class="num">${v}</b><span>${l}</span></div>`).join('')}</div>` : ''}
-   <button class="btn btn-g btn-b" style="margin-top:14px" onclick="closeSheet();setTimeout(()=>openPlayer(${id}),200)">${I('i-user', 'i', 'width:16px;height:16px')}${tt('صفحة اللاعب الكاملة', 'Full player page')}</button>`;
+  box.outerHTML = pgwView({ p, id, gw, s, fxs, rows, total, shown, mult, pb });
   import('../motion.js').then((m) => { const b = document.querySelector('#sheetRoot .sh-body'); if (b) { m.countAll(b, true); m.decorate(b, true); } }).catch(() => {});
 };
