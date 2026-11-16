@@ -291,3 +291,44 @@ html.v2 .h2-top>span:first-child{font:600 11px var(--fp-num);letter-spacing:.12e
 .pk-empty{padding:24px 10px;text-align:center;font-size:12.5px;color:var(--fp-steel);border:1px dashed var(--fp-edge-2);border-radius:14px;margin-top:10px}
 .cmp-dn li.ded span,.cmp-dn li.ded b{color:#FF8A95}.cmp-dn li.ded i{background:#FF5C6C;border-radius:50%}
 .cmp-dn-n{font-size:10px;color:var(--fp-pewter);text-align:center}
+
+/* ===== كرت المدرب: خيارات الجولة، خطط 5 جولات، اختبار المقاومة — ترتيب هادئ ===== */
+.cz-sub{margin-top:14px}
+.cz-sub h5{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:11.5px;font-weight:600;color:var(--fp-steel,#8A93A3);letter-spacing:.2px}
+.cz-sub h5 .i{width:13px;height:13px;opacity:.8}
+.cz-opts,.cz-plans{display:flex;flex-direction:column;gap:6px}
+.cz-opt,.cz-plan{padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.cz-opt.on,.cz-plan.on{background:rgba(60,245,160,.06);border-color:rgba(60,245,160,.28)}
+.cz-oh,.cz-ph{display:flex;align-items:center;gap:8px}
+.cz-oh b,.cz-ph b{font-size:12.5px;font-weight:700}
+.cz-oh em,.cz-ph em{margin-inline-start:auto;font:700 15px Inter,sans-serif;font-style:normal}
+.cz-ph span{margin-inline-start:auto;display:flex;align-items:baseline;gap:5px}.cz-ph span em{margin:0}
+.cz-ph small{font-size:10.5px;color:var(--fp-steel,#8A93A3);font-weight:500}
+em.up{color:var(--acc)}em.down{color:var(--bad)}
+.cz-rec{font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;background:rgba(60,245,160,.12);color:var(--acc)}
+.cz-ob{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-top:7px}
+.cz-ml{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:1.4;max-width:100%}
+.cz-ml s{text-decoration:none;color:var(--fp-steel,#8A93A3)}
+.cz-ml i{font-style:normal;color:var(--fp-steel,#8A93A3);opacity:.7;font-size:11px}
+.cz-ml b{font-weight:600;color:var(--txt)}
+.cz-c{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:#F5C451;color:#111;font:800 9.5px Inter,sans-serif}
+.cz-q{font-size:11px;color:var(--fp-steel,#8A93A3);line-height:1.6;margin:0}
+.cz-hit{font:700 10.5px Inter,sans-serif;font-style:normal;color:var(--bad);background:rgba(255,90,90,.1);padding:1px 6px;border-radius:6px}
+.cz-ob .cz-hit{align-self:flex-start}
+.cz-note{display:flex;gap:8px;align-items:flex-start;margin-top:8px;padding:9px 11px;border-radius:12px;background:rgba(245,196,81,.07);border:1px solid rgba(245,196,81,.18)}
+.cz-note .i{width:15px;height:15px;color:#F5C451;flex:none;margin-top:1px}.cz-note p{margin:0;font-size:11.5px;line-height:1.6}
+.cz-fn{margin:7px 2px 0;font-size:10.5px;line-height:1.6;color:var(--fp-steel,#8A93A3);opacity:.75}
+.cz-alts{display:flex;flex-direction:column;gap:4px}
+.cz-alts>div{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:12px;background:rgba(255,255,255,.03)}
+.cz-alts em{margin-inline-start:auto;font:700 12.5px Inter,sans-serif;font-style:normal}
+.cz-gws{display:flex;gap:4px;margin:9px 0 2px}
+.cz-gws i{flex:1;max-width:44px;height:20px;border-radius:6px;display:grid;place-items:center;background:rgba(255,255,255,.04);font-style:normal}
+.cz-gws i span{font:600 10px Inter,sans-serif;color:var(--fp-steel,#8A93A3)}
+.cz-gws i.a{background:rgba(60,245,160,.14)}.cz-gws i.a span{color:var(--acc)}
+.cz-gws i.h{box-shadow:inset 0 -2px 0 var(--bad)}
+.cz-gw{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-top:1px solid rgba(255,255,255,.05)}
+.cz-gw:first-of-type{border-top:0}
+.cz-gn{flex:none;min-width:28px;height:20px;display:grid;place-items:center;border-radius:6px;background:rgba(60,245,160,.12);color:var(--acc);font:600 10.5px Inter,sans-serif;margin-top:-1px}
+.cz-gw>div{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.cz-gw .cz-hit{margin-top:1px}
+.cz-plan .cz-q{margin-top:4px}
