@@ -1,0 +1,241 @@
+/* =====================================================================
+   FANTASY PRO — PREMIUM DESIGN SYSTEM (v3)
+   Luxury Sports Technology · Premium Analytics · Futuristic Minimalism
+   طبقة واحدة فوق التصميم الحالي: ما تغيّر أي وظيفة أو قسم.
+   ---------------------------------------------------------------------
+   1. Tokens (ألوان بطبقات، خطوط، مسافات، زوايا، ظلال، حركة)
+   2. Digital Signature (البصمة الهندسية + توقيع الجولة)
+   3. Surfaces (خامات: مطفي، معدني، كاربون، ورقي، بارز)
+   4. Typography + Data numbers
+   5. Editorial dividers (عناوين الأقسام)
+   6. Components (أزرار، تبويبات، حقول، قوائم، نوافذ، جداول، شارات…)
+   7. Adaptive borders (حالة اللاعب)
+   8. Micro-signatures (رموز تحليلية)
+   9. Data confidence (حقيقة / توقع / تقدير / ناقص / قديم)
+   10. Motion language
+   11. Mobile refinements
+===================================================================== */
+
+/* ---------- 1. TOKENS ---------- */
+:root,html.v2{
+  /* طبقات الأسود والفحمي */
+  --fp-void:#050608;      /* أعمق خلفية */
+  --fp-ink:#090B0F;       /* خلفية الصفحة */
+  --fp-carbon:#0E1116;    /* سطح أول */
+  --fp-graphite:#141820;  /* سطح ثاني */
+  --fp-slate:#1B202A;     /* سطح ثالث / مرفوع */
+  --fp-edge:rgba(255,255,255,.07);
+  --fp-edge-2:rgba(255,255,255,.12);
+  --fp-edge-hi:rgba(255,255,255,.18);
+  /* معدني هادئ للثانوي */
+  --fp-steel:#9AA3B2; --fp-titan:#C9CFD8; --fp-chrome:#E8EBF0; --fp-pewter:#6B7383;
+  /* اللون المميز (نيون أخضر) — يستخدم للمعلومة الأهم فقط */
+  --fp-neon:#3CF5A0; --fp-neon-d:#16C47F; --fp-neon-rgb:60,245,160; --fp-on-neon:#03140C;
+  /* ألوان الحالات (محدودة) */
+  --fp-danger:#FF5C6C; --fp-warn:#FFC24B; --fp-info:#6CB8FF; --fp-violet:#A99BFF;
+  /* خطوط */
+  --fp-font:'IBM Plex Sans Arabic','Inter',system-ui,sans-serif;
+  --fp-num:'Inter','IBM Plex Sans Arabic',system-ui,sans-serif;
+  --fs-xs:11px; --fs-sm:12.5px; --fs-md:14px; --fs-lg:16px; --fs-xl:20px; --fs-2xl:28px; --fs-3xl:40px; --fs-4xl:56px;
+  /* مسافات (شبكة 4) */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px;
+  /* زوايا */
+  --rd-xs:6px; --rd-sm:10px; --rd-md:14px; --rd-lg:18px; --rd-xl:24px; --rd-pill:999px;
+  /* ظلال وإضاءة دقيقة */
+  --lift-1:0 1px 0 rgba(255,255,255,.04) inset,0 10px 24px -18px rgba(0,0,0,.9);
+  --lift-2:0 1px 0 rgba(255,255,255,.06) inset,0 22px 44px -26px rgba(0,0,0,.95);
+  --glow-neon:0 0 0 1px rgba(var(--fp-neon-rgb),.35),0 8px 24px -10px rgba(var(--fp-neon-rgb),.45);
+  /* حركة */
+  --mo-fast:140ms; --mo-base:240ms; --mo-slow:420ms;
+  --mo-ease:cubic-bezier(.2,.8,.2,1); --mo-out:cubic-bezier(.16,1,.3,1);
+  /* ربط بمتغيرات التطبيق الحالية */
+  --bg:var(--fp-ink); --bg2:var(--fp-carbon);
+  --s1:var(--fp-carbon); --s2:var(--fp-graphite); --s3:var(--fp-slate);
+  --line:var(--fp-edge); --line2:var(--fp-edge-2);
+  --txt:#EEF1F5; --mut:var(--fp-steel); --mut2:var(--fp-pewter);
+  --bad:var(--fp-danger); --warn:var(--fp-warn); --gold:var(--fp-warn); --info:var(--fp-info);
+  --r:var(--rd-lg); --r-sm:var(--rd-md); --r-lg:var(--rd-xl);
+  --ease:var(--mo-ease);
+  --num:var(--fp-num);
+}
+/* اللون المميز يتبع الثيم المختار من الإعدادات؛ الافتراضي هو النيون */
+html:not([data-th]) ,html[data-th="green"]{--acc:var(--fp-neon);--acc-d:var(--fp-neon-d);--acc-rgb:var(--fp-neon-rgb);--on-acc:var(--fp-on-neon)}
+
+/* ---------- 2. DIGITAL SIGNATURE ---------- */
+/* بصمة هندسية: خطوط كنتور (تضاريس رقمية) + شبكة دقيقة بعلامات تقاطع */
+:root{
+  --sig-topo:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420' viewBox='0 0 420 420'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='.7'%3E%3Cpath d='M-20 210c60-40 110-70 180-40s120 70 180 30 80-50 100-40'/%3E%3Cpath d='M-20 236c64-38 118-62 182-34s116 64 176 26 84-46 102-38' opacity='.8'/%3E%3Cpath d='M-20 262c68-34 124-54 186-28s112 58 172 22 88-42 104-34' opacity='.6'/%3E%3Cpath d='M-20 184c56-42 104-78 176-48s124 76 184 34 76-54 98-44' opacity='.8'/%3E%3Cpath d='M-20 158c52-44 98-86 172-56s128 82 188 38 72-58 96-48' opacity='.6'/%3E%3Cellipse cx='300' cy='92' rx='54' ry='30' opacity='.55'/%3E%3Cellipse cx='300' cy='92' rx='34' ry='18' opacity='.4'/%3E%3Cellipse cx='96' cy='338' rx='60' ry='26' opacity='.5'/%3E%3Cellipse cx='96' cy='338' rx='36' ry='14' opacity='.35'/%3E%3C/g%3E%3C/svg%3E");
+  --sig-grid:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cpath d='M32 28v8M28 32h8' stroke='%23ffffff' stroke-width='.8'/%3E%3C/svg%3E");
+  --sig-carbon:repeating-linear-gradient(45deg,rgba(255,255,255,.018) 0 2px,transparent 2px 4px),repeating-linear-gradient(-45deg,rgba(0,0,0,.25) 0 2px,transparent 2px 4px);
+  --sig-paper:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+html.v2 body,html body{background:var(--fp-ink)}
+html.v2 body::before,html body::before{
+  background:
+    radial-gradient(700px 380px at 100% -8%,rgba(var(--acc-rgb),.10),transparent 62%),
+    radial-gradient(600px 400px at -10% 110%,rgba(108,184,255,.05),transparent 60%)!important}
+/* طبقة البصمة: كنتور بزاوية تتغير مع رقم الجولة + شبكة تقاطع */
+html body::after{content:"";position:fixed;inset:-20%;pointer-events:none;z-index:0;opacity:.045;
+  background-image:var(--sig-topo);background-size:520px 520px;transform:rotate(var(--gwa,0deg));
+  -webkit-mask-image:radial-gradient(70% 60% at 50% 30%,#000 30%,transparent 80%);mask-image:radial-gradient(70% 60% at 50% 30%,#000 30%,transparent 80%)}
+html .app::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.05;background-image:var(--sig-grid);background-size:var(--gws,64px) var(--gws,64px)}
+
+/* ---------- 3. SURFACES ---------- */
+/* مطفي (افتراضي) */
+html.v2 .card,html.v2 .list,html.v2 .h2-card,html.v2 .h2-list,html.v2 .lu2-box,html.v2 .row{
+  background:linear-gradient(180deg,rgba(255,255,255,.022),rgba(255,255,255,0) 40%),var(--fp-carbon);
+  border:1px solid var(--fp-edge);box-shadow:var(--lift-1)}
+html.v2 .list .row{background:transparent;box-shadow:none;border:0;border-radius:0}
+html.v2 .list>.row+.row{border-top:1px solid rgba(255,255,255,.045)}
+/* معدني دقيق: البطاقات الرئيسية (هيرو) — حافة كروم علوية وبصمة كنتور */
+html.v2 .h2-hero,html.v2 .team-hero,html.v2 .stadium,html.v2 .hero{
+  background:
+    var(--sig-topo) right -60px top -80px/380px 380px no-repeat,
+    radial-gradient(120% 90% at 100% 0%,rgba(var(--acc-rgb),.13),transparent 55%),
+    linear-gradient(180deg,#12161D,#0B0E13)!important;
+  border:1px solid var(--fp-edge-2)!important;border-radius:var(--rd-xl)!important;box-shadow:var(--lift-2)!important;
+  background-blend-mode:soft-light,normal,normal}
+html.v2 .h2-hero::after,html.v2 .team-hero::after,html.v2 .stadium::after,html.v2 .hero::after{
+  content:""!important;position:absolute!important;inset:0 0 auto 0!important;width:auto!important;height:1px!important;border-radius:0!important;animation:none!important;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.35) 30%,rgba(var(--acc-rgb),.6) 50%,rgba(255,255,255,.35) 70%,transparent)!important}
+/* كاربون خفيف: شريط الإحصائيات والمربعات الثانوية */
+html.v2 .h2-st,html.v2 .live-side>div,html.v2 .sq-stats>div,html.v2 .pz-cmp,html.v2 .h2-dl{
+  background:var(--sig-carbon),var(--fp-graphite)!important;border:1px solid var(--fp-edge)!important;box-shadow:none!important}
+/* ورقي رياضي: بطاقات التحليل والنصائح */
+html.v2 .cz,html.v2 .note,html.v2 .cz-idea{background-image:var(--sig-paper)}
+/* بارز (Embossed) محدود: الأرقام الكبيرة */
+html.v2 .h2-pts b,html.v2 .big-num,html.v2 .pz-sb b{text-shadow:0 1px 0 rgba(255,255,255,.06),0 -1px 0 rgba(0,0,0,.6)}
+
+/* ---------- 4. TYPOGRAPHY + DATA ---------- */
+html body{font-family:var(--fp-font);letter-spacing:0}
+.num,.v,.score,.big-num,.pbig,.kv b,.h2-st b,.pz-sb b,.sq-stats b,.lb,.gwstrip b,.mx td{font-family:var(--fp-num);font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1}
+/* سلّم أهمية: رقم رئيسي / رقم ثانوي / وسم */
+html.v2 .h2-pts b{font-size:var(--fs-4xl);font-weight:700;letter-spacing:-.045em;color:#fff}
+html.v2 .big-num{font-weight:700;letter-spacing:-.035em}
+html.v2 .h2-st b,html.v2 .live-side b{font-size:var(--fs-lg)!important;font-weight:650;color:var(--fp-chrome)}
+html.v2 .h2-st small,html.v2 .live-side small,html.v2 .sq-stats small{font-size:var(--fs-xs)!important;letter-spacing:.02em;color:var(--fp-steel);text-transform:uppercase}
+html.v2 .mut{color:var(--fp-steel)}
+
+/* ---------- 5. EDITORIAL DIVIDERS ---------- */
+/* عنوان القسم: علامة جانبية + خط متفاوت الطول + تسمية الجولة */
+html.v2 .sec{position:relative;margin:28px 2px 12px;padding-bottom:10px}
+html.v2 .sec h2,html.v2 .h2-h{display:flex;align-items:center;gap:10px;font-size:var(--fs-lg);font-weight:700;color:#fff;background:none;border:0;padding:0;clip-path:none}
+html.v2 .sec h2 svg.i{width:16px;height:16px;padding:0;background:none;box-shadow:none;color:var(--fp-steel)}
+html.v2 .sec h2::before,html.v2 .h2-h::before{content:"";width:3px;height:16px;border-radius:2px;background:var(--acc);box-shadow:none;flex:none}
+html.v2 .sec::after{content:"";position:absolute;inset-inline:0;bottom:0;height:1px;
+  background:linear-gradient(to left,rgba(255,255,255,.16) 0 18%,rgba(255,255,255,.05) 18% 72%,transparent 72%)}
+html.v2 .sec .tag,html.v2 .sec small{color:var(--fp-steel)}
+
+/* ---------- 6. COMPONENTS ---------- */
+/* أزرار */
+html.v2 .btn{border-radius:var(--rd-md);font-weight:600;letter-spacing:.005em;transition:transform var(--mo-fast) var(--mo-ease),background var(--mo-base),box-shadow var(--mo-base)}
+html.v2 .btn:active{transform:scale(.97)}
+html.v2 .btn-p{background:linear-gradient(180deg,var(--acc),var(--acc-d));color:var(--on-acc);box-shadow:var(--glow-neon);border:0}
+html.v2 .btn-g{background:var(--fp-graphite);border:1px solid var(--fp-edge-2);color:var(--fp-chrome)}
+html.v2 .btn:disabled{opacity:.45;filter:saturate(.4)}
+/* تبويبات */
+html.v2 .tabs2{background:var(--fp-carbon);border:1px solid var(--fp-edge);border-radius:var(--rd-lg);padding:4px;box-shadow:inset 0 1px 2px rgba(0,0,0,.4)}
+html.v2 .tabs2 button{color:var(--fp-steel);border-radius:var(--rd-md);transition:color var(--mo-base),background var(--mo-base)}
+html.v2 .tabs2 button.on{background:linear-gradient(180deg,#F3F5F8,#D9DEE6)!important;color:#07090C!important;box-shadow:0 1px 0 #fff inset,0 6px 14px -8px rgba(0,0,0,.8)}
+html.v2 .seg button,html.v2 .chips2 button{border-radius:var(--rd-pill);background:var(--fp-carbon);border:1px solid var(--fp-edge);color:var(--fp-steel);transition:all var(--mo-base) var(--mo-ease)}
+html.v2 .seg button.on,html.v2 .chips2 button.on{background:var(--fp-chrome);color:#07090C;border-color:var(--fp-chrome)}
+/* حقول وقوائم منسدلة */
+html input,html textarea,html select{background:var(--fp-carbon);border:1px solid var(--fp-edge-2);border-radius:var(--rd-md);color:var(--txt);transition:border-color var(--mo-base),box-shadow var(--mo-base)}
+html input:focus,html textarea:focus,html select:focus{border-color:rgba(var(--acc-rgb),.7);box-shadow:0 0 0 3px rgba(var(--acc-rgb),.14)}
+html select{appearance:none;-webkit-appearance:none;padding-inline-end:34px;background-image:linear-gradient(45deg,transparent 50%,var(--fp-steel) 50%),linear-gradient(135deg,var(--fp-steel) 50%,transparent 50%);background-position:left 16px center,left 11px center;background-size:5px 5px;background-repeat:no-repeat}
+/* النوافذ المنبثقة (bottom sheets) */
+html.v2 .sheet,html.v2 .ov .box,html.v2 .modal{background:linear-gradient(180deg,#141821,#0C0F14);border:1px solid var(--fp-edge-2);box-shadow:0 -20px 60px -20px rgba(0,0,0,.9)}
+html.v2 .ov{background:rgba(3,4,6,.66);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+/* شارات ووسوم */
+html.v2 .tag,html.v2 .chip,html.v2 .pill{border-radius:var(--rd-pill);font-weight:600;letter-spacing:.01em}
+/* جداول */
+html.v2 table.mx th{font:600 10.5px var(--fp-num);letter-spacing:.08em;color:var(--fp-pewter);text-transform:uppercase}
+html.v2 table.mx td{border-color:rgba(255,255,255,.04)}
+/* شريط الجولات */
+html.v2 .gwstrip button{border-radius:var(--rd-md);background:var(--fp-carbon);border:1px solid var(--fp-edge)}
+html.v2 .gwstrip button.on{background:linear-gradient(180deg,var(--acc),var(--acc-d));border-color:transparent;box-shadow:var(--glow-neon)}
+/* مؤشرات التحميل (هيكل) */
+html .sk,html .skel,html .skeleton{background:linear-gradient(90deg,var(--fp-carbon) 0%,var(--fp-slate) 50%,var(--fp-carbon) 100%)!important;background-size:200% 100%!important;animation:fpShimmer 1.3s linear infinite!important}
+@keyframes fpShimmer{to{background-position:-200% 0}}
+/* رسائل النجاح والخطأ والحالات الفارغة */
+html.v2 .toast{background:var(--fp-slate);border:1px solid var(--fp-edge-2);color:var(--fp-chrome);border-radius:var(--rd-md);box-shadow:var(--lift-2)}
+html.v2 .toast.ok,html.v2 .toast.good{border-color:rgba(var(--acc-rgb),.45)}
+html.v2 .toast.err,html.v2 .toast.bad{border-color:rgba(255,92,108,.5)}
+html.v2 .empty{border:1px dashed var(--fp-edge-2);background:transparent;border-radius:var(--rd-lg);color:var(--fp-steel)}
+/* التمرير */
+html{scrollbar-color:var(--fp-slate) transparent}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--fp-slate);border-radius:8px}
+
+/* ---------- 7. ADAPTIVE BORDERS (حالة اللاعب) ---------- */
+/* أساسي: إطار كروم ناعم · احتياطي: مطفي ومتقطع · مصاب: حافة حمراء بزاوية مقطوعة · مهدد: حافة صفرة · استثنائي: نيون */
+html.v2 .pitch .pl .nm{border:1px solid rgba(255,255,255,.08);border-bottom:0;background:rgba(7,9,12,.9)}
+html.v2 .pitch .pl .lb{border:1px solid rgba(255,255,255,.12);border-top:0}
+html.v2 .benchbox .pl .nm{background:rgba(20,24,32,.92);border:1px dashed rgba(255,255,255,.16);border-bottom:0;color:var(--fp-titan)}
+html.v2 .benchbox .pl .lb{opacity:.85}
+html.v2 .pl.st-out .nm{border-color:var(--fp-danger);box-shadow:inset 0 2px 0 var(--fp-danger)}
+html.v2 .pl.st-out .sh{filter:grayscale(.75) brightness(.7) drop-shadow(0 4px 6px rgba(0,0,0,.4))}
+html.v2 .pl.st-doubt .nm{border-color:var(--fp-warn);box-shadow:inset 0 2px 0 var(--fp-warn)}
+html.v2 .pl.st-hot .nm{border-color:rgba(var(--acc-rgb),.7);box-shadow:inset 0 2px 0 var(--acc)}
+html.v2 .pl.st-hot .sh{filter:drop-shadow(0 0 10px rgba(var(--acc-rgb),.35)) drop-shadow(0 4px 6px rgba(0,0,0,.4))}
+html.v2 .pl.sel .nm{background:var(--acc);color:var(--on-acc);border-color:var(--acc)}
+html.v2 .pl.dim{opacity:.32;filter:saturate(.3)}
+html.v2 .pl.capt .nm{border-color:rgba(255,194,75,.6)}
+/* العناصر المحددة / غير المتاحة عامة */
+html.v2 [aria-selected="true"],html.v2 .on.sel{box-shadow:0 0 0 1.5px var(--acc)}
+html.v2 [disabled],html.v2 .na{opacity:.45}
+
+/* ---------- 8. MICRO-SIGNATURES ---------- */
+.ms{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;flex:none;position:relative;background:var(--fp-graphite);box-shadow:inset 0 0 0 1px var(--fp-edge-2)}
+.ms::before{content:"";width:14px;height:14px;background:currentColor;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+.ms-stable{color:var(--fp-titan);--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 6h12M2 10h12' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")}
+.ms-vol{color:var(--fp-warn);--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M1 9l3-5 3 8 3-8 3 6 2-2' fill='none' stroke='%23000' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E")}
+.ms-risk{color:var(--fp-danger);--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.5L15 14H1z' fill='none' stroke='%23000' stroke-width='1.7' stroke-linejoin='round'/%3E%3Cpath d='M8 6v3.5' stroke='%23000' stroke-width='1.8' stroke-linecap='round'/%3E%3Ccircle cx='8' cy='11.6' r='1' fill='%23000'/%3E%3C/svg%3E")}
+.ms-opp{color:var(--acc);--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1l2 5 5 .4-3.8 3.3 1.2 5L8 12l-4.4 2.7 1.2-5L1 6.4 6 6z' fill='none' stroke='%23000' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.ms-up{color:var(--acc);--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 12l4-4 3 3 5-6M10 5h4v4' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.ms-down{color:var(--fp-danger);--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 4l4 4 3-3 5 6M10 11h4V7' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.ms-nodata{color:var(--fp-pewter);box-shadow:inset 0 0 0 1px var(--fp-edge-2);--m:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='none' stroke='%23000' stroke-width='1.6' stroke-dasharray='2.4 2'/%3E%3C/svg%3E")}
+html.v2 .cz-idea{align-items:flex-start;gap:10px}
+
+/* ---------- 9. DATA CONFIDENCE ---------- */
+/* حقيقة = رقم صلب · توقع = علامة ≈ وخط سفلي منقط · تقدير = شفافية خفيفة · ناقص = متقطع · قديم = رمادي */
+html.v2 .is-pred{position:relative}
+html.v2 .is-pred::before{content:"≈";font:600 .55em var(--fp-num);color:var(--fp-steel);margin-inline-end:3px;vertical-align:.35em}
+html.v2 .h2-st.is-pred b{text-decoration:underline dotted rgba(255,255,255,.35);text-underline-offset:4px;text-decoration-thickness:1.5px}
+html.v2 .h2-st.is-pred::after{content:"";position:absolute;inset:0;border-radius:inherit;border:1px dashed rgba(255,255,255,.14);pointer-events:none}
+html.v2 .h2-st{position:relative}
+html.v2 .is-est{opacity:.82}
+html.v2 .is-missing{color:var(--fp-pewter)!important;border-style:dashed!important}
+html.v2 .is-stale{filter:saturate(.2);opacity:.7}
+html.v2 .cz-conf{border:1px solid currentColor;background:transparent!important}
+
+/* ---------- 10. MOTION LANGUAGE ---------- */
+@media (prefers-reduced-motion:no-preference){
+  #view.fx-first>*{animation:fpEnter var(--mo-slow) var(--mo-out) both}
+  #view.fx-first>*:nth-child(2){animation-delay:40ms}#view.fx-first>*:nth-child(3){animation-delay:80ms}#view.fx-first>*:nth-child(4){animation-delay:120ms}#view.fx-first>*:nth-child(n+5){animation-delay:160ms}
+  html.v2 .pl{transition:transform var(--mo-fast) var(--mo-ease)}
+  html.v2 .pl.sel{animation:fpSelect var(--mo-base) var(--mo-out)}
+  html.v2 .sheet,html.v2 .ov .box{animation:fpSheet var(--mo-slow) var(--mo-out) both}
+  html.v2 .tap,html.v2 .row.tap,html.v2 .card.tap{transition:transform var(--mo-fast) var(--mo-ease),background var(--mo-base)}
+  html.v2 .tap:active{transform:scale(.985)}
+}
+@keyframes fpEnter{from{opacity:0;transform:translateY(8px)}}
+@keyframes fpSelect{50%{transform:translateY(-3px) scale(1.04)}}
+@keyframes fpSheet{from{transform:translateY(24px);opacity:.4}}
+
+/* ---------- 12. MATCHWEEK IDENTITY ---------- */
+/* رقم الجولة كعلامة مائية بخط محفور داخل البطاقة الرئيسية */
+.gw-mark{position:absolute;inset-inline-start:-6px;bottom:-26px;font:800 150px/1 var(--fp-num);letter-spacing:-.06em;color:transparent;
+  -webkit-text-stroke:1px rgba(255,255,255,.06);pointer-events:none;user-select:none;z-index:0}
+.h2-hero>*:not(.gw-mark){position:relative;z-index:1}
+html.v2 .h2-top>span:first-child{font:600 11px var(--fp-num);letter-spacing:.12em;text-transform:uppercase;color:var(--fp-steel)}
+
+/* ---------- 11. MOBILE ---------- */
+@media (max-width:640px){
+  html .app{padding-inline:14px}
+  html.v2 .sec{margin:22px 2px 10px}
+  html.v2 .h2-pts b{font-size:48px}
+  html.v2 .btn,html.v2 .tabs2 button,html.v2 .seg button{min-height:42px}
+  html.v2 .row{min-height:52px}
+  html.v2 .scroll-x{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  #view{overflow-x:clip}
+}

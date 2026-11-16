@@ -91,17 +91,17 @@ function vHome2() {
   let ck = '';
   try { const C = runChecks(), bad = C.filter((c) => c.lvl === 'bad').length, warn = C.filter((c) => c.lvl === 'warn').length;
     if (bad || warn) ck = `<button class="h2-ck ${bad ? 'bad' : 'warn'}" onclick="go('check')">${I('i-alert', 'i')}<span>${bad ? tt(`${bad} مشاكل بفريقك قبل الإغلاق`, `${bad} issues before deadline`) : tt(`${warn} تنبيهات بفريقك`, `${warn} warnings`)}</span>${I('i-chev', 'chev')}</button>`; } catch {}
-  const stat = (lbl, val, sub = '') => `<div class="h2-st"><small>${lbl}</small><b class="num">${val}</b>${sub}</div>`;
+  const stat = (lbl, val, sub = '', pred = false) => `<div class="h2-st${pred ? ' is-pred' : ''}"><small>${lbl}</small><b class="num">${val}</b>${sub}</div>`;
   return `<div class="h2">
     ${ck}
-    <section class="h2-hero">
+    <section class="h2-hero"><span class="gw-mark" aria-hidden="true">${G.cur}</span>
       <div class="h2-top"><span>${t('gw')} ${G.cur}${livePts != null ? `<i class="h2-live">${tt('مباشر', 'Live')}</i>` : ''}</span><div class="h2-acts"><button onclick="openShareCard(${G.cur})" aria-label="share">${I('i-send', 'i')}</button><button onclick="seasonGo(${G.cur})">${tt('التفاصيل', 'Details')}${I('i-chev', 'chev')}</button></div></div>
       <div class="h2-pts"><b class="num count" data-v="${gwPts ?? ''}">${gwPts ?? '—'}</b><span>${tt('نقطة هالجولة', 'pts this GW')}</span></div>
       ${diff != null ? `<div class="h2-avg ${diff >= 0 ? 'up' : 'down'}"><bdi dir="ltr">${diff >= 0 ? '+' : ''}${diff}</bdi> ${tt('عن المعدل', 'vs avg')} <span>(${ev.avg})</span></div>` : ''}
       <div class="h2-stats">
         ${stat(t('total'), fmt(en.summary_overall_points))}
         ${stat(t('overall'), R0.rank ? fmt(R0.rank) : '—', R0.move ? `<em class="${R0.move > 0 ? 'up' : 'down'}">${R0.move > 0 ? '▲' : '▼'} ${fmt(Math.abs(R0.move))}</em>` : '')}
-        ${stat(`${tt('متوقع', 'Proj.')} GW${G.next}`, plan ? projected(plan) : '—')}
+        ${stat(`${tt('متوقع', 'Proj.')} GW${G.next}`, plan ? projected(plan) : '—', '', true)}
       </div>
     </section>
 
