@@ -88,17 +88,33 @@ function radar(ps, A) {
     return `<g class="rd-blob" style="--c:${CC[i]};--d:${i * 120}ms"><path d="${path}" fill="${CC[i]}" fill-opacity=".16" stroke="${CC[i]}" stroke-width="2" stroke-linejoin="round"/>${vs.map((v, k) => { const [x, y] = pt(k, v); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${CC[i]}" stroke="#0E1116" stroke-width="2"><title>${esc(p.name)} · ${A[k][1]}: ${v}%</title></circle>`; }).join('')}</g>`; }).join('');
   return `<svg viewBox="0 0 ${S} ${S}" class="rd" role="img" aria-label="${tt('مخطط مقارنة المؤشرات', 'Attribute radar')}">${rings}${spokes}${blobs}${labels}</svg>`;
 }
-function sources(p) {
-  const g = p.gls * GP[p.pos], a = p.ast * 3, cs = p.cs * CSP[p.pos], b = p.bonus || 0, sv = p.pos === 'GK' ? Math.floor((p.saves || 0) / 3) : 0;
-  const rest = Math.max(0, p.total - g - a - cs - b - sv);
-  return [[tt('أهداف', 'Goals'), g], [tt('صناعة', 'Assists'), a], [tt('شباك نظيفة', 'Clean sheets'), cs], [tt('بونص', 'Bonus'), b], ...(sv ? [[tt('تصديات', 'Saves'), sv]] : []), [tt('مشاركة وأخرى', 'Apps & other'), rest]].filter((x) => x[1] > 0);
+/** مصادر نقاط اللاعب. ويا سجل مبارياته (h) الحساب دقيق مباراة بمباراة، وبدونه تقريبي من أرقام الموسم */
+function sources(p, h) {
+  const gk = p.pos === 'GK', dfn = gk || p.pos === 'DEF', T = { DEF: 10, MID: 12, FWD: 12 }[p.pos];
+  let app = 0, dc = 0, gcD = 0, sv, g, a, cs, b, psv, ded;
+  if (h && h.length) {
+    const S = (k) => h.reduce((x, r) => x + (r[k] || 0), 0);
+    h.forEach((r) => { const m = r.minutes || 0; app += m >= 60 ? 2 : m > 0 ? 1 : 0; if (T && (r.defensive_contribution || 0) >= T) dc += 2; if (dfn && m > 0) gcD += Math.floor((r.goals_conceded || 0) / 2); });
+    g = S('goals_scored') * GP[p.pos]; a = S('assists') * 3; cs = S('clean_sheets') * CSP[p.pos]; b = S('bonus');
+    sv = gk ? h.reduce((x, r) => x + Math.floor((r.saves || 0) / 3), 0) : 0; psv = S('penalties_saved') * 5;
+    ded = S('yellow_cards') + S('red_cards') * 3 + S('own_goals') * 2 + S('penalties_missed') * 2 + gcD;
+  } else {
+    g = p.gls * GP[p.pos]; a = p.ast * 3; cs = p.cs * CSP[p.pos]; b = p.bonus || 0; sv = gk ? Math.floor((p.saves || 0) / 3) : 0; psv = (p.ps || 0) * 5;
+    ded = (p.yc || 0) + (p.rc || 0) * 3 + (p.og || 0) * 2 + (p.pm || 0) * 2 + (dfn ? Math.floor((p.gc || 0) / 2) : 0);
+    // الباقي = مشاركة + مساهمات دفاعية (تقدير لحد ما يوصل سجل المباريات)
+    const rest = Math.max(0, p.total - g - a - cs - b - sv - psv + ded), est = Math.min(rest, (p.starts ?? Math.round(p.min / 90)) * 2);
+    app = est; dc = rest - est;
+  }
+  const pos = [[tt('أهداف', 'Goals'), g], [tt('صناعة', 'Assists'), a], [tt('شباك نظيفة', 'Clean sheets'), cs], [tt('بونص', 'Bonus'), b], [tt('تصديات', 'Saves'), sv], [tt('صد ركلة جزاء', 'Pen saves'), psv], [tt('مشاركة', 'Appearances'), app], [tt('مساهمات دفاعية', 'Def. contributions'), dc]].filter((x) => x[1] > 0);
+  return { pos, ded, exact: !!(h && h.length) };
 }
-function donut(p, i) {
-  const L = sources(p), tot = L.reduce((x, y) => x + y[1], 0) || 1, R = 42, C = 2 * Math.PI * R, gap = 3;
-  let off = 0; const op = [1, 0.78, 0.58, 0.42, 0.3, 0.22];
-  const arcs = L.map(([l, v], k) => { const len = Math.max(0, (v / tot) * C - gap), s = `<circle r="${R}" cx="60" cy="60" fill="none" stroke="${CC[i]}" stroke-opacity="${op[k] || .2}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${len.toFixed(1)} ${C.toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 60 60)" class="dn-arc" style="--len:${len.toFixed(1)}"><title>${l}: ${v}</title></circle>`; off += (v / tot) * C; return s; }).join('');
+function donut(p, i, h) {
+  const { pos: L, ded, exact } = sources(p, h), tot = L.reduce((x, y) => x + y[1], 0) || 1, R = 42, C = 2 * Math.PI * R, gap = 3;
+  let off = 0; const op = [1, 0.82, 0.66, 0.52, 0.42, 0.34, 0.27, 0.2];
+  const arcs = L.map(([l, v], k) => { const len = Math.max(0, (v / tot) * C - gap), s = `<circle r="${R}" cx="60" cy="60" fill="none" stroke="${CC[i]}" stroke-opacity="${op[k] || .2}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${len.toFixed(1)} ${C.toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 60 60)" class="dn-arc"><title>${l}: ${v}</title></circle>`; off += (v / tot) * C; return s; }).join('');
   return `<div class="cmp-dn"><div class="cmp-dn-c"><svg viewBox="0 0 120 120"><circle r="${R}" cx="60" cy="60" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="12"/>${arcs}</svg><div><b class="num">${p.total}</b><small>${tt('نقطة', 'pts')}</small></div></div>
-    <ul>${L.map(([l, v], k) => `<li><i style="background:${CC[i]};opacity:${op[k] || .2}"></i><span>${l}</span><b class="num">${v}</b><em class="num">${Math.round((v / tot) * 100)}%</em></li>`).join('')}</ul></div>`;
+    <ul>${L.map(([l, v], k) => `<li><i style="background:${CC[i]};opacity:${op[k] || .2}"></i><span>${l}</span><b class="num">${v}</b><em class="num">${Math.round((v / tot) * 100)}%</em></li>`).join('')}${ded > 0 ? `<li class="ded"><i></i><span>${tt('خصومات', 'Deductions')}</span><b class="num">−${ded}</b><em></em></li>` : ''}</ul>
+    ${exact ? '' : `<small class="cmp-dn-n">${tt('تقريبي — يتحدث بعد تحميل سجل المباريات', 'Approximate until match log loads')}</small>`}</div>`;
 }
 export function vCompare() {
   const ids = LS.get('fp_cmp', []).filter((id) => PM(id));
@@ -138,7 +154,7 @@ export function vCompare() {
    <div class="sec"><h2>${I('i-swords')}${tt('وجهاً لوجه', 'Head to head')}</h2></div>
    <div class="card cmp-h2h">${legend}${rows}</div>
    <div class="sec"><h2>${I('i-star')}${tt('من وين تجي نقاطه', 'Where the points come from')}</h2></div>
-   <div class="cmp-dns" style="grid-template-columns:repeat(${ps.length},1fr)">${ps.map((p, i) => `<div class="card"><b class="cmp-dnt"><i style="background:${CC[i]}"></i>${esc(p.name)}</b>${donut(p, i)}</div>`).join('')}</div>
+   <div class="cmp-dns" style="grid-template-columns:repeat(${ps.length},1fr)">${ps.map((p, i) => `<div class="card"><b class="cmp-dnt"><i style="background:${CC[i]}"></i>${esc(p.name)}</b><div id="dn_${p.id}">${donut(p, i)}</div></div>`).join('')}</div>
    <div class="sec"><h2>${I('i-season')}${tt('المباريات الجاية', 'Next fixtures')}</h2></div>
    <div class="card">${nx}</div>`;
 }
@@ -159,6 +175,7 @@ export function afterCompare() {
   const ids = [...document.querySelectorAll('.cmp-h')].map((el) => +el.getAttribute('onclick').match(/\d+/)[0]);
   Promise.all(ids.map((id, i) => playerSummary(id).then((d) => ({ n: PM(id).name, c: CC[i], h: d.history || [] })).catch(() => ({ n: PM(id).name, c: CC[i], h: [] })))).then((S) => {
     const b = document.getElementById('cmpLine'); if (!b) return; b.dataset.done = 1;
+    ids.forEach((id, i) => { const e = document.getElementById('dn_' + id); if (e && S[i].h.length) e.innerHTML = donut(PM(id), i, S[i].h); });
     b.innerHTML = lineChart(S) + `<div class="cmp-leg">${S.map((s) => `<span><i style="background:${s.c}"></i>${esc(s.n)}</span>`).join('')}</div>`;
   });
 }

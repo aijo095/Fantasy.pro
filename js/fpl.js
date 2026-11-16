@@ -52,7 +52,7 @@ export async function loadGame(fresh = false) {
     id: e.id, code: e.code, name: e.web_name, full: `${e.first_name} ${e.second_name}`.trim(), team: e.team, pos: POS[e.element_type],
     price: e.now_cost / 10, form: +e.form || 0, ppg: +e.points_per_game || 0, ep: e.ep_next != null ? +e.ep_next : null,
     total: e.total_points, own: +e.selected_by_percent || 0, st: e.status, chance: e.chance_of_playing_next_round, news: e.news || '',
-    gls: e.goals_scored, ast: e.assists, cs: e.clean_sheets, min: e.minutes, starts: e.starts ?? null, yc: e.yellow_cards, rc: e.red_cards,
+    gls: e.goals_scored, ast: e.assists, cs: e.clean_sheets, min: e.minutes, starts: e.starts ?? null, yc: e.yellow_cards, rc: e.red_cards, og: e.own_goals || 0, pm: e.penalties_missed || 0, ps: e.penalties_saved || 0,
     saves: e.saves, bonus: e.bonus, bps: e.bps, gc: e.goals_conceded, xg: +e.expected_goals || 0, xa: +e.expected_assists || 0,
     xgi: +e.expected_goal_involvements || 0, ict: +e.ict_index || 0, threat: +e.threat || 0, creativity: +e.creativity || 0,
     cc: (e.cost_change_event || 0) / 10, ccs: (e.cost_change_start || 0) / 10, tin: e.transfers_in_event || 0, tout: e.transfers_out_event || 0,
