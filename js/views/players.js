@@ -1,7 +1,7 @@
 /* قاعدة بيانات اللاعبين + سوق الانتقالات + المقارنة */
 import { ST, PM, tName, tShort } from '../store.js';
 import { t, tt } from '../i18n.js';
-import { esc, I, fmt, r1, LS, posTag, toast, spark, barChart } from '../ui.js';
+import { esc, I, fmt, r1, LS, posTag, toast, spark, barChart, openSheet, closeSheet, crest } from '../ui.js';
 import { xp, xpN, avgFdr, avail, canBuy, suggestions } from '../engine.js';
 import { parseQuery } from '../ai.js';
 import { playerRow, pShirt, fdrChips, playerSummary, stTag } from './common.js';
@@ -103,6 +103,7 @@ function donut(p, i) {
 export function vCompare() {
   const ids = LS.get('fp_cmp', []).filter((id) => PM(id));
   if (ids.length < 2 && ST.plan) { const c = ST.plan.cap; if (!ids.includes(c)) ids.unshift(c); const alt = ST.G.players.filter((p) => p.pos === PM(ids[0]).pos && p.id !== ids[0]).sort((a, b) => b.total - a.total)[0]; if (ids.length < 2 && alt) ids.push(alt.id); }
+  if (LS.get('fp_cmp', []).filter((id) => PM(id)).length < ids.length) LS.set('fp_cmp', ids.slice(0, 3)); // نحفظ الاختيار التلقائي حتى المنتقي يعرف منو معروض
   const ps = ids.slice(0, 3).map(PM), G = ST.G, A = axes();
   const fin = Math.max(1, G.finished), per90 = (p, v) => (p.min > 0 ? r1((v / p.min) * 90) : 0);
   const score = (p) => Math.round(A.reduce((s, [, , f]) => s + pctl(p, f), 0) / A.length);
@@ -125,7 +126,7 @@ export function vCompare() {
   // أسباب التوصية: أكثر محورين يتفوق بيهم
   const lead = A.map(([k, l, f]) => ({ l, d: pctl(best, f) - Math.max(...ps.filter((x) => x !== best).map((x) => pctl(x, f))) })).filter((x) => x.d > 0).sort((a, b) => b.d - a.d).slice(0, 2);
   const nx = ps.map((p, i) => `<div class="cmp-fx"><span style="--c:${CC[i]}">${esc(p.name)}</span><div>${fdrChips(p.team, G.next, 5)}</div></div>`).join('');
-  return `<div class="searchbox"><span class="sicon">${I('i-plus')}</span><input id="cq" list="cqList" placeholder="${tt('أضف لاعب للمقارنة (لحد 3)', 'Add player (up to 3)')}" autocomplete="off"><datalist id="cqList">${G.players.slice().sort((a, b) => b.total - a.total).slice(0, 400).map((p) => `<option value="${esc(p.name)} — ${tShort(p.team)}" data-id="${p.id}">`).join('')}</datalist></div>
+  return `<button class="cmp-add" onclick="cmpPick()"><span class="sicon">${I('i-plus')}</span><span>${ps.length >= 3 ? tt('بدّل لاعب أو أضف (لحد 3)', 'Swap or add a player (max 3)') : tt('أضف لاعب للمقارنة', 'Add a player to compare')}</span><small>${tt('بحث · نادي · اقتراحات', 'Search · club · picks')}</small></button>
    ${head}
    <div class="card cmp-verdict" style="--c:${CC[bi]}"><span class="ms ms-opp"></span><div><small>${tt('التوصية', 'Verdict')}</small><b>${esc(best.name)}</b><p>${lead.length ? tt(`يتفوق بـ${lead.map((x) => x.l).join(' و')}`, `Leads on ${lead.map((x) => x.l).join(' & ')}`) : tt('أفضل توازن بالمؤشرات', 'Best overall balance')} · ${tt(`متوقع ${xpN(best, G.next, 5)} نقطة بـ5 جولات`, `${xpN(best, G.next, 5)} xP over 5 GWs`)}${avail(best) < 1 ? tt(' — بس انتبه لجاهزيته', ' — check availability') : ''}</p></div></div>
    <div class="sec"><h2>${I('i-target')}${tt('بصمة اللاعب', 'Player profile')}</h2></div>
@@ -152,8 +153,6 @@ function lineChart(series) {
   return `<svg viewBox="0 0 ${W} ${H}" class="ln" role="img" aria-label="${tt('نقاط آخر الجولات', 'Recent GW points')}">${grid}${xs}${lines}</svg>`;
 }
 export function afterCompare() {
-  const inp = document.getElementById('cq');
-  inp.onchange = () => { const opt = [...document.querySelectorAll('#cqList option')].find((o) => o.value === inp.value); if (!opt) return; const c = LS.get('fp_cmp', []).filter((id) => PM(id)); const id = +opt.dataset.id; if (!c.includes(id)) c.push(id); LS.set('fp_cmp', c.slice(-3)); window.render(); };
   const box = document.getElementById('cmpLine'); if (!box || box.dataset.done) return;
   const ids = [...document.querySelectorAll('.cmp-h')].map((el) => +el.getAttribute('onclick').match(/\d+/)[0]);
   Promise.all(ids.map((id, i) => playerSummary(id).then((d) => ({ n: PM(id).name, c: CC[i], h: d.history || [] })).catch(() => ({ n: PM(id).name, c: CC[i], h: [] })))).then((S) => {
@@ -161,4 +160,68 @@ export function afterCompare() {
     b.innerHTML = lineChart(S) + `<div class="cmp-leg">${S.map((s) => `<span><i style="background:${s.c}"></i>${esc(s.n)}</span>`).join('')}</div>`;
   });
 }
+/* ---------- منتقي لاعب المقارنة: بحث مرن + تصفح حسب النادي + اقتراحات ذكية ---------- */
+const PK = { q: '', team: 0, pos: 'ALL' };
+// تطبيع: يشيل الحركات والرموز، ويقبل جزء من الاسم أو أي كلمة منه (مثلاً "hala" تلكه Haaland و"odeg" تلكه Ødegaard)
+const fold = (x) => norm(x).replace(/ø/g, 'o').replace(/æ/g, 'ae').replace(/ß/g, 'ss').replace(/[^a-z0-9؀-ۿ ]/g, ' ');
+// مسافة تحرير (مع تبديل حرفين متجاورين) — تسامح ويا الأخطاء الإملائية
+function dl(a, b) { const m = a.length, n = b.length; if (Math.abs(m - n) > 2) return 9; const d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]); for (let j = 1; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) { const c = a[i - 1] === b[j - 1] ? 0 : 1; d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c); if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1); }
+  return d[m][n]; }
+function matchScore(p, q) {
+  if (!q) return 1;
+  const name = fold(p.name), words = [...new Set([...name.split(' '), ...fold(p.full || '').split(' ')])].filter(Boolean);
+  const sh = tShort(p.team).toLowerCase(), club = fold(tName(p.team));
+  if (q === sh || (q.length >= 4 && club.startsWith(q))) return 7; // اسم النادي: كل لاعبينه
+  if (name.startsWith(q)) return 6; if (words.some((w) => w.startsWith(q))) return 5;
+  if (q.length >= 3 && words.some((w) => dl(w.slice(0, q.length), q) <= (q.length >= 6 ? 2 : 1))) return 4; // تقريبي
+  if (q.length >= 3 && (name.includes(q) || words.some((w) => w.includes(q)))) return 3;
+  return club.includes(q) && q.length >= 3 ? 2 : 0;
+}
+function pickList() {
+  const G = ST.G, cur = LS.get('fp_cmp', []).filter((id) => PM(id));
+  const raw = PK.q.trim(), ar = /[؀-ۿ]/.test(raw);
+  let arIds = null, arClub = null; if (ar && raw.length >= 2) { const PQ = parseQuery(raw); arIds = new Set((PQ.players || []).map((p) => p.id)); arClub = PQ.club?.id || null; }
+  const q = ar ? '' : fold(raw).trim();
+  let L = G.players.filter((p) => (PK.pos === 'ALL' || p.pos === PK.pos) && (!PK.team || p.team === PK.team));
+  if (raw) L = L.map((p) => ({ p, s: ar ? (arIds?.has(p.id) ? 6 : arClub === p.team ? 3 : 0) : matchScore(p, q) })).filter((x) => x.s > 0).sort((a, b) => b.s - a.s || b.p.total - a.p.total).map((x) => x.p);
+  else L = L.sort((a, b) => (PK.team ? ['GK', 'DEF', 'MID', 'FWD'].indexOf(a.pos) - ['GK', 'DEF', 'MID', 'FWD'].indexOf(b.pos) : 0) || b.total - a.total);
+  return { L: L.slice(0, PK.team ? 40 : 30), cur };
+}
+function pickRow(p, cur) {
+  const on = cur.includes(p.id);
+  return `<button class="pk-row${on ? ' on' : ''}" onclick="cmpAdd(${p.id})"><span class="mini">${pShirt(p)}</span><span class="pk-i"><b>${esc(p.name)}</b><small><bdi>${tShort(p.team)}</bdi> · ${t(p.pos.toLowerCase())} · <bdi>£${p.price.toFixed(1)}</bdi> · ${p.total} ${tt('نقطة', 'pts')}</small></span><span class="pk-ck">${on ? I('i-check', 'i') : I('i-plus', 'i')}</span></button>`;
+}
+function pickSuggest(cur) {
+  const G = ST.G, base = PM(cur[0]); const out = [];
+  if (base) { const sim = G.players.filter((p) => p.pos === base.pos && p.id !== base.id && !cur.includes(p.id) && Math.abs(p.price - base.price) <= 1 && p.min > 180).sort((a, b) => xpN(b, G.next, 5) - xpN(a, G.next, 5)).slice(0, 4); if (sim.length) out.push([tt(`بدائل لـ ${base.name} (نفس المركز والسعر)`, `Alternatives to ${base.name}`), sim]); }
+  const mine = (ST.plan?.squad || []).map(PM).filter((p) => p && !cur.includes(p.id)).sort((a, b) => b.total - a.total).slice(0, 6); if (mine.length) out.push([tt('لاعبين فريقك', 'Your squad'), mine]);
+  const hot = G.players.filter((p) => !cur.includes(p.id) && p.min > 180).sort((a, b) => b.tin - a.tin).slice(0, 4); out.push([tt('الأكثر شراء هالجولة', 'Most bought this GW'), hot]);
+  return out.map(([t2, L]) => `<div class="pk-sec">${t2}</div>${L.map((p) => pickRow(p, cur)).join('')}`).join('');
+}
+function pickBody() {
+  const { L, cur } = pickList(), teams = Object.values(ST.G.teams).sort((a, b) => tShort(a.id).localeCompare(tShort(b.id)));
+  const browsing = PK.q || PK.team || PK.pos !== 'ALL';
+  const sel = cur.length ? `<div class="pk-sel">${cur.map((id) => `<span>${esc(PM(id).name)}<button onclick="cmpAdd(${id})" aria-label="x">${I('i-x', 'i')}</button></span>`).join('')}<small>${cur.length}/3</small></div>` : '';
+  return `${sel}<div class="pk-clubs">${teams.map((tm) => `<button class="${PK.team === tm.id ? 'on' : ''}" onclick="pkSet('team',${PK.team === tm.id ? 0 : tm.id})">${crest(tShort(tm.id), 26)}<small>${tShort(tm.id)}</small></button>`).join('')}</div>
+   <div class="seg pk-pos">${['ALL', 'GK', 'DEF', 'MID', 'FWD'].map((x) => `<button class="${PK.pos === x ? 'on' : ''}" onclick="pkSet('pos','${x}')">${x === 'ALL' ? t('all') : t(x.toLowerCase())}</button>`).join('')}</div>
+   <div id="pkRes">${browsing ? (L.length ? `<div class="pk-sec">${PK.team ? tName(PK.team) : tt(`${L.length} نتيجة`, `${L.length} results`)}</div>${L.map((p) => pickRow(p, cur)).join('')}` : `<div class="pk-empty">${tt('ما لكينا لاعب — جرب جزء من الاسم أو اختار النادي من فوك', 'No match — try part of the name or pick a club')}</div>`) : pickSuggest(cur)}</div>`;
+}
+function pickRefresh() { const b = document.getElementById('pkBody'); if (b) b.innerHTML = pickBody(); }
+window.cmpPick = () => {
+  PK.q = ''; PK.team = 0; PK.pos = 'ALL';
+  openSheet(`<div class="pk"><div class="pk-top"><b>${tt('اختار لاعب للمقارنة', 'Pick a player')}</b><button class="icon-btn" onclick="closeSheet()">${I('i-x', 'i')}</button></div>
+    <div class="searchbox"><span class="sicon">${I('i-search')}</span><input id="pkq" type="search" placeholder="${tt('اكتب جزء من الاسم أو النادي (عربي أو إنكليزي)', 'Type part of a name or club')}" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div id="pkBody">${pickBody()}</div></div>`, () => {
+    const q = document.getElementById('pkq'); let tm;
+    q.oninput = () => { clearTimeout(tm); tm = setTimeout(() => { PK.q = q.value; pickRefresh(); }, 120); };
+  });
+};
+window.pkSet = (k, v) => { PK[k] = v; pickRefresh(); };
+window.cmpAdd = (id) => {
+  let c = LS.get('fp_cmp', []).filter((x) => PM(x));
+  if (c.includes(id)) c = c.filter((x) => x !== id);
+  else { if (c.length >= 3) { c = c.slice(1); toast(tt('بدّلنا أقدم لاعب (الحد 3)', 'Replaced the oldest (max 3)')); } c.push(id); }
+  LS.set('fp_cmp', c); pickRefresh(); window.render();
+};
 window.rmCompare = (id) => { LS.set('fp_cmp', LS.get('fp_cmp', []).filter((x) => x !== id)); window.render(); };

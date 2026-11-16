@@ -265,3 +265,26 @@ html.v2 .h2-top>span:first-child{font:600 11px var(--fp-num);letter-spacing:.12e
 @keyframes lnDraw{from{stroke-dashoffset:900}to{stroke-dashoffset:0}}
 @keyframes dnIn{from{stroke-dasharray:0 999}}
 @media (max-width:420px){.cmp-r{grid-template-columns:78px repeat(auto-fit,minmax(0,1fr));gap:8px}}
+
+/* ---------- منتقي لاعب المقارنة ---------- */
+.cmp-add{display:flex;align-items:center;gap:10px;width:100%;padding:13px 16px;border-radius:var(--rd-lg);background:var(--fp-carbon);border:1px solid var(--fp-edge-2);text-align:start}
+.cmp-add .sicon{color:var(--acc);display:grid}.cmp-add>span:nth-child(2){flex:1;font-size:14px;color:var(--fp-titan)}
+.cmp-add small{font-size:11px;color:var(--fp-pewter)}
+.pk-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.pk-top b{font-size:16px}
+.pk-sel{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
+.pk-sel span{display:inline-flex;align-items:center;gap:4px;padding:4px 6px 4px 10px;border-radius:99px;background:rgba(var(--acc-rgb),.12);color:var(--fp-chrome);font-size:12px;font-weight:600}
+.pk-sel button{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.08)}.pk-sel .i{width:11px;height:11px}
+.pk-sel small{margin-inline-start:auto;font-size:11px;color:var(--fp-pewter)}
+.pk-clubs{display:grid;grid-auto-flow:column;grid-auto-columns:56px;gap:6px;overflow-x:auto;scrollbar-width:none;margin:12px -4px 0;padding:2px 4px 6px}.pk-clubs::-webkit-scrollbar{display:none}
+.pk-clubs button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0 5px;border-radius:14px;background:var(--fp-carbon);border:1px solid var(--fp-edge)}
+.pk-clubs button small{font:600 10px var(--fp-num);color:var(--fp-steel)}
+.pk-clubs button.on{border-color:rgba(var(--acc-rgb),.7);background:rgba(var(--acc-rgb),.1)}.pk-clubs button.on small{color:var(--fp-chrome)}
+.pk-pos{margin:8px 0 4px}
+.pk-sec{font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--fp-pewter);margin:12px 2px 4px}
+.pk-row{display:flex;align-items:center;gap:10px;width:100%;padding:8px 6px;border-radius:12px;text-align:start;transition:background var(--mo-fast)}
+.pk-row:active{background:rgba(255,255,255,.05)}
+.pk-row .mini{width:34px;height:34px;flex:none}
+.pk-i{flex:1;min-width:0;display:flex;flex-direction:column}.pk-i b{font-size:13.5px}.pk-i small{font-size:11px;color:var(--fp-steel);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk-ck{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.05);color:var(--fp-steel);flex:none}.pk-ck .i{width:15px;height:15px}
+.pk-row.on .pk-ck{background:var(--acc);color:var(--on-acc)}
+.pk-empty{padding:24px 10px;text-align:center;font-size:12.5px;color:var(--fp-steel);border:1px dashed var(--fp-edge-2);border-radius:14px;margin-top:10px}
