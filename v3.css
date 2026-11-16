@@ -101,8 +101,6 @@ html.v2 .h2-st,html.v2 .live-side>div,html.v2 .sq-stats>div,html.v2 .pz-cmp,html
   background:var(--sig-carbon),var(--fp-graphite)!important;border:1px solid var(--fp-edge)!important;box-shadow:none!important}
 /* ورقي رياضي: بطاقات التحليل والنصائح */
 html.v2 .cz,html.v2 .note,html.v2 .cz-idea{background-image:var(--sig-paper)}
-/* بارز (Embossed) محدود: الأرقام الكبيرة */
-html.v2 .h2-pts b,html.v2 .big-num,html.v2 .pz-sb b{text-shadow:0 1px 0 rgba(255,255,255,.06),0 -1px 0 rgba(0,0,0,.6)}
 
 /* ---------- 4. TYPOGRAPHY + DATA ---------- */
 html body{font-family:var(--fp-font);letter-spacing:0}
