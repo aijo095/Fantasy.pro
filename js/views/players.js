@@ -4,6 +4,7 @@ import { t, tt } from '../i18n.js';
 import { esc, I, fmt, r1, LS, posTag, toast, spark, barChart, openSheet, closeSheet, crest } from '../ui.js';
 import { xp, xpN, avgFdr, avail, canBuy, suggestions } from '../engine.js';
 import { parseQuery } from '../ai.js';
+import * as LR from '../learn.js';
 import { playerRow, pShirt, fdrChips, playerSummary, stTag } from './common.js';
 
 const F = { q: '', pos: 'ALL', team: 'ALL', max: 16, sort: 'total', quick: 'all', page: 1 };
@@ -60,18 +61,29 @@ function smooth(pts, closed) {
   }
   return d + (closed ? 'Z' : '');
 }
-/** مؤشرات كل لاعب كنسبة مئوية (ترتيبه بين لاعبين نفس المركز اللي لعبوا 270 دقيقة+) */
-function axes() {
-  const G = ST.G, fin = Math.max(1, G.finished);
-  return [
-    ['att', tt('الهجوم', 'Attack'), (p) => (p.min > 0 ? (p.xg / p.min) * 90 : 0)],
-    ['cre', tt('الصناعة', 'Creativity'), (p) => (p.min > 0 ? (p.xa / p.min) * 90 : 0)],
-    ['frm', tt('الفورم', 'Form'), (p) => p.form],
-    ['min', tt('ضمان الدقائق', 'Nailed'), (p) => (p.starts ?? p.min / 90) / fin],
-    ['fix', tt('الجدول', 'Fixtures'), (p) => 5 - avgFdr(p.team, G.next, 5)],
-    ['val', tt('القيمة', 'Value'), (p) => p.total / p.price],
-  ];
+/** مؤشرات المقارنة حسب المركز: كل مركز يُقاس باللي فعلاً يجيب نقاطه
+ *  (الحارس ما ينقاس بالصناعة، والمدافع ينقاس بالشباك النظيفة والمساهمات الدفاعية) */
+function axes(ps) {
+  const G = ST.G, fin = Math.max(1, G.finished), p90 = (v, p) => (p.min > 0 ? (v / p.min) * 90 : 0), st = (p) => Math.max(1, p.starts ?? Math.round(p.min / 90));
+  const X = {
+    att: ['att', tt('الهجوم', 'Attack'), (p) => p90(p.xg, p)],
+    cre: ['cre', tt('الصناعة', 'Creativity'), (p) => p90(p.xa, p)],
+    xgi: ['xgi', tt('التهديد الهجومي', 'Attacking threat'), (p) => p90(p.xg + p.xa, p)],
+    sav: ['sav', tt('التصديات', 'Saves'), (p) => p90(p.saves || 0, p)],
+    cs: ['cs', tt('الشباك النظيفة', 'Clean sheets'), (p) => (p.cs || 0) / st(p)],
+    dc: ['dc', tt('المساهمات الدفاعية', 'Def. contribution'), (p) => p.dc90 || 0],
+    bon: ['bon', tt('البونص', 'Bonus'), (p) => (p.bonus || 0) / st(p)],
+    frm: ['frm', tt('الفورم', 'Form'), (p) => p.form],
+    min: ['min', tt('ضمان الدقائق', 'Nailed'), (p) => (p.starts ?? p.min / 90) / fin],
+    fix: ['fix', tt('الجدول', 'Fixtures'), (p) => 5 - avgFdr(p.team, G.next, 5)],
+    val: ['val', tt('القيمة', 'Value'), (p) => p.total / p.price],
+  };
+  const pos = ps && ps.length && ps.every((p) => p.pos === ps[0].pos) ? ps[0].pos : 'MIX';
+  const K = { GK: ['sav', 'cs', 'frm', 'min', 'fix', 'val'], DEF: ['cs', 'dc', 'xgi', 'frm', 'min', 'fix', 'val'], MID: ['att', 'cre', 'dc', 'frm', 'min', 'fix', 'val'], FWD: ['att', 'cre', 'frm', 'min', 'fix', 'val'], MIX: ['xgi', 'bon', 'frm', 'min', 'fix', 'val'] }[pos];
+  return K.map((k) => X[k]);
 }
+/** المتوقع المصحَّح بتعلّم المدرب (نفس العقل اللي يستخدمه المدرب الذكي ومقترح التشكيلات) */
+function xpS(p, n = 5) { const G = ST.G; let s = 0; for (let g = G.next; g < G.next + n && g <= G.lastGW; g++) s += LR.xpL(p, g); return r1(s); }
 function pctl(p, f) {
   const pool = ST.G.players.filter((x) => x.pos === p.pos && x.min >= 270);
   if (pool.length < 5) return 50;
@@ -121,19 +133,24 @@ export function vCompare() {
   const userMode = LS.get('fp_cmp_user', false); // المستخدم اختار بنفسه: ما نضيف أي لاعب تلقائي
   if (!userMode && ids.length < 2 && ST.plan) { const c = ST.plan.cap; if (!ids.includes(c)) ids.unshift(c); const alt = ST.G.players.filter((p) => p.pos === PM(ids[0]).pos && p.id !== ids[0]).sort((a, b) => b.total - a.total)[0]; if (ids.length < 2 && alt) ids.push(alt.id); }
   if (!userMode && LS.get('fp_cmp', []).filter((id) => PM(id)).length < ids.length) LS.set('fp_cmp', ids.slice(0, 3)); // نحفظ الاختيار التلقائي حتى المنتقي يعرف منو معروض
-  const ps = ids.slice(0, 3).map(PM), G = ST.G, A = axes();
+  const ps = ids.slice(0, 3).map(PM), G = ST.G, A = axes(ps.length >= 2 ? ps : null);
   if (ps.length < 2) return `<button class="cmp-add" onclick="cmpPick()"><span class="sicon">${I('i-plus')}</span><span>${tt('أضف لاعب للمقارنة', 'Add a player to compare')}</span><small>${tt('بحث · نادي · اقتراحات', 'Search · club · picks')}</small></button>${ps.length ? `<div class="cmp-heads" style="grid-template-columns:1fr"><div class="cmp-h" style="--c:${CC[0]}"><div class="cmp-sh">${pShirt(ps[0])}</div><b>${esc(ps[0].name)}</b><small>${tt('اختار لاعب ثاني حتى تبدي المقارنة', 'Pick one more player to compare')}</small></div></div>` : `<div class="pk-empty" style="margin-top:12px">${tt('اختار لاعبين أو ثلاثة حتى تقارن بينهم', 'Pick 2–3 players to compare')}</div>`}`;
   const fin = Math.max(1, G.finished), per90 = (p, v) => (p.min > 0 ? r1((v / p.min) * 90) : 0);
   const score = (p) => Math.round(A.reduce((s, [, , f]) => s + pctl(p, f), 0) / A.length);
-  const ranked = [...ps].sort((a, b) => score(b) - score(a) || xpN(b, G.next, 5) - xpN(a, G.next, 5)), best = ranked[0], bi = ps.indexOf(best);
+  const XS = new Map(ps.map((p) => [p, xpS(p)])), xmax = Math.max(...XS.values(), 0.1);
+  // الحكم النهائي: 55% مؤشرات الموسم + 45% المتوقع الذكي (المصحَّح بالتعلّم) — والجاهزية تنقص منه
+  const judge = (p) => (0.55 * score(p) + 0.45 * (XS.get(p) / xmax) * 100) * (0.5 + 0.5 * avail(p));
+  const ranked = [...ps].sort((a, b) => judge(b) - judge(a)), best = ranked[0], bi = ps.indexOf(best);
   const ring = (v, i) => { const R = 22, C = 2 * Math.PI * R; return `<div class="cmp-ring"><svg viewBox="0 0 54 54"><circle r="${R}" cx="27" cy="27" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="5"/><circle r="${R}" cx="27" cy="27" fill="none" stroke="${CC[i]}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${((v / 100) * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 27 27)" class="cmp-ring-a"/></svg><b class="num">${v}</b></div>`; };
   const head = `<div class="cmp-heads" style="grid-template-columns:repeat(${ps.length},1fr)">${ps.map((p, i) => `<div class="cmp-h${p === best ? ' top' : ''}" style="--c:${CC[i]}" onclick="openPlayer(${p.id})"><button class="cmp-x" onclick="event.stopPropagation();rmCompare(${p.id})" aria-label="${tt('شيل', 'Remove')}">${I('i-x', 'i')}</button>
      <div class="cmp-sh">${pShirt(p)}</div><b>${esc(p.name)}</b><small><bdi>${tShort(p.team)}</bdi> · ${t(p.pos.toLowerCase())}</small>
      <div class="cmp-meta"><span class="num">£${p.price.toFixed(1)}</span><span class="num">${p.own}%</span></div>${ring(score(p), i)}<small class="cmp-sc">${tt('التقييم العام', 'Overall')}</small>${avail(p) < 1 ? `<span class="cmp-warn">${p.st === 'i' || avail(p) === 0 ? tt('غير جاهز', 'Unavailable') : tt(`مشاركة ${Math.round(avail(p) * 100)}%`, `${Math.round(avail(p) * 100)}% to play`)}</span>` : ''}</div>`).join('')}</div>`;
   const legend = `<div class="cmp-leg">${ps.map((p, i) => `<span><i style="background:${CC[i]}"></i>${esc(p.name)}</span>`).join('')}</div>`;
   // صفوف المقارنة بأشرطة مشتركة المقياس
+  const allGK = ps.every((p) => p.pos === 'GK');
   const GROUPS = [
-    [tt('النقاط', 'Points'), [[tt('المجموع', 'Total'), (p) => p.total, 1], [tt('نقطة/مباراة', 'PPG'), (p) => p.ppg, 1], [tt('الفورم', 'Form'), (p) => p.form, 1], [tt('المتوقع 5 جولات', 'xP 5 GWs'), (p) => xpN(p, G.next, 5), 1], [tt('البونص', 'Bonus'), (p) => p.bonus || 0, 1]]],
+    [tt('النقاط', 'Points'), [[tt('المجموع', 'Total'), (p) => p.total, 1], [tt('نقطة/مباراة', 'PPG'), (p) => p.ppg, 1], [tt('الفورم', 'Form'), (p) => p.form, 1], [tt('المتوقع 5 جولات', 'xP 5 GWs'), (p) => XS.get(p), 1], [tt('البونص', 'Bonus'), (p) => p.bonus || 0, 1]]],
+    allGK ? [tt('أرقام الحارس', 'Goalkeeping'), [[tt('تصديات/90', 'Saves/90'), (p) => per90(p, p.saves || 0), 1], [tt('شباك نظيفة', 'Clean sheets'), (p) => p.cs || 0, 1], [tt('أهداف مستقبلة/90', 'Conceded/90'), (p) => per90(p, p.gc || 0), -1], [tt('صد ركلة جزاء', 'Pen saves'), (p) => p.ps || 0, 1]]] :
     [tt('الأرقام الحقيقية لكل 90 دقيقة', 'Underlying per 90'), [['xG', (p) => per90(p, p.xg), 1], ['xA', (p) => per90(p, p.xa), 1], [tt('أهداف', 'Goals'), (p) => per90(p, p.gls), 1], [tt('صناعة', 'Assists'), (p) => per90(p, p.ast), 1], [tt('مساهمات دفاعية', 'Def. contrib.'), (p) => r1(p.dc90 || 0), 1]]],
     [tt('الدقائق والقيمة', 'Minutes & value'), [[tt('الدقائق', 'Minutes'), (p) => p.min, 1, fmt], [tt('أساسي', 'Starts'), (p) => p.starts ?? 0, 1, (v) => `${v}/${fin}`], [tt('نقطة لكل مليون', 'Pts per £m'), (p) => r1(p.total / p.price), 1], [tt('السعر', 'Price'), (p) => p.price, -1, (v) => '£' + v.toFixed(1)], [tt('الملكية', 'Owned'), (p) => p.own, 0, (v) => v + '%']]],
   ];
@@ -141,12 +158,20 @@ export function vCompare() {
     const vals = ps.map((p) => +f(p) || 0), mx = Math.max(...vals.map(Math.abs), 1e-9), bv = dir === 1 ? Math.max(...vals) : dir === -1 ? Math.min(...vals) : null, tie = vals.filter((v) => v === bv).length === vals.length;
     return `<div class="cmp-r"><span class="cmp-l">${l}</span>${vals.map((v, i) => { const w = dir === -1 ? (Math.min(...vals) / Math.max(v, 1e-9)) * 100 : (Math.abs(v) / mx) * 100, win = bv != null && v === bv && !tie;
       return `<div class="cmp-b${win ? ' win' : ''}"><div class="cmp-bt"><i style="width:${Math.max(3, w).toFixed(0)}%;background:${CC[i]}"></i></div><b class="num">${fm ? fm(v) : v}${win ? `<svg class="i cmp-ck" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg>` : ''}</b></div>`; }).join('')}</div>`; }).join('')}</div>`).join('');
-  // أسباب التوصية: أكثر محورين يتفوق بيهم
-  const lead = A.map(([k, l, f]) => ({ l, d: pctl(best, f) - Math.max(...ps.filter((x) => x !== best).map((x) => pctl(x, f))) })).filter((x) => x.d > 0).sort((a, b) => b.d - a.d).slice(0, 2);
+  // أسباب التوصية: نذكر بس المحاور اللي الفرق بيها حقيقي (8 مراتب+ وقيمة فعلية مو صفر)
+  const others = ps.filter((x) => x !== best), MIN_D = 8;
+  const gap = (a, f, rest) => pctl(a, f) - Math.max(...rest.map((x) => pctl(x, f)));
+  const real = (f) => ps.some((x) => (+f(x) || 0) > 0);
+  const lead = A.filter(([, , f]) => real(f)).map(([, l, f]) => ({ l, d: gap(best, f, others) })).filter((x) => x.d >= MIN_D).sort((a, b) => b.d - a.d).slice(0, 2);
+  const runner = ranked[1], rlead = A.filter(([, , f]) => real(f)).map(([, l, f]) => ({ l, d: gap(runner, f, ps.filter((x) => x !== runner)) })).filter((x) => x.d >= MIN_D).sort((a, b) => b.d - a.d).slice(0, 1);
+  const xb = XS.get(best), xr = XS.get(runner), dx = r1(xb - xr), BR = LR.brain(), learned = (BR.nEval || 0) > 0 || BR.boot;
+  const why = lead.length ? tt(`يتفوق بـ${lead.map((x) => x.l).join(' و')}`, `Leads on ${lead.map((x) => x.l).join(' & ')}`) : dx > 0.4 ? tt('المؤشرات متقاربة — الفرق بالتوقع', 'Similar profiles — expected points decide') : tt('متقاربين جداً', 'Very close call');
+  const verdictTxt = `${why} · ${tt(`متوقع ${xb} نقطة بـ5 جولات`, `${xb} xP over 5 GWs`)}${dx > 0 ? tt(` · <bdi>+${dx}</bdi> عن <bdi>${esc(runner.name)}</bdi>`, ` · +${dx} vs ${esc(runner.name)}`) : ''}${avail(best) < 1 ? tt(' — بس انتبه لجاهزيته', ' — check availability') : ''}`;
+  const verdictSub = `${rlead.length ? tt(`<bdi>${esc(runner.name)}</bdi> أفضل بـ${rlead[0].l}`, `${esc(runner.name)} is better on ${rlead[0].l}`) : ''}${rlead.length && learned ? ' · ' : ''}${learned ? tt('التوقع معدّل حسب تعلّم المدرب من الجولات السابقة', 'xP adjusted by the coach\'s learning') : ''}`;
   const nx = ps.map((p, i) => `<div class="cmp-fx"><span style="--c:${CC[i]}">${esc(p.name)}</span><div>${fdrChips(p.team, G.next, 5)}</div></div>`).join('');
   return `<button class="cmp-add" onclick="cmpPick()"><span class="sicon">${I('i-plus')}</span><span>${ps.length >= 3 ? tt('بدّل لاعب أو أضف (لحد 3)', 'Swap or add a player (max 3)') : tt('أضف لاعب للمقارنة', 'Add a player to compare')}</span><small>${tt('بحث · نادي · اقتراحات', 'Search · club · picks')}</small></button>
    ${head}
-   <div class="card cmp-verdict" style="--c:${CC[bi]}"><span class="ms ms-opp"></span><div><small>${tt('التوصية', 'Verdict')}</small><b>${esc(best.name)}</b><p>${lead.length ? tt(`يتفوق بـ${lead.map((x) => x.l).join(' و')}`, `Leads on ${lead.map((x) => x.l).join(' & ')}`) : tt('أفضل توازن بالمؤشرات', 'Best overall balance')} · ${tt(`متوقع ${xpN(best, G.next, 5)} نقطة بـ5 جولات`, `${xpN(best, G.next, 5)} xP over 5 GWs`)}${avail(best) < 1 ? tt(' — بس انتبه لجاهزيته', ' — check availability') : ''}</p></div></div>
+   <div class="card cmp-verdict" style="--c:${CC[bi]}"><span class="ms ms-opp"></span><div><small>${tt('التوصية', 'Verdict')}</small><b>${esc(best.name)}</b><p>${verdictTxt}</p>${verdictSub ? `<small class="cmp-vs">${verdictSub}</small>` : ''}</div></div>
    <div class="sec"><h2>${I('i-target')}${tt('بصمة اللاعب', 'Player profile')}</h2></div>
    <div class="card cmp-rd">${radar(ps, A)}${legend}<p class="cmp-note">${tt('كل محور = ترتيب اللاعب بين لاعبين نفس مركزه (100 = الأفضل)', 'Each axis = percentile vs same-position players')}</p></div>
    <div class="sec"><h2>${I('i-chart')}${tt('آخر 6 جولات', 'Last 6 GWs')}</h2></div>
