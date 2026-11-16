@@ -46,29 +46,119 @@ window.pf = (k, v) => { F[k] = v; if (k !== 'page') F.page = 1; window.render();
 
 /* ---------- سوق الانتقالات ---------- */
 /* ---------- المقارنة ---------- */
+// ألوان اللاعبين (تحقق منها بمدقق الألوان: مميزة لعمى الألوان ومريحة على الخلفية الغامقة)
+const CC = ['#14A874', '#3E86D6', '#C9821F'];
+const GP = { GK: 6, DEF: 6, MID: 5, FWD: 4 }, CSP = { GK: 4, DEF: 4, MID: 1, FWD: 0 };
+// منحنى ناعم يمر بكل النقاط (Catmull-Rom → Bézier)
+function smooth(pts, closed) {
+  const n = pts.length; if (n < 2) return '';
+  const P = (k) => pts[closed ? (k + n) % n : Math.max(0, Math.min(n - 1, k))];
+  let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let k = 0; k < (closed ? n : n - 1); k++) {
+    const p0 = P(k - 1), p1 = P(k), p2 = P(k + 1), p3 = P(k + 2), t = 0.18;
+    d += ` C${(p1[0] + (p2[0] - p0[0]) * t).toFixed(1)} ${(p1[1] + (p2[1] - p0[1]) * t).toFixed(1)},${(p2[0] - (p3[0] - p1[0]) * t).toFixed(1)} ${(p2[1] - (p3[1] - p1[1]) * t).toFixed(1)},${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d + (closed ? 'Z' : '');
+}
+/** مؤشرات كل لاعب كنسبة مئوية (ترتيبه بين لاعبين نفس المركز اللي لعبوا 270 دقيقة+) */
+function axes() {
+  const G = ST.G, fin = Math.max(1, G.finished);
+  return [
+    ['att', tt('الهجوم', 'Attack'), (p) => (p.min > 0 ? (p.xg / p.min) * 90 : 0)],
+    ['cre', tt('الصناعة', 'Creativity'), (p) => (p.min > 0 ? (p.xa / p.min) * 90 : 0)],
+    ['frm', tt('الفورم', 'Form'), (p) => p.form],
+    ['min', tt('ضمان الدقائق', 'Nailed'), (p) => (p.starts ?? p.min / 90) / fin],
+    ['fix', tt('الجدول', 'Fixtures'), (p) => 5 - avgFdr(p.team, G.next, 5)],
+    ['val', tt('القيمة', 'Value'), (p) => p.total / p.price],
+  ];
+}
+function pctl(p, f) {
+  const pool = ST.G.players.filter((x) => x.pos === p.pos && x.min >= 270);
+  if (pool.length < 5) return 50;
+  const v = f(p); let below = 0; for (const x of pool) if (f(x) < v) below++;
+  return Math.round((below / pool.length) * 100);
+}
+function radar(ps, A) {
+  const S = 300, c = S / 2, R = 108, n = A.length;
+  const pt = (k, v) => { const a = -Math.PI / 2 + (k * 2 * Math.PI) / n, r = (R * Math.max(4, v)) / 100; return [c + r * Math.cos(a), c + r * Math.sin(a)]; };
+  const rings = [25, 50, 75, 100].map((v) => `<path d="${smooth(A.map((_, k) => pt(k, v)), true)}" class="rd-ring"/>`).join('');
+  const spokes = A.map((_, k) => { const [x, y] = pt(k, 100); return `<line x1="${c}" y1="${c}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="rd-spoke"/>`; }).join('');
+  const labels = A.map(([, l], k) => { const a = -Math.PI / 2 + (k * 2 * Math.PI) / n, x = c + (R + 24) * Math.cos(a), y = c + (R + 24) * Math.sin(a); return `<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle" class="rd-lbl">${l}</text>`; }).join('');
+  const blobs = ps.map((p, i) => { const vs = A.map(([, , f]) => pctl(p, f)), path = smooth(vs.map((v, k) => pt(k, v)), true);
+    return `<g class="rd-blob" style="--c:${CC[i]};--d:${i * 120}ms"><path d="${path}" fill="${CC[i]}" fill-opacity=".16" stroke="${CC[i]}" stroke-width="2" stroke-linejoin="round"/>${vs.map((v, k) => { const [x, y] = pt(k, v); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${CC[i]}" stroke="#0E1116" stroke-width="2"><title>${esc(p.name)} · ${A[k][1]}: ${v}%</title></circle>`; }).join('')}</g>`; }).join('');
+  return `<svg viewBox="0 0 ${S} ${S}" class="rd" role="img" aria-label="${tt('مخطط مقارنة المؤشرات', 'Attribute radar')}">${rings}${spokes}${blobs}${labels}</svg>`;
+}
+function sources(p) {
+  const g = p.gls * GP[p.pos], a = p.ast * 3, cs = p.cs * CSP[p.pos], b = p.bonus || 0, sv = p.pos === 'GK' ? Math.floor((p.saves || 0) / 3) : 0;
+  const rest = Math.max(0, p.total - g - a - cs - b - sv);
+  return [[tt('أهداف', 'Goals'), g], [tt('صناعة', 'Assists'), a], [tt('شباك نظيفة', 'Clean sheets'), cs], [tt('بونص', 'Bonus'), b], ...(sv ? [[tt('تصديات', 'Saves'), sv]] : []), [tt('مشاركة وأخرى', 'Apps & other'), rest]].filter((x) => x[1] > 0);
+}
+function donut(p, i) {
+  const L = sources(p), tot = L.reduce((x, y) => x + y[1], 0) || 1, R = 42, C = 2 * Math.PI * R, gap = 3;
+  let off = 0; const op = [1, 0.78, 0.58, 0.42, 0.3, 0.22];
+  const arcs = L.map(([l, v], k) => { const len = Math.max(0, (v / tot) * C - gap), s = `<circle r="${R}" cx="60" cy="60" fill="none" stroke="${CC[i]}" stroke-opacity="${op[k] || .2}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${len.toFixed(1)} ${C.toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 60 60)" class="dn-arc" style="--len:${len.toFixed(1)}"><title>${l}: ${v}</title></circle>`; off += (v / tot) * C; return s; }).join('');
+  return `<div class="cmp-dn"><div class="cmp-dn-c"><svg viewBox="0 0 120 120"><circle r="${R}" cx="60" cy="60" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="12"/>${arcs}</svg><div><b class="num">${p.total}</b><small>${tt('نقطة', 'pts')}</small></div></div>
+    <ul>${L.map(([l, v], k) => `<li><i style="background:${CC[i]};opacity:${op[k] || .2}"></i><span>${l}</span><b class="num">${v}</b><em class="num">${Math.round((v / tot) * 100)}%</em></li>`).join('')}</ul></div>`;
+}
 export function vCompare() {
   const ids = LS.get('fp_cmp', []).filter((id) => PM(id));
   if (ids.length < 2 && ST.plan) { const c = ST.plan.cap; if (!ids.includes(c)) ids.unshift(c); const alt = ST.G.players.filter((p) => p.pos === PM(ids[0]).pos && p.id !== ids[0]).sort((a, b) => b.total - a.total)[0]; if (ids.length < 2 && alt) ids.push(alt.id); }
-  const ps = ids.slice(0, 3).map(PM), G = ST.G;
-  const M = [[t('price'), (p) => p.price, -1, (v) => v.toFixed(1)], [t('total'), (p) => p.total, 1], [tt('نقطة/مباراة', 'PPG'), (p) => p.ppg, 1], [t('form'), (p) => p.form, 1], [tt('متوقع 5ج', 'xP 5GW'), (p) => xpN(p, G.next, 5), 1], ['xG', (p) => r1(p.xg), 1], ['xA', (p) => r1(p.xa), 1], [t('goals'), (p) => p.gls, 1], [t('assists'), (p) => p.ast, 1], [t('minutes'), (p) => p.min, 1, fmt], [t('starts'), (p) => p.starts ?? 0, 1], [t('own') + ' %', (p) => p.own, 0], [tt('صعوبة 5ج', 'FDR 5GW'), (p) => r1(avgFdr(p.team, G.next, 5)), -1], [tt('نقطة/مليون', 'Pts/£m'), (p) => r1(p.total / p.price), 1]];
-  const score = (p) => xpN(p, G.next, 5) * 2 + p.form + p.ppg - avgFdr(p.team, G.next, 5) + (avail(p) < 1 ? -4 : 0);
-  const best = [...ps].sort((a, b) => score(b) - score(a))[0];
-  const cols = `grid-template-columns:110px repeat(${ps.length},1fr)`;
+  const ps = ids.slice(0, 3).map(PM), G = ST.G, A = axes();
+  const fin = Math.max(1, G.finished), per90 = (p, v) => (p.min > 0 ? r1((v / p.min) * 90) : 0);
+  const score = (p) => Math.round(A.reduce((s, [, , f]) => s + pctl(p, f), 0) / A.length);
+  const ranked = [...ps].sort((a, b) => score(b) - score(a) || xpN(b, G.next, 5) - xpN(a, G.next, 5)), best = ranked[0], bi = ps.indexOf(best);
+  const ring = (v, i) => { const R = 22, C = 2 * Math.PI * R; return `<div class="cmp-ring"><svg viewBox="0 0 54 54"><circle r="${R}" cx="27" cy="27" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="5"/><circle r="${R}" cx="27" cy="27" fill="none" stroke="${CC[i]}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${((v / 100) * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 27 27)" class="cmp-ring-a"/></svg><b class="num">${v}</b></div>`; };
+  const head = `<div class="cmp-heads" style="grid-template-columns:repeat(${ps.length},1fr)">${ps.map((p, i) => `<div class="cmp-h${p === best ? ' top' : ''}" style="--c:${CC[i]}" onclick="openPlayer(${p.id})"><button class="cmp-x" onclick="event.stopPropagation();rmCompare(${p.id})" aria-label="${tt('شيل', 'Remove')}">${I('i-x', 'i')}</button>
+     <div class="cmp-sh">${pShirt(p)}</div><b>${esc(p.name)}</b><small><bdi>${tShort(p.team)}</bdi> · ${t(p.pos.toLowerCase())}</small>
+     <div class="cmp-meta"><span class="num">£${p.price.toFixed(1)}</span><span class="num">${p.own}%</span></div>${ring(score(p), i)}<small class="cmp-sc">${tt('التقييم العام', 'Overall')}</small>${avail(p) < 1 ? `<span class="cmp-warn">${p.st === 'i' || avail(p) === 0 ? tt('غير جاهز', 'Unavailable') : tt(`مشاركة ${Math.round(avail(p) * 100)}%`, `${Math.round(avail(p) * 100)}% to play`)}</span>` : ''}</div>`).join('')}</div>`;
+  const legend = `<div class="cmp-leg">${ps.map((p, i) => `<span><i style="background:${CC[i]}"></i>${esc(p.name)}</span>`).join('')}</div>`;
+  // صفوف المقارنة بأشرطة مشتركة المقياس
+  const GROUPS = [
+    [tt('النقاط', 'Points'), [[tt('المجموع', 'Total'), (p) => p.total, 1], [tt('نقطة/مباراة', 'PPG'), (p) => p.ppg, 1], [tt('الفورم', 'Form'), (p) => p.form, 1], [tt('المتوقع 5 جولات', 'xP 5 GWs'), (p) => xpN(p, G.next, 5), 1], [tt('البونص', 'Bonus'), (p) => p.bonus || 0, 1]]],
+    [tt('الأرقام الحقيقية لكل 90 دقيقة', 'Underlying per 90'), [['xG', (p) => per90(p, p.xg), 1], ['xA', (p) => per90(p, p.xa), 1], [tt('أهداف', 'Goals'), (p) => per90(p, p.gls), 1], [tt('صناعة', 'Assists'), (p) => per90(p, p.ast), 1], [tt('مساهمات دفاعية', 'Def. contrib.'), (p) => r1(p.dc90 || 0), 1]]],
+    [tt('الدقائق والقيمة', 'Minutes & value'), [[tt('الدقائق', 'Minutes'), (p) => p.min, 1, fmt], [tt('أساسي', 'Starts'), (p) => p.starts ?? 0, 1, (v) => `${v}/${fin}`], [tt('نقطة لكل مليون', 'Pts per £m'), (p) => r1(p.total / p.price), 1], [tt('السعر', 'Price'), (p) => p.price, -1, (v) => '£' + v.toFixed(1)], [tt('الملكية', 'Owned'), (p) => p.own, 0, (v) => v + '%']]],
+  ];
+  const rows = GROUPS.map(([g, M]) => `<div class="cmp-grp"><div class="cmp-gt">${g}</div>${M.map(([l, f, dir, fm]) => {
+    const vals = ps.map((p) => +f(p) || 0), mx = Math.max(...vals.map(Math.abs), 1e-9), bv = dir === 1 ? Math.max(...vals) : dir === -1 ? Math.min(...vals) : null, tie = vals.filter((v) => v === bv).length === vals.length;
+    return `<div class="cmp-r"><span class="cmp-l">${l}</span>${vals.map((v, i) => { const w = dir === -1 ? (Math.min(...vals) / Math.max(v, 1e-9)) * 100 : (Math.abs(v) / mx) * 100, win = bv != null && v === bv && !tie;
+      return `<div class="cmp-b${win ? ' win' : ''}"><div class="cmp-bt"><i style="width:${Math.max(3, w).toFixed(0)}%;background:${CC[i]}"></i></div><b class="num">${fm ? fm(v) : v}${win ? `<svg class="i cmp-ck" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg>` : ''}</b></div>`; }).join('')}</div>`; }).join('')}</div>`).join('');
+  // أسباب التوصية: أكثر محورين يتفوق بيهم
+  const lead = A.map(([k, l, f]) => ({ l, d: pctl(best, f) - Math.max(...ps.filter((x) => x !== best).map((x) => pctl(x, f))) })).filter((x) => x.d > 0).sort((a, b) => b.d - a.d).slice(0, 2);
+  const nx = ps.map((p, i) => `<div class="cmp-fx"><span style="--c:${CC[i]}">${esc(p.name)}</span><div>${fdrChips(p.team, G.next, 5)}</div></div>`).join('');
   return `<div class="searchbox"><span class="sicon">${I('i-plus')}</span><input id="cq" list="cqList" placeholder="${tt('أضف لاعب للمقارنة (لحد 3)', 'Add player (up to 3)')}" autocomplete="off"><datalist id="cqList">${G.players.slice().sort((a, b) => b.total - a.total).slice(0, 400).map((p) => `<option value="${esc(p.name)} — ${tShort(p.team)}" data-id="${p.id}">`).join('')}</datalist></div>
-   <div class="cmph" style="${cols};margin-top:12px"><span></span>${ps.map((p) => `<div class="card tap" style="padding:10px" onclick="openPlayer(${p.id})"><div style="width:44px;height:44px;margin:auto">${pShirt(p)}</div><b style="font-size:13px;display:block">${esc(p.name)}</b><span class="mut" style="font-size:11px"><bdi>${tShort(p.team)}</bdi> · ${posTag(p.pos)}</span><button class="icon-btn" style="margin:6px auto 0;width:30px;height:30px" onclick="event.stopPropagation();rmCompare(${p.id})">${I('i-x', 'i', 'width:14px;height:14px')}</button></div>`).join('')}</div>
-   <div class="cmpg" style="margin-top:8px">${M.map(([l, f, dir, fm]) => { const vals = ps.map(f); const bv = dir === 1 ? Math.max(...vals) : dir === -1 ? Math.min(...vals) : null; return `<div class="cmph" style="${cols}"><span class="mut" style="font-size:12px;text-align:start">${l}</span>${vals.map((v) => `<div class="cmpcell ${bv != null && v === bv ? 'best' : ''}">${fm ? fm(v) : v}</div>`).join('')}</div>`; }).join('')}
-    <div class="cmph" style="${cols}"><span class="mut" style="font-size:12px;text-align:start">${tt('المباريات القادمة', 'Next fixtures')}</span>${ps.map((p) => `<div style="display:flex;gap:2px;flex-wrap:wrap;justify-content:center">${fdrChips(p.team, G.next, 5)}</div>`).join('')}</div></div>
-   <div class="sec"><h2>${I('i-chart')}${tt('آخر 5 جولات', 'Last 5 GWs')}</h2></div><div class="grid" style="grid-template-columns:repeat(${ps.length},1fr)" id="cmpL5">${ps.map((p) => `<div class="card" id="l5_${p.id}"><b style="font-size:13px">${esc(p.name)}</b><div class="aiload"><i></i><i></i><i></i></div></div>`).join('')}</div>
-   <div class="alert" style="margin-top:12px;border-color:rgba(var(--acc-rgb),.4)"><div class="ai" style="background:rgba(var(--acc-rgb),.14);color:#34D399">${I('i-sparkle')}</div><p><b>${tt('التوصية', 'Verdict')}: ${esc(best.name)}</b> — ${tt('يجمع أفضل توازن بين النقاط المتوقعة لـ 5 جولات، والفورم، ومعدل النقاط، وسهولة المباريات', 'best balance of 5-GW xP, form, PPG and fixture ease')}${avail(best) < 1 ? tt('، بس انتبه لجاهزيته', ', but check availability') : ''}.</p></div>`;
+   ${head}
+   <div class="card cmp-verdict" style="--c:${CC[bi]}"><span class="ms ms-opp"></span><div><small>${tt('التوصية', 'Verdict')}</small><b>${esc(best.name)}</b><p>${lead.length ? tt(`يتفوق بـ${lead.map((x) => x.l).join(' و')}`, `Leads on ${lead.map((x) => x.l).join(' & ')}`) : tt('أفضل توازن بالمؤشرات', 'Best overall balance')} · ${tt(`متوقع ${xpN(best, G.next, 5)} نقطة بـ5 جولات`, `${xpN(best, G.next, 5)} xP over 5 GWs`)}${avail(best) < 1 ? tt(' — بس انتبه لجاهزيته', ' — check availability') : ''}</p></div></div>
+   <div class="sec"><h2>${I('i-target')}${tt('بصمة اللاعب', 'Player profile')}</h2></div>
+   <div class="card cmp-rd">${radar(ps, A)}${legend}<p class="cmp-note">${tt('كل محور = ترتيب اللاعب بين لاعبين نفس مركزه (100 = الأفضل)', 'Each axis = percentile vs same-position players')}</p></div>
+   <div class="sec"><h2>${I('i-chart')}${tt('آخر 6 جولات', 'Last 6 GWs')}</h2></div>
+   <div class="card" id="cmpLine"><div class="aiload"><i></i><i></i><i></i></div></div>
+   <div class="sec"><h2>${I('i-swords')}${tt('وجهاً لوجه', 'Head to head')}</h2></div>
+   <div class="card cmp-h2h">${legend}${rows}</div>
+   <div class="sec"><h2>${I('i-star')}${tt('من وين تجي نقاطه', 'Where the points come from')}</h2></div>
+   <div class="cmp-dns" style="grid-template-columns:repeat(${ps.length},1fr)">${ps.map((p, i) => `<div class="card"><b class="cmp-dnt"><i style="background:${CC[i]}"></i>${esc(p.name)}</b>${donut(p, i)}</div>`).join('')}</div>
+   <div class="sec"><h2>${I('i-season')}${tt('المباريات الجاية', 'Next fixtures')}</h2></div>
+   <div class="card">${nx}</div>`;
+}
+function lineChart(series) {
+  const W = 340, H = 170, pl = 26, pr = 10, pt = 16, pb = 24;
+  const gws = [...new Set(series.flatMap((s) => s.h.map((r) => r.round)))].sort((a, b) => a - b).slice(-6);
+  if (!gws.length) return `<p class="mut" style="font-size:12.5px">${tt('ماكو بيانات كافية', 'Not enough data')}</p>`;
+  const mx = Math.max(4, ...series.flatMap((s) => s.h.filter((r) => gws.includes(r.round)).map((r) => r.total_points || 0)));
+  const top = Math.ceil(mx / 4) * 4, X = (k) => pl + (k * (W - pl - pr)) / Math.max(1, gws.length - 1), Y = (v) => pt + (1 - Math.max(0, v) / top) * (H - pt - pb);
+  const grid = [0, top / 2, top].map((v) => `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" class="ln-grid"/><text x="${pl - 6}" y="${Y(v) + 3}" text-anchor="end" class="ln-ax">${v}</text>`).join('');
+  const xs = gws.map((g, k) => `<text x="${X(k)}" y="${H - 6}" text-anchor="middle" class="ln-ax">${g}</text>`).join('');
+  const lines = series.map((s) => { const pts = gws.map((g, k) => { const r = s.h.filter((x) => x.round === g); return [X(k), Y(r.reduce((a, x) => a + (x.total_points || 0), 0)), r.reduce((a, x) => a + (x.total_points || 0), 0), g]; });
+    return `<g style="--c:${s.c}"><path d="${smooth(pts, false)}" fill="none" stroke="${s.c}" stroke-width="2.2" stroke-linecap="round" class="ln-path"/>${pts.map(([x, y, v, g]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="${s.c}" stroke="#0E1116" stroke-width="2"><title>${esc(s.n)} · GW${g}: ${v}</title></circle>`).join('')}</g>`; }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" class="ln" role="img" aria-label="${tt('نقاط آخر الجولات', 'Recent GW points')}">${grid}${xs}${lines}</svg>`;
 }
 export function afterCompare() {
   const inp = document.getElementById('cq');
   inp.onchange = () => { const opt = [...document.querySelectorAll('#cqList option')].find((o) => o.value === inp.value); if (!opt) return; const c = LS.get('fp_cmp', []).filter((id) => PM(id)); const id = +opt.dataset.id; if (!c.includes(id)) c.push(id); LS.set('fp_cmp', c.slice(-3)); window.render(); };
-  // نفس المقياس لكل اللاعبين حتى الأعمدة تنقارن صح (6 عند لاعب = 6 عند الثاني)
-  const l5 = [...document.querySelectorAll('[id^="l5_"]')].map((el) => +el.id.slice(3));
-  Promise.all(l5.map((id) => playerSummary(id).then((d) => ({ id, h: (d.history || []).slice(-5) })).catch(() => null))).then((all) => {
-    const ok = all.filter(Boolean), mx = Math.max(1, ...ok.flatMap((x) => x.h.map((r) => r.total_points || 0)));
-    ok.forEach(({ id, h }) => { const e2 = document.getElementById('l5_' + id); if (e2) e2.innerHTML = `<b style="font-size:13px">${esc(PM(id).name)}</b>${barChart(h.map((r) => 'GW' + r.round), h.map((r) => r.total_points), { h: 110, max: mx })}<div class="mut" style="font-size:11.5px;text-align:center">${h.reduce((a, r) => a + r.total_points, 0)} ${t('points')}</div>`; });
+  const box = document.getElementById('cmpLine'); if (!box || box.dataset.done) return;
+  const ids = [...document.querySelectorAll('.cmp-h')].map((el) => +el.getAttribute('onclick').match(/\d+/)[0]);
+  Promise.all(ids.map((id, i) => playerSummary(id).then((d) => ({ n: PM(id).name, c: CC[i], h: d.history || [] })).catch(() => ({ n: PM(id).name, c: CC[i], h: [] })))).then((S) => {
+    const b = document.getElementById('cmpLine'); if (!b) return; b.dataset.done = 1;
+    b.innerHTML = lineChart(S) + `<div class="cmp-leg">${S.map((s) => `<span><i style="background:${s.c}"></i>${esc(s.n)}</span>`).join('')}</div>`;
   });
 }
 window.rmCompare = (id) => { LS.set('fp_cmp', LS.get('fp_cmp', []).filter((x) => x !== id)); window.render(); };
