@@ -4,7 +4,7 @@
    - للإيقاف من جهاز معيّن: localStorage.setItem('fp_flags', '{"guard":false}')
    - ENGINE_VER يتسجل ويا كل توصية حتى نقارن الإصدارات لاحقاً (المرحلة 3)
 ========================================================= */
-export const ENGINE_VER = '3.2.0-p2';
+export const ENGINE_VER = '3.3.0-p3';
 
 const DEFAULTS = {
   decisionMemory: true, // 1 + 4 + 13: حفظ البدائل، الندم، وتقييم جودة القرار
@@ -18,6 +18,8 @@ const DEFAULTS = {
   crossManager: true,   // 10: الفرص من مقارنة المدربين (أفضل 10,000)
   biasDetect: true,     // 8: اكتشاف تحيز المحرك (مقترحات فقط)
   positiveLearn: true,  // 15: التعلم من النجاح
+  stressTest: true,     // 11: اختبار مقاومة التوصيات
+  regressGuard: true,   // 14: الحماية من التراجع (اعتماد/رفض/رجوع التعديلات)
 };
 
 let cache = null;
@@ -25,7 +27,10 @@ export function flag(name) {
   if (!cache) {
     let o = {};
     try { o = JSON.parse((typeof localStorage !== 'undefined' && localStorage.getItem('fp_flags')) || '{}') || {}; } catch {}
-    cache = { ...DEFAULTS, ...o };
+    // إيقاف تلقائي من نظام الحماية إذا الإصدار الحالي تراجع (يخص هذا الإصدار بس)
+    let auto = {};
+    try { const a = JSON.parse((typeof localStorage !== 'undefined' && localStorage.getItem('fp_flags_auto')) || 'null'); if (a?.ver === ENGINE_VER) (a.off || []).forEach((k) => (auto[k] = false)); } catch {}
+    cache = { ...DEFAULTS, ...auto, ...o };
   }
   return cache[name] !== false;
 }

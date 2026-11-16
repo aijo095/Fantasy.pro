@@ -268,7 +268,13 @@ export function evaluateDue(ctx) {
 export function saveProposals(entryId, list) {
   const b = load(entryId); if (!b) return;
   b.proposals = b.proposals || [];
-  list.forEach((p) => { const i = b.proposals.findIndex((x) => x.seg === p.seg && x.ver === ENGINE_VER); const row = { ...p, ver: ENGINE_VER, at: Date.now(), applied: false }; if (i >= 0) b.proposals[i] = row; else b.proposals.push(row); });
+  const gwAt = Math.max(0, ...b.evals.map((e) => e.gw)); // المقترح يتقيّم للأمام: الجولات اللي بعد هذي بس
+  list.forEach((p) => {
+    const i = b.proposals.findIndex((x) => x.seg === p.seg && x.ver === ENGINE_VER);
+    if (i >= 0 && Math.abs(b.proposals[i].m - p.m) < 0.03) return; // نفس المقترح تقريباً — نخلي تاريخه حتى الاختبار يكمل
+    const row = { ...p, gwAt, ver: ENGINE_VER, at: Date.now(), applied: false };
+    if (i >= 0) b.proposals[i] = row; else b.proposals.push(row);
+  });
   b.proposals = b.proposals.slice(-20); save(b);
 }
 

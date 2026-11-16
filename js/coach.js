@@ -25,6 +25,7 @@ import { behaviourRows, fit as fitBehaviour, predict as predictBehaviour, backte
 import { opportunities as crossOpps } from './intel/cross.js';
 import { detectBias, captainRepeat } from './intel/bias.js';
 import { wins as winsOf, successPatterns } from './intel/positive.js';
+import { stress as stressPlan, compare as compareStress, withTransfer } from './intel/stress.js';
 
 const VER = 2, WIN = 10; // نحلل آخر 10 جولات منتهية
 const key = () => `fp_coach_v${VER}_${ST.E?.entry?.id}`;
@@ -60,6 +61,8 @@ export async function ensureCoach(onProgress) {
       try { DM.evaluateDue({ entryId: id, isFinished: (g) => !!G.events.find((e) => e.id === g)?.fin, pts: c.pts, picks: c.picks, transfers: ST.E.transfers || [], lastGW: G.lastGW, ftBefore, under }); } catch {}
       // (8) اكتشاف التحيز واختبار التعديل زمنياً — المقترحات تنحفظ بس، ما تنطبق
       if (flag('biasDetect')) { try { const bd = detectBias(DM.load(id).evals); if (bd.flags.length) DM.saveProposals(id, bd.flags.filter((f) => f.proposal).map((f) => ({ seg: f.seg, d: f.d, t: f.t, n: f.n, ...f.proposal }))); } catch {} }
+      // (14) الحماية: معاملات التحيز تتعتمد بس بعد ما تثبت على جولات جديدة، وتراجع الإصدار ينكشف ويتعالج
+      if (flag('regressGuard')) { try { const b = DM.load(id); LR.gateSegments(b.evals, b.proposals); LR.versionGuard(b.byVer); } catch {} }
     }
     // بيانات أفضل 10,000 (عامة ومجمّعة) لكاشف الفرص بين المدربين
     if (flag('crossManager')) {
@@ -370,6 +373,23 @@ export function coachPlan(plan) {
   }
   const ideasAll = [...opp, ...ideas];
   const seq = flag('sequential') ? seqMemo(plan, transfer.kind === 'go' ? [[transfer.m.o.id, transfer.m.c.id]] : null) : null;
+  // (11) اختبار مقاومة: خطتك الحالية، توصية المحرك، والكابتن الآمن والجريء — تحت سيناريوهات واقعية
+  let stressR = null;
+  if (flag('stressTest')) {
+    try {
+      const sctx = { posOf: (id) => PM(id)?.pos, xp: (id) => (PM(id) ? xp(PM(id), gw) : 0), avail: (id) => (PM(id) ? avail(PM(id), gw) : 0), start: (id) => (PM(id) ? sustain(PM(id)).start : 1) };
+      const eng = transfer.kind === 'go' ? withTransfer(plan, transfer.m.o.id, transfer.m.c.id) : { ...plan };
+      const vcOf = (P, c) => (P.vc === c ? P.cap === c ? P.xi.filter((x) => x !== c).sort((a, b) => sctx.xp(b) - sctx.xp(a))[0] : P.cap : P.vc);
+      const mk = (k, P, c) => (c != null && P.xi.includes(c) ? { k, cap: c, s: stressPlan({ ...P, cap: c, vc: vcOf(P, c) }, sctx) } : null);
+      const rows = [mk('current', plan, plan.cap), mk('engine', eng, cap.p.id)];
+      if (capSafe && capSafe.p.id !== cap.p.id) rows.push(mk('safeCap', eng, capSafe.p.id));
+      if (capRisk && capRisk.p.id !== cap.p.id) rows.push(mk('riskCap', eng, capRisk.p.id));
+      stressR = compareStress(rows);
+      // إذا التوصية هشّة (أسوأ سيناريو أضعف بوضوح من الخيار الآمن والمتوقع تقريباً نفسه) نسجّل تحذير
+      const E = stressR?.rows.find((r) => r.k === 'engine'), S = stressR?.stable;
+      if (E && S && S !== E && S.s.worst - E.s.worst >= 4 && E.s.weighted - S.s.weighted < 1) gIss.push({ code: 'stress_fragile', sev: 'warn', msg: 'التوصية هشّة أمام السيناريوهات مقارنة بالخيار الأكثر استقراراً', ids: [S.cap] });
+    } catch {}
+  }
   // فحص نهائي للتوصية كاملة (الانتقال + الكابتن + الورقة) — التحذيرات تنحفظ ويا القرار
   let guard = null;
   if (useGuard) { const fin = checkRecommendation(plan, { transfers: transfer.kind === 'go' ? [{ out: transfer.m.o.id, in: transfer.m.c.id }] : [], cap: cap.p.id, vc: cap.p.id === plan.vc ? plan.cap : plan.vc, capRisk: cap.risk, chip: plan.chip || '' }, GC); guard = { ok: fin.ok, issues: [...gIss, ...fin.issues] }; }
@@ -383,7 +403,7 @@ export function coachPlan(plan) {
       if (flag('positiveLearn')) dm.pos = { wins: winsOf(b.evals), patterns: successPatterns(b.evals) };
     } catch {}
   }
-  return { transfer, cap, capAlt, capL: capL.slice(0, 3), capSafe, capRisk, capConf, scen, bestScen, timing, trConf, focus, ideas: ideasAll.slice(0, 6), hitBar, ftBar, learn: LR.summary(), dm, guard, seq, at: ST.G.fetchedAt || Date.now() };
+  return { transfer, cap, capAlt, capL: capL.slice(0, 3), capSafe, capRisk, capConf, scen, bestScen, timing, trConf, focus, ideas: ideasAll.slice(0, 6), hitBar, ftBar, learn: LR.summary(), dm, guard, seq, stress: stressR, at: ST.G.fetchedAt || Date.now() };
 }
 
 /* ---------- (9) خطط متعددة الجولات: تنحسب بالخلفية مرة وحدة لكل وضع ---------- */

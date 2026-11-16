@@ -88,11 +88,21 @@ function seqHTML(C) {
   const L = { best: tt('الأعلى توقعاً', 'Highest expected'), balanced: tt('الأكثر توازناً', 'Most balanced'), stable: tt('الأكثر استقراراً', 'Most stable'), risky: tt('الأعلى مخاطرة', 'Riskiest') };
   const seen = new Set(), rows = ['best', 'balanced', 'stable', 'risky'].map((k) => [k, S.cls[k]]).filter(([, p]) => p && p.desc && !seen.has(p) && seen.add(p));
   if (!rows.length) return '';
-  return `<div class="cz-scen" style="margin-top:8px">${rows.map(([k, p]) => `<div class="${k === 'best' ? 'on' : ''}"><span>${L[k]}</span><b dir="ltr">${esc(p.desc)}</b><em class="num ${p.gain > 0 ? 'up' : p.gain < 0 ? 'down' : ''}" dir="ltr">${p.gain > 0 ? '+' : ''}${p.gain}${p.sd != null ? ` ±${p.sd}` : ''}</em></div>`).join('')}</div><p class="cz-why" style="margin-top:4px;opacity:.75">${tt('خطط كاملة على 5 جولات مقارنة بالاحتفاظ بالفريق (بعد الضربات) · ± = مقدار عدم اليقين', 'Full 5-GW plans vs holding (after hits) · ± = uncertainty')}</p>`;
+  return `<div class="cz-scen" style="margin-top:8px">${rows.map(([k, p]) => `<div class="${k === 'best' ? 'on' : ''}"><span>${L[k]}</span><b dir="ltr" style="white-space:normal;line-height:1.5">${esc(p.desc)}</b><em class="num ${p.gain > 0 ? 'up' : p.gain < 0 ? 'down' : ''}" dir="ltr">${p.gain > 0 ? '+' : ''}${p.gain}${p.sd != null ? ` ±${p.sd}` : ''}</em></div>`).join('')}</div><p class="cz-why" style="margin-top:4px;opacity:.75">${tt('خطط كاملة على 5 جولات مقارنة بالاحتفاظ بالفريق (بعد الضربات) · ± = مقدار عدم اليقين', 'Full 5-GW plans vs holding (after hits) · ± = uncertainty')}</p>`;
 }
 function scenHTML(C) {
   if (!C.scen || C.scen.length < 2) return seqHTML(C);
   return `<div class="cz-scen">${C.scen.map((x) => `<div class="${x === C.bestScen ? 'on' : ''}"><span>${x.k === 'roll' ? tt('احتفظ', 'Roll') : x.k === 'one' ? tt('انتقال واحد', 'One move') : tt('انتقالين', 'Two moves')}</span><b dir="ltr">${esc(x.t)}</b><em class="num ${x.g > 0 ? 'up' : x.g < 0 ? 'down' : ''}" dir="ltr">${x.g > 0 ? '+' : ''}${x.g}</em></div>`).join('')}</div>${C.timing ? `<p class="cz-why" style="margin-top:6px">⏱ ${esc(C.timing.t)}</p>` : ''}<p class="cz-why" style="margin-top:4px;opacity:.75">${tt('الأرقام = الربح المتوقع بخمس جولات بعد خصم الضربات', 'Expected gain over 5 GWs after hits')}</p>${seqHTML(C)}`;
+}
+/** (11) اختبار المقاومة — داخل نفس قسم الكابتن */
+function stressHTML(C) {
+  const S = C.stress; if (!S?.rows?.length || S.rows.length < 2) return '';
+  const nm = (id) => ST.G.PM?.[id]?.name || '';
+  const K = { current: tt('خطتك الحالية', 'Your current plan'), engine: tt('توصية المدرب', 'Coach plan'), safeCap: tt('كابتن آمن', 'Safe captain'), riskCap: tt('كابتن جريء', 'Bold captain') };
+  const L = { best: tt('الأعلى توقعاً', 'Highest expected'), stable: tt('الأكثر استقراراً', 'Most stable'), balanced: tt('الأكثر توازناً', 'Most balanced'), risky: tt('الأعلى مخاطرة', 'Riskiest') };
+  const W = { keyOut: tt('غياب أهم لاعب', 'key player out'), capOut: tt('غياب الكابتن', 'captain out'), capBlank: tt('الكابتن ما يسجل', 'captain blanks'), shortMin: tt('دقائق قليلة', 'short minutes'), doubtOut: tt('غياب المشكوكين', 'doubtful players out'), tough: tt('مباريات أصعب', 'tougher matches') };
+  const tag = (r) => Object.entries(L).filter(([k]) => S[k] === r).map(([, l]) => l).join(' · ');
+  return `<div class="cz-scen" style="margin-top:8px">${S.rows.map((r) => `<div class="${S.balanced === r ? 'on' : ''}"><span style="line-height:1.5">${K[r.k]}${tag(r) ? `<br><small style="font-weight:500">${tag(r)}</small>` : ''}</span><b style="white-space:normal;line-height:1.5">${esc(nm(r.cap))} C<br><small style="opacity:.8">${tt('أسوأ حالة', 'worst')}: ${W[r.s.worstK]} <bdi dir="ltr">${r.s.worst}</bdi></small></b><em class="num" dir="ltr">${r.s.weighted}</em></div>`).join('')}</div><p class="cz-why" style="margin-top:4px;opacity:.75">${tt('اختبار مقاومة: الرقم = النقاط المتوقعة مرجّحة باحتمالات المشاركة الرسمية، و"أسوأ حالة" = أضعف نتيجة بالسيناريوهات مع التبديل التلقائي', 'Stress test: expected points weighted by official availability; worst = weakest scenario with autosubs')}</p>`;
 }
 function capRiskHTML(C) {
   if (!C.capSafe) return '';
@@ -106,7 +116,7 @@ function learnHTML(L, D, GU) {
     : L.err ? tt(`من تاريخك: التوقع من الفورمة وحدها يخطي ${L.err.form} نقطة باللاعب، والمعدل الطويل ${L.err.long} — عدّلت الأوزان على هالأساس`, `From your history: form-only error ${L.err.form}, long-run ${L.err.long}`)
     : tt('أحفظ توقعاتي لكل جولة وأقارنها بالنتيجة حتى أتعلم وأعدّل', 'Saving predictions each GW to learn from results');
   const last = L.last?.cap ? tt(`الجولة ${L.last.gw}: اقترحت ${(ST.G.PM?.[L.last.cap.id] || {}).name || ''} كابتن وجاب ${L.last.cap.pts}${L.last.cap.followed != null ? (L.last.cap.followed ? ' (نفذتها)' : ' (ما نفذتها)') : ''}`, `GW${L.last.gw}: captain pick scored ${L.last.cap.pts}`) : '';
-  const dm = dmLines(D, GU);
+  const dm = dmLines(D, { ...(GU || {}), __learn: L });
   return `<div class="cz-learn"><small>${I('i-bot', 'i')}${tt('ذاكرة المدرب والتعلّم', 'Memory & learning')}</small><p>${body}</p>${last ? `<p>${esc(last)}</p>` : ''}${dm.map((x) => `<p>${esc(x)}</p>`).join('')}${notes.length ? `<ul>${notes.slice(0, 3).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}</div>`;
 }
 /** ذاكرة القرارات: جودة القرار بعيداً عن الحظ، دقة التوقع مقابل خط أساس، الأخطاء المتكررة، والتوصيات اللي استبعدها كاشف التضارب */
@@ -129,6 +139,19 @@ function dmLines(D, GU) {
   if (pw?.list?.length) { const c = pw.counts, sk = c.skill + c.expected, lk = c.luck; out.push(tt(`من لاعبينك اللي جابوا 10+ نقاط مؤخراً: ${sk} نجاح متوقع بالأرقام${lk ? `، و${lk} حظ (أداء حقيقي ضعيف)` : ''}${pw.surprise.length ? ` — ${nm(pw.surprise[0].id)} ما جان متوقع بس أداؤه الحقيقي يسند، فهذا اختيار ذكي مو حظ` : ''}`, `Recent hauls: ${sk} expected, ${lk} lucky`)); }
   const sp = D.pos?.patterns?.list?.[0];
   if (sp) out.push(tt(`نمط نجاح مثبت: ${SEGT[sp.k] || sp.k} يجيبون جولات كبيرة (8+) بنسبة ${Math.round(sp.rate * 100)}% مقابل ${Math.round(sp.base * 100)}% للباقين`, `Success pattern: ${sp.k} haul ${Math.round(sp.rate * 100)}% vs ${Math.round(sp.base * 100)}%`));
+  // (14) الحماية من التراجع: شنو اعتمد المحرك أو رفض أو رجع عنه
+  const LG = GU?.__learn;
+  if (LG) {
+    const g = LG.gate?.[LG.gate.length - 1];
+    if (g?.type === 'adopt') out.push(tt(`اعتمدت تعديل على أوزاني بعد ما ثبت على ${g.g} جولات جديدة (الخطأ قل ${Math.round((1 - g.rel) * 100)}%)`, `Adopted a weight update after ${g.g} new GWs`));
+    else if (g?.type === 'reject') out.push(tt(`رفضت تعديل على أوزاني لأنه ما حسّن التوقعات على ${g.g} جولات جديدة — بقيت على الإعداد السابق`, `Rejected a weight update that did not improve on new GWs`));
+    else if (g?.type === 'rollback') out.push(tt(`رجعت للإعداد السابق: التعديل الأخير صار أسوأ بـ${Math.round((g.rel - 1) * 100)}% على ${g.g} جولات`, `Rolled back the last update (worse by ${Math.round((g.rel - 1) * 100)}%)`));
+    else if (g?.type === 'version_rollback') out.push(tt('هذا الإصدار من المحرك طلع أسوأ من السابق، فطفيت القدرة الجديدة اللي تغيّر التوقعات لحد ما تنصلح', 'This engine version regressed; the new prediction feature was switched off'));
+    else if (LG.cand) out.push(tt(`عندي تعديل مقترح على أوزاني يتجرب على الجولات الجديدة (${LG.cand.g} من 2) — ما ينعتمد قبل ما يثبت`, `A weight update is being tested (${LG.cand.g}/2)`));
+    const sl = LG.segLog?.[LG.segLog.length - 1];
+    if (sl?.type === 'adopt') out.push(tt(`اعتمدت تصحيح الانحياز لـ${SEGT[sl.seg] || sl.seg} (×${sl.m}) بعد ما حسّن الدقة على ${sl.g} جولات جديدة`, `Adopted bias correction for ${sl.seg}`));
+    else if (sl?.type === 'reject') out.push(tt(`تصحيح الانحياز لـ${SEGT[sl.seg] || sl.seg} ما ثبت على الجولات الجديدة، فما اعتمدته`, `Bias correction for ${sl.seg} rejected`));
+  }
   if (!D.n && D.pending?.length) out.push(tt(`حفظت توصيات الجولة ${D.pending[D.pending.length - 1]} ويا البدائل اللي درستها، وراح أقيّمها بعد ما تخلص`, `Saved GW${D.pending[D.pending.length - 1]} decisions with alternatives; will review after the GW`));
   return out;
 }
@@ -155,7 +178,7 @@ function coachCard(P) {
     <div class="cz-st"><span><b class="${S.vsAvg >= 0 ? 'up' : 'down'}" dir="ltr">${S.vsAvg >= 0 ? '+' : ''}${S.vsAvg}</b><small>${tt('فرقك عن معدل الجولة', 'Vs GW average')}</small></span><span><b dir="ltr">${S.hitsN}</b><small>${tt('عدد الضربات (−4)', 'Hits (−4)')}</small></span><span><b dir="ltr">${S.benchPts}</b><small>${tt('نقاط ضاعت على الدكة بالجولة', 'Bench pts lost / GW')}</small></span><span><b>${S.favF || '—'}</b><small>${tt('التشكيل اللي تلعب بيه أكثر', 'Most used formation')}</small></span></div>
     <div class="cz-sec"><h4>${I('i-gauge', 'i')}${tt('تقييمك من 100', 'Your scores out of 100')}</h4><div class="cz-tr">${TR.map(([k, l, h]) => `<div class="cz-t"><div class="cz-tl"><span>${l}</span><b class="num" style="color:${col(T[k])}">${T[k] ?? '—'}</b></div><div class="meter"><i style="width:${T[k] ?? 0}%;background:${col(T[k])}"></i></div><small>${h}</small></div>`).join('')}</div></div>
     <div class="cz-sec"><h4>${I('i-swap', 'i')}${tt('الانتقال المقترح لهالجولة', 'Suggested transfer this GW')}${confChip(C.trConf)}</h4>${trHTML}${scenHTML(C)}</div>
-    <div class="cz-sec"><h4>${I('i-star', 'i')}${tt('الكابتن المقترح', 'Suggested captain')}${confChip(C.capConf)}</h4>${capHTML}${capRiskHTML(C)}</div>
+    <div class="cz-sec"><h4>${I('i-star', 'i')}${tt('الكابتن المقترح', 'Suggested captain')}${confChip(C.capConf)}</h4>${capHTML}${capRiskHTML(C)}${stressHTML(C)}</div>
     ${C.ideas.length ? `<div class="cz-sec"><h4>${I('i-sparkle', 'i')}${tt('ملاحظات ونصائح إلك', 'Notes and tips for you')}</h4><div class="cz-ideas">${C.ideas.map((x) => `<div class="cz-idea${x.act ? ' tap' : ''}"${x.act ? ` onclick="${x.act}"` : ''}><span class="ms ${MS[x.ic] || 'ms-opp'}" role="img" aria-label="${MSL()[MS[x.ic] || 'ms-opp']}"></span><p>${esc(x.t)}</p></div>`).join('')}</div></div>` : ''}
   </div>`;
 }
