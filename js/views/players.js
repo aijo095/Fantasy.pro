@@ -67,6 +67,7 @@ function axes(ps) {
   const G = ST.G, fin = Math.max(1, G.finished), p90 = (v, p) => (p.min > 0 ? (v / p.min) * 90 : 0), st = (p) => Math.max(1, p.starts ?? Math.round(p.min / 90));
   const X = {
     att: ['att', tt('الهجوم', 'Attack'), (p) => p90(p.xg, p)],
+    gls: ['gls', tt('الأهداف', 'Goals'), (p) => p.gls || 0],
     cre: ['cre', tt('الصناعة', 'Creativity'), (p) => p90(p.xa, p)],
     xgi: ['xgi', tt('التهديد الهجومي', 'Attacking threat'), (p) => p90(p.xg + p.xa, p)],
     sav: ['sav', tt('التصديات', 'Saves'), (p) => p90(p.saves || 0, p)],
@@ -80,7 +81,7 @@ function axes(ps) {
     val: ['val', tt('القيمة', 'Value'), (p) => p.total / p.price],
   };
   const pos = ps && ps.length && ps.every((p) => p.pos === ps[0].pos) ? ps[0].pos : 'MIX';
-  const K = { GK: ['sav', 'cs', 'frm', 'min', 'fix', 'val'], DEF: ['cs', 'dc', 'xgi', 'frm', 'min', 'fix', 'val'], MID: ['att', 'cre', 'dc', 'frm', 'min', 'fix', 'val'], FWD: ['att', 'cre', 'frm', 'min', 'fix', 'val'], MIX: ['xgi', 'bon', 'frm', 'min', 'fix', 'val'] }[pos];
+  const K = { GK: ['sav', 'cs', 'frm', 'min', 'fix', 'val'], DEF: ['cs', 'dc', 'gls', 'xgi', 'frm', 'min', 'fix', 'val'], MID: ['gls', 'att', 'cre', 'dc', 'frm', 'min', 'fix', 'val'], FWD: ['gls', 'att', 'cre', 'frm', 'min', 'fix', 'val'], MIX: ['gls', 'xgi', 'bon', 'frm', 'min', 'fix', 'val'] }[pos];
   return K.map((k) => X[k]);
 }
 /** المتوقع المصحَّح بتعلّم المدرب (نفس العقل اللي يستخدمه المدرب الذكي ومقترح التشكيلات) */
