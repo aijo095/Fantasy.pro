@@ -414,3 +414,22 @@ em.up{color:var(--acc)}em.down{color:var(--bad)}
 .cl-pt{flex:none;display:flex;flex-direction:column;align-items:center;font:700 15px Inter,sans-serif;min-width:40px}
 .cl-pt small{font:500 10px 'IBM Plex Sans Arabic',sans-serif;color:var(--fp-steel,#8A93A3)}
 .cl-e{padding:16px;text-align:center}
+
+/* ===== أيقونات فسفور: هوية جديدة ثنائية اللون ===== */
+/* الطبقة الثانية بالدوتون أوضح، وتاخذ لون مخصص إذا انطى (--ic2) */
+svg.i .ph [opacity]{opacity:.34;fill:var(--ic2,currentColor)}
+/* عناوين الأقسام: أيقونة داخل مربع زجاجي ملوّن بدل الخط الأخضر */
+html.v2 .sec h2:has(svg.i)::before,html.v2 .h2-h:has(svg.i)::before{display:none}
+html.v2 .sec h2 svg.i,html.v2 .h2-h svg.i,.cl .sec h2 svg.i{box-sizing:content-box;width:17px;height:17px;padding:7px;border-radius:11px;color:var(--acc);background:linear-gradient(145deg,rgba(60,245,160,.16),rgba(60,245,160,.04));border:1px solid rgba(60,245,160,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+/* كرت المدرب وعناوين البطاقات */
+.cz-sec h4 svg.i,.cz .cz-sec h4 .i{box-sizing:content-box;width:14px;height:14px;padding:5px;border-radius:8px;color:var(--acc);background:rgba(60,245,160,.1);border:1px solid rgba(60,245,160,.18)}
+.cz-h .cz-ic svg.i{--ic2:var(--acc)}
+/* قائمة المزيد: مربعات زجاجية ملوّنة وأيقونة بلونين بدل المربع المصمت */
+html.ui2 #view[data-view=more] .pbig{width:42px;height:42px;border-radius:13px;color:var(--c1)!important;background:linear-gradient(150deg,color-mix(in srgb,var(--c1) 22%,transparent),color-mix(in srgb,var(--c2) 6%,transparent))!important;border:1px solid color-mix(in srgb,var(--c1) 32%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 6px 16px -8px color-mix(in srgb,var(--c1) 55%,transparent)!important}
+html.ui2 #view[data-view=more] .pbig svg{width:21px!important;height:21px!important}
+html.ui2 #view[data-view=more] .pbig svg .ph [opacity]{opacity:.45}
+/* الشريط العلوي وأزرار الأيقونات */
+.topbar .icon-btn svg.i,.sbar svg.i{color:var(--acc)}
+/* أيقونات الصفوف والقوائم: لون مميز خفيف */
+.row .pbig svg.i{--ic2:var(--acc)}
+.tag svg.i .ph [opacity]{opacity:.5}
