@@ -1,5 +1,5 @@
 /* فريقي: ملخص احترافي + ملعب تفاعلي + أدوات (تشكيل، أوراق، تحليل الفريق) */
-import { ST, PM, tShort, savePlan } from '../store.js';
+import { ST, PM, tShort, tName, savePlan } from '../store.js';
 import { t, tt } from '../i18n.js';
 import { esc, I, toast, fmt, r1, LS, crest, fmtTime, fxMin } from '../ui.js';
 import { xp, xpN, validXI, formation, bestXI, bestXIFormation, projected, hits, avail, fixturesFor, analyze, avgFdr } from '../engine.js';
@@ -170,6 +170,21 @@ function dmLines(D, GU) {
   if (!D.n && D.pending?.length) out.push(tt(`حفظت توصيات الجولة ${D.pending[D.pending.length - 1]} ويا البدائل اللي درستها، وراح أقيّمها بعد ما تخلص`, `Saved GW${D.pending[D.pending.length - 1]} decisions with alternatives; will review after the GW`));
   return out;
 }
+/** نص النصيحة بالعربي: يبدّل المصطلحات الإنكليزية ورموز الأندية، ويثبّت مكان الأرقام والأسماء جوه الجملة العربية */
+function arTip(raw) {
+  const T = ST.G?.teams || {}, SH = {}; Object.keys(T).forEach((id) => { if (T[id]?.short) SH[T[id].short] = tName(+id); });
+  let s = String(raw)
+    .replace(/\(?xG\/xA\)?/g, (m) => (m.startsWith('(') ? '(الفرص الحقيقية)' : 'الفرص الحقيقية'))
+    .replace(/\(xGI\)|xGI/g, (m) => (m.startsWith('(') ? '(الفرص الحقيقية)' : 'الفرص الحقيقية'))
+    .replace(/\(xG\)/g, '(الأهداف المتوقعة)').replace(/\bxG\b/g, 'الأهداف المتوقعة').replace(/\bxA\b/g, 'الصناعة المتوقعة').replace(/\bxP\b/g, 'نقطة متوقعة')
+    .replace(/\b([A-Z]{3})\b/g, (m) => SH[m] || m)
+    .replace(/(\d+(?:\.\d+)?)م(?![\u0621-\u064A])/g, '$1 مليون');
+  const RX = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.'\-]*(?:\s+[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.'\-]*)*)|([+−-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?%?)/g;
+  let out = '', i = 0, m;
+  while ((m = RX.exec(s))) { out += esc(s.slice(i, m.index)) + (m[1] ? `<bdi>${esc(m[1])}</bdi>` : `<bdi dir="ltr" class="num">${m[2]}</bdi>`); i = m.index + m[0].length; }
+  s = out + esc(s.slice(i));
+  return s;
+}
 function coachCard(P) {
   const M = CO.coachReady();
   if (!M) {
@@ -200,7 +215,7 @@ function coachCard(P) {
     <div class="cz-sec"><h4>${I('i-gauge', 'i')}${tt('تقييمك', 'Your scores')}${learn ? `<span class="cz-h4s">${learn}</span>` : ''}</h4><div class="cz-tr">${TR.map(([k, l]) => `<div class="cz-t"><span>${l}</span><div class="meter"><i style="width:${T[k] ?? 0}%;background:${col(T[k])}"></i></div><b class="num" style="color:${col(T[k])}">${T[k] ?? '—'}</b></div>`).join('')}</div></div>
     <div class="cz-sec"><h4>${I('i-swap', 'i')}${tt('الانتقال', 'Transfer')}${confChip(C.trConf)}</h4>${main}${opts}${urgent}${plan}</div>
     <div class="cz-sec"><h4>${I('i-star', 'i')}${tt('الكابتن', 'Captain')}${confChip(C.capConf)}</h4>${capHTML}</div>
-    ${C.ideas.length ? `<div class="cz-sec"><h4>${I('i-sparkle', 'i')}${tt('نصائح', 'Tips')}</h4><div class="cz-ideas">${C.ideas.map((x) => `<div class="cz-idea${x.act ? ' tap' : ''}"${x.act ? ` onclick="${x.act}"` : ''}><span class="ms ${MS[x.ic] || 'ms-opp'}" role="img" aria-label="${MSL()[MS[x.ic] || 'ms-opp']}"></span><p>${esc(x.t)}</p></div>`).join('')}</div></div>` : ''}
+    ${C.ideas.length ? `<div class="cz-sec"><h4>${I('i-sparkle', 'i')}${tt('نصائح', 'Tips')}</h4><div class="cz-ideas">${C.ideas.map((x) => `<div class="cz-idea${x.act ? ' tap' : ''}"${x.act ? ` onclick="${x.act}"` : ''}><span class="ms ${MS[x.ic] || 'ms-opp'}" role="img" aria-label="${MSL()[MS[x.ic] || 'ms-opp']}"></span><p>${arTip(x.t)}</p></div>`).join('')}</div></div>` : ''}
   </div>`;
 }
 function insight(P) {
