@@ -74,7 +74,8 @@ function axes(ps) {
     dc: ['dc', tt('المساهمات الدفاعية', 'Def. contribution'), (p) => p.dc90 || 0],
     bon: ['bon', tt('البونص', 'Bonus'), (p) => (p.bonus || 0) / st(p)],
     frm: ['frm', tt('الفورم', 'Form'), (p) => p.form],
-    min: ['min', tt('ضمان الدقائق', 'Nailed'), (p) => (p.starts ?? p.min / 90) / fin],
+    // ضمان الدقائق مقياس مطلق مو ترتيب: اللاعب الأساسي بكل الجولات = 100 مهما كان عدد الأساسيين بمركزه
+    min: ['min', tt('ضمان الدقائق', 'Nailed'), Object.assign((p) => Math.min(100, Math.round(100 * Math.max((p.starts ?? 0) / fin, p.min / (fin * 90)))), { abs: true })],
     fix: ['fix', tt('الجدول', 'Fixtures'), (p) => 5 - avgFdr(p.team, G.next, 5)],
     val: ['val', tt('القيمة', 'Value'), (p) => p.total / p.price],
   };
@@ -87,8 +88,10 @@ function xpS(p, n = 5) { const G = ST.G; let s = 0; for (let g = G.next; g < G.n
 function pctl(p, f) {
   const pool = ST.G.players.filter((x) => x.pos === p.pos && x.min >= 270);
   if (pool.length < 5) return 50;
-  const v = f(p); let below = 0; for (const x of pool) if (f(x) < v) below++;
-  return Math.round((below / pool.length) * 100);
+  if (f.abs) return Math.max(0, Math.min(100, Math.round(f(p))));
+  // ترتيب منصف للتعادلات: اللاعبين المتساويين ياخذون نفس المرتبة (وسط مجموعتهم) بدل ما يُحسبون أقل
+  const v = f(p); let below = 0, eq = 0; for (const x of pool) { const y = f(x); if (y < v) below++; else if (y === v) eq++; }
+  return Math.round(((below + eq / 2) / pool.length) * 100);
 }
 function radar(ps, A) {
   const S = 300, c = S / 2, R = 108, n = A.length;
@@ -173,7 +176,7 @@ export function vCompare() {
    ${head}
    <div class="card cmp-verdict" style="--c:${CC[bi]}"><span class="ms ms-opp"></span><div><small>${tt('التوصية', 'Verdict')}</small><b>${esc(best.name)}</b><p>${verdictTxt}</p>${verdictSub ? `<small class="cmp-vs">${verdictSub}</small>` : ''}</div></div>
    <div class="sec"><h2>${I('i-target')}${tt('بصمة اللاعب', 'Player profile')}</h2></div>
-   <div class="card cmp-rd">${radar(ps, A)}${legend}<p class="cmp-note">${tt('كل محور = ترتيب اللاعب بين لاعبين نفس مركزه (100 = الأفضل)', 'Each axis = percentile vs same-position players')}</p></div>
+   <div class="card cmp-rd">${radar(ps, A)}${legend}<p class="cmp-note">${tt('كل محور = ترتيب اللاعب بين لاعبين نفس مركزه (100 = الأفضل)، وضمان الدقائق = نسبة مشاركته أساسي', 'Each axis = percentile vs same-position players')}</p></div>
    <div class="sec"><h2>${I('i-chart')}${tt('آخر 6 جولات', 'Last 6 GWs')}</h2></div>
    <div class="card" id="cmpLine"><div class="aiload"><i></i><i></i><i></i></div></div>
    <div class="sec"><h2>${I('i-swords')}${tt('وجهاً لوجه', 'Head to head')}</h2></div>
