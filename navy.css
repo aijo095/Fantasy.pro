@@ -1,0 +1,98 @@
+/* =========================================================
+   ثيم «كحلي وبلاتيني» — يشتغل بس لما يختاره المستخدم من المظهر
+   (html[data-th=navy]). الخطوط ما تتغير، والشريط السفلي يبقى مثل ما هو.
+========================================================= */
+html[data-th=navy]{
+  --t-bg:#060A14; --t-s0:#0A1020; --t-s1:#0D1426; --t-s2:#121B32; --t-s3:#18233F;
+  --t-line:rgba(190,215,255,.09); --t-line2:rgba(190,215,255,.2);
+  --t-txt:#EEF3FB; --t-mut:#94A2BC; --t-mut2:#5E6B85;
+  --t-acc:#BFD8FF; --t-acc-d:#7FA8F0; --t-acc-rgb:150,190,255; --t-on-acc:#06102A; --t-k:#7CC4FF;
+  --t-icon:#E6EEFB;
+  --t-ambient:radial-gradient(90% 55% at 80% -10%,rgba(110,160,255,.18),transparent 60%),radial-gradient(60% 40% at 0% 100%,rgba(124,196,255,.07),transparent 60%);
+  --t-hero:radial-gradient(120% 90% at 100% 0%,rgba(124,170,255,.18),transparent 55%),linear-gradient(165deg,#131D38,#0A1020 70%);
+  --t-rim:linear-gradient(160deg,rgba(230,240,255,.6),rgba(150,190,255,.08) 35%,rgba(150,190,255,.04) 65%,rgba(230,240,255,.3));
+  --t-num:linear-gradient(180deg,#FFFFFF 10%,#CFE0FA 55%,#8EA6CC);
+  --t-tile:linear-gradient(150deg,#1B2747,#0E1529);
+  --t-ask:linear-gradient(100deg,rgba(124,196,255,.12),rgba(124,196,255,.02)),#0C1324;
+  --t-bar:linear-gradient(180deg,#34446A,#1A2440); --t-bar-up:linear-gradient(180deg,#EAF2FF,#7FA8F0);
+  --t-on:linear-gradient(180deg,#F4F8FF,#C7D8F3); --t-on-txt:#081430;
+  --t-pitch:radial-gradient(80% 60% at 50% 0%,rgba(150,190,255,.12),transparent 60%),linear-gradient(180deg,#0E2537,#0A1A2A);
+  /* ربط بمتغيرات التطبيق */
+  --bg:var(--t-bg); --bg2:var(--t-s0); --s1:var(--t-s1); --s2:var(--t-s2); --s3:var(--t-s3);
+  --line:var(--t-line); --line2:var(--t-line2); --txt:var(--t-txt); --mut:var(--t-mut); --mut2:var(--t-mut2);
+  --acc:var(--t-acc); --acc-d:var(--t-acc-d); --acc-rgb:var(--t-acc-rgb); --on-acc:var(--t-on-acc);
+  --fp-ink:var(--t-bg); --fp-carbon:var(--t-s1); --fp-graphite:var(--t-s2); --fp-slate:var(--t-s3);
+  --fp-neon:var(--t-acc); --fp-neon-d:var(--t-acc-d); --fp-neon-rgb:var(--t-acc-rgb); --fp-on-neon:var(--t-on-acc);
+  --fp-edge:var(--t-line); --fp-edge-2:var(--t-line2);
+  --card-a:rgba(18,27,50,.66); --card-b:rgba(10,16,32,.58);
+  --acc-soft:rgba(var(--t-acc-rgb),.12); --g1:var(--t-acc); --lime:var(--t-acc); --good:var(--t-acc);
+  --ic-k:var(--t-k);
+}
+/* الشريط السفلي: نفس قيمه الأصلية بالضبط */
+html[data-th=navy] .bnav{--acc:#3CF5A0;--acc-d:#16C47F;--acc-rgb:60,245,160;--on-acc:#03140C;--s1:#0E1116;--s2:#141820;--mut:#9AA3B2;--line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.12);--txt:#EEF1F5;--fp-neon:#3CF5A0;--fp-neon-rgb:60,245,160;--fp-carbon:#0E1116;--fp-graphite:#141820;--fp-edge:rgba(255,255,255,.07);--fp-edge-2:rgba(255,255,255,.12);--ic-k:currentColor}
+
+/* الخلفية */
+html[data-th=navy] body{background:var(--t-bg)!important}
+html[data-th=navy] body::before{background:var(--t-ambient)!important;opacity:1!important}
+html[data-th=navy] #lux-bg{opacity:0!important}
+
+/* الشريط العلوي */
+html.ui2[data-th=navy] .topbar .av{background:var(--t-s2)!important;color:var(--t-acc)!important;box-shadow:inset 0 0 0 1.5px var(--t-acc),0 0 0 4px rgba(var(--t-acc-rgb),.08)!important}
+html[data-th=navy] .topbar .icon-btn,html[data-th=navy] .topbar .sbar{background:var(--t-s1)!important;box-shadow:inset 0 0 0 1px var(--t-line)!important;color:var(--t-txt)!important}
+html[data-th=navy] .topbar .sbar .i{color:var(--t-acc)}
+html[data-th=navy] .fresh{background:var(--t-s1)!important;box-shadow:inset 0 0 0 1px var(--t-line)}
+
+/* بطاقة الجولة */
+html.v2[data-th=navy] .h2-hero,html.v2[data-th=navy] .team-hero{background:var(--t-hero) padding-box,var(--t-rim) border-box!important;background-blend-mode:normal!important;border:1px solid transparent!important;box-shadow:0 30px 60px -36px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.05)!important}
+html.v2[data-th=navy] .h2-hero::after,html.v2[data-th=navy] .team-hero::after{background:linear-gradient(90deg,transparent,rgba(var(--t-acc-rgb),.7) 50%,transparent)!important;opacity:.8!important}
+html[data-th=navy] .gw-mark{opacity:.07!important;-webkit-text-stroke:1px var(--t-acc)!important}
+html[data-th=navy] .h2-pts b,html[data-th=navy] .team-hero .big-num{background:var(--t-num);-webkit-background-clip:text;background-clip:text;color:transparent!important;filter:drop-shadow(0 6px 18px rgba(var(--t-acc-rgb),.25))}
+html[data-th=navy] .h2-stats{gap:0!important;border-top:1px solid var(--t-line);padding-top:12px;margin-top:6px}
+html.v2[data-th=navy] .h2-st{background:none!important;box-shadow:none!important;border:0!important;border-inline-start:1px solid var(--t-line)!important;border-radius:0!important}
+html.v2[data-th=navy] .h2-st:first-child{border-inline-start:0!important}
+html.v2[data-th=navy] .h2-st::before,html.v2[data-th=navy] .h2-st::after,html.v2[data-th=navy] .h2-cd>div::before,html.v2[data-th=navy] .h2-cd>div::after,html.v2[data-th=navy] .h2-dl::before,html.v2[data-th=navy] .h2-dl::after,html.v2[data-th=navy] .live-side>div::before,html.v2[data-th=navy] .live-side>div::after{display:none!important}
+html[data-th=navy] .h2-st small{color:var(--t-mut)!important}
+html[data-th=navy] .h2-st b{color:var(--t-txt)!important}
+html[data-th=navy] .h2-acts button{background:var(--t-s2)!important;box-shadow:inset 0 0 0 1px var(--t-line)!important}
+html.v2[data-th=navy] .live-side>div{background:rgba(255,255,255,.02)!important;box-shadow:inset 0 0 0 1px var(--t-line)!important;border:0!important}
+
+/* الديدلاين */
+html.v2[data-th=navy] .h2-dl{background:var(--t-s1)!important;box-shadow:inset 0 0 0 1px var(--t-line)!important;border:0!important}
+html[data-th=navy] .h2-dl .i{color:var(--t-acc)!important}
+html.v2[data-th=navy] .h2-cd>div{background:var(--t-s2)!important;box-shadow:inset 0 0 0 1px var(--t-line),inset 0 -12px 18px -14px rgba(var(--t-acc-rgb),.35)!important;border:0!important}
+html[data-th=navy] .h2-cd b{color:var(--t-txt)!important}
+
+/* عناوين الأقسام: ماسة صغيرة وخط */
+html[data-th=navy] .h2-h,html[data-th=navy] .sec h2{display:flex;align-items:center;gap:10px}
+html.ui2[data-th=navy] .h2-h::before,html.ui2[data-th=navy] #view .sec h2::before,html.ui2[data-th=navy] #view[data-view=more] .sec h2::before{display:block!important;content:""!important;width:7px!important;height:7px!important;transform:rotate(45deg)!important;background:var(--t-acc)!important;box-shadow:0 0 12px rgba(var(--t-acc-rgb),.6)!important;border-radius:1.5px!important;flex:none!important;position:static!important;margin:0!important}
+html.ui2[data-th=navy] .h2-h::after,html.ui2[data-th=navy] #view .sec h2::after{display:block!important;content:""!important;flex:1!important;height:1px!important;width:auto!important;background:linear-gradient(to left,var(--t-line2),transparent)!important;position:static!important;margin:0!important;transform:none!important}
+html.ui2[data-th=navy] #view[data-view=more] .sec h2{color:var(--t-mut)!important}
+html.ui2[data-th=navy] #view .sec{background:none!important}
+
+/* القوائم والبطاقات */
+html.ui2[data-th=navy] .h2-list,html.ui2[data-th=navy] .list,html.ui2[data-th=navy] .h2-card,html.ui2[data-th=navy] .card{background:var(--t-s1)!important;box-shadow:inset 0 0 0 1px var(--t-line),0 18px 40px -30px rgba(0,0,0,.9)!important;border:0!important}
+html[data-th=navy] .h2-act,html[data-th=navy] .list .row{border-color:var(--t-line)!important}
+html.ui2[data-th=navy] .h2-ic,html.ui2[data-th=navy] #view[data-view=more] .row .pbig,html.ui2[data-th=navy] #view[data-view=more] .row:nth-child(n) .pbig{--c1:var(--t-acc);--c2:var(--t-acc-d);background:var(--t-tile)!important;color:var(--t-icon)!important;box-shadow:inset 0 0 0 1px rgba(var(--t-acc-rgb),.28),inset 0 1px 0 rgba(255,255,255,.08),0 10px 18px -12px rgba(0,0,0,.9)!important;border-radius:14px!important}
+html.ui2[data-th=navy] #view[data-view=more] .row .pbig{width:42px!important;height:42px!important}
+html.ui2[data-th=navy] #view[data-view=more] .row .pbig svg,html[data-th=navy] .h2-ic .i{width:22px!important;height:22px!important}
+html[data-th=navy] .h2-act em{background:transparent!important;color:var(--t-acc)!important;box-shadow:inset 0 0 0 1px rgba(var(--t-acc-rgb),.45)!important}
+html[data-th=navy] .info span,html[data-th=navy] .h2-tx small{color:var(--t-mut)!important}
+
+/* المساعد والمخطط */
+html[data-th=navy] .h2-ask{background:var(--t-ask)!important;box-shadow:inset 0 0 0 1px rgba(var(--t-acc-rgb),.25)!important;border:0!important}
+html[data-th=navy] .h2-ask .i{color:var(--t-acc)!important}
+html[data-th=navy] .h2-chart .bar i{background:var(--t-bar)!important}
+html[data-th=navy] .h2-chart .bar i.up{background:var(--t-bar-up)!important}
+
+/* فريقي واللاعبين */
+html[data-th=navy] .tabs2,html[data-th=navy] .seg{background:var(--t-s1)!important;box-shadow:inset 0 0 0 1px var(--t-line)!important;border:0!important}
+html.v2[data-th=navy] .tabs2 button.on,html.v2[data-th=navy] .seg button.on{background:var(--t-on)!important;color:var(--t-on-txt)!important;box-shadow:0 8px 20px -12px rgba(var(--t-acc-rgb),.7)!important}
+html.v2[data-th=navy] .tabs2 button.on *{color:var(--t-on-txt)!important}
+html[data-th=navy] .gwstrip button{background:var(--t-s1)!important;box-shadow:inset 0 0 0 1px var(--t-line)!important;border:0!important}
+html[data-th=navy] .gwstrip button.on{background:var(--t-tile)!important;box-shadow:inset 0 0 0 1.5px var(--t-acc)!important}
+html[data-th=navy] .gwstrip button.on b{color:var(--t-acc)!important}
+html[data-th=navy] .btn-g{background:var(--t-s1)!important;box-shadow:inset 0 0 0 1px var(--t-line)!important;border:0!important}
+html[data-th=navy] .pitch{background:var(--t-pitch)!important;box-shadow:inset 0 0 0 1px rgba(var(--t-acc-rgb),.18)!important}
+html[data-th=navy] .tag.amber{background:rgba(var(--t-acc-rgb),.1)!important;color:var(--t-acc)!important}
+html[data-th=navy] .searchbox{background:var(--t-s1)!important;box-shadow:inset 0 0 0 1px var(--t-line)!important;border:0!important}
+html[data-th=navy] .h2-ck{background:var(--t-s1)!important;box-shadow:inset 0 0 0 1px rgba(255,194,75,.3)!important;border:0!important}

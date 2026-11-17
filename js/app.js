@@ -16,6 +16,8 @@ import './sharecard.js';
 import { VIEWS, AFTER, startLivePolling, freshness } from './views/index.js';
 
 document.body.insertAdjacentHTML('afterbegin', SPRITE);
+['home', 'pitch', 'season', 'users', 'grid'].forEach((k) => { const s = document.getElementById('i-' + k); if (s && !document.getElementById('n-' + k)) { const c = s.cloneNode(true); c.id = 'n-' + k; s.parentNode.appendChild(c); } }); // نسخ ثابتة للشريط السفلي
+import('./navy-icons.js');
 applyDir();
 
 /* ---------- الشاشات ---------- */
@@ -260,7 +262,7 @@ const NAV = [
   ['g_comp', [['leagues', 'i-trophy'], ['rivals', 'i-swords'], ['captains', 'i-crown'], ['elite', 'i-globe'], ['chips', 'i-bolt'], ['stats', 'i-history'], ['achievements', 'i-medal']]],
   ['g_more', [['notifs', 'i-bell'], ['settings', 'i-settings']]],
 ];
-const BNAV = [['home', 'i-home'], ['team', 'i-pitch'], ['season', 'i-season'], ['players', 'i-users'], ['more', 'i-grid']];
+const BNAV = [['home', 'n-home'], ['team', 'n-pitch'], ['season', 'n-season'], ['players', 'n-users'], ['more', 'n-grid']];
 export function buildNav() {
   const nav = NAV.map(([g, items]) => [g, (g === 'g_more' && ST.admin ? [...items, ['admin', 'i-admin']] : items)]);
   $('#side').innerHTML = `<div style="display:flex;align-items:center;gap:10px;margin:4px 8px 14px"><div class="logo-ic" style="width:34px;height:34px;font-size:16px;border-radius:10px">F</div><b style="font-size:16px">${tt('فانتازي', 'Fantasy')} <span class="gt">${tt('برو', 'Pro')}</span></b></div>${nav.map(([g, items]) => `<div class="grp">${t(g)}</div>${items.map((n) => `<button class="nb" data-v="${n[0]}" onclick="go('${n[0]}')">${I(n[1])}<span style="flex:1">${t(n[0])}</span>${n[0] === 'notifs' ? '<span class="tag lime" id="sideBadge"></span>' : ''}</button>`).join('')}`).join('')}`;

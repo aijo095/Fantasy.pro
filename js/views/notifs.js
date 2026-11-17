@@ -57,6 +57,7 @@ export function vSettings() {
 /* ---------- المظهر: ألوان وخلفيات مريحة للبصر ---------- */
 const THEMES = [
   ['def', tt('الأصلي', 'Original'), tt('أسود وأخضر زمردي', 'Black & emerald'), '#0A0D14', '#171C27', '#34D399'],
+  ['navy', tt('كحلي وبلاتيني', 'Navy & platinum'), tt('كحلي عميق ولمعة بلاتينية', 'Deep navy & platinum sheen'), '#060A14', '#121B32', '#BFD8FF'],
   ['royal', tt('أزرق ملكي', 'Royal blue'), tt('كحلي غامق وأزرق ساطع', 'Deep navy & bright blue'), '#080D1C', '#172242', '#4F8CFF'],
   ['cyan', tt('فيروزي', 'Cyan'), tt('أخضر بحري وفيروزي حيوي', 'Sea dark & vivid cyan'), '#061316', '#132F36', '#22D3EE'],
   ['violet', tt('بنفسجي', 'Violet'), tt('ليلي وبنفسجي لامع', 'Night & bright violet'), '#0D0A1C', '#221C42', '#9D7BFF'],
