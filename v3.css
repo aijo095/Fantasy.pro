@@ -414,3 +414,13 @@ em.up{color:var(--acc)}em.down{color:var(--bad)}
 .cl-pt{flex:none;display:flex;flex-direction:column;align-items:center;font:700 15px Inter,sans-serif;min-width:40px}
 .cl-pt small{font:500 10px 'IBM Plex Sans Arabic',sans-serif;color:var(--fp-steel,#8A93A3)}
 .cl-e{padding:16px;text-align:center}
+/* النوادي: زر رجوع واضح + صفوف المباريات قابلة للضغط */
+.cl-top{display:flex;align-items:center;gap:10px;margin:2px 0 12px}
+.cl .cl-back{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px 0 12px;margin:0;border-radius:12px;font-size:13px;font-weight:700;color:var(--txt);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.cl .cl-back .i{width:16px;height:16px;color:var(--acc)}
+.cl .cl-back:active{transform:scale(.97);background:rgba(255,255,255,.1)}
+.cl-crumb{font-size:12px;color:var(--fp-steel,#8A93A3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.cl-crumb b{color:var(--txt);font-weight:600}
+button.cl-m{width:100%;text-align:start}
+button.cl-m:active{background:rgba(255,255,255,.04)}
+button.cl-m::after{content:"";flex:none;width:6px;height:6px;border-top:1.5px solid currentColor;border-left:1.5px solid currentColor;transform:rotate(-45deg);opacity:.35;margin-inline-start:2px}
+html[dir=ltr] button.cl-m::after{transform:rotate(135deg)}

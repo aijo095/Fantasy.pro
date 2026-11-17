@@ -44,14 +44,14 @@ function clubHTML(R) {
   const res = (f) => { const h = f.h === tid, gf = h ? f.hs : f.as, ga = h ? f.as : f.hs; return gf > ga ? 'W' : gf < ga ? 'L' : 'D'; };
   const tabs = [['res', tt(`النتائج (${past.length})`, `Results (${past.length})`)], ['next', tt(`الجاية (${next.length})`, `Upcoming (${next.length})`)], ['pl', tt('اللاعبين', 'Players')]];
   let body = '';
-  if (TAB === 'res') body = past.length ? `<div class="card cl-ls">${past.map((f) => { const r = res(f); return `<div class="cl-m"><span class="cl-gw num">${f.ev}</span><div class="cl-sc"><span class="${f.h === tid ? 'me' : ''}">${esc(tName(f.h))}</span>${scoreHTML(f.hs, f.as, 'num')}<span class="${f.a === tid ? 'me' : ''}">${esc(tName(f.a))}</span></div><i class="cl-f ${r} w">${RL()[r]}</i></div>`; }).join('')}</div>` : `<p class="mut cl-e">${tt('ما لعب أي مباراة بعد', 'No matches played yet')}</p>`;
-  if (TAB === 'next') body = next.length ? `<div class="card cl-ls">${next.map((f) => { const h = f.h === tid, opp = h ? f.a : f.h, d = h ? f.hd : f.ad; return `<div class="cl-m"><span class="cl-gw num">${f.ev || '—'}</span><div class="cl-op">${crest(tShort(opp), 22)}<b>${esc(tName(opp))}</b><small>${h ? tt('بملعبه', 'Home') : tt('خارج ملعبه', 'Away')}</small></div><div class="cl-kd"><span class="rate f${d}">${d}</span><small>${f.ko ? fmtTime(f.ko) : tt('موعد غير محدد', 'TBC')}</small></div></div>`; }).join('')}</div>` : `<p class="mut cl-e">${tt('ماكو مباريات جاية', 'No upcoming matches')}</p>`;
+  if (TAB === 'res') body = past.length ? `<div class="card cl-ls">${past.map((f) => { const r = res(f); return `<button class="cl-m tap" onclick="openMatchC(${f.id},${f.ev})"><span class="cl-gw num">${f.ev}</span><div class="cl-sc"><span class="${f.h === tid ? 'me' : ''}">${esc(tName(f.h))}</span>${scoreHTML(f.hs, f.as, 'num')}<span class="${f.a === tid ? 'me' : ''}">${esc(tName(f.a))}</span></div><i class="cl-f ${r} w">${RL()[r]}</i></button>`; }).join('')}</div>` : `<p class="mut cl-e">${tt('ما لعب أي مباراة بعد', 'No matches played yet')}</p>`;
+  if (TAB === 'next') body = next.length ? `<div class="card cl-ls">${next.map((f) => { const h = f.h === tid, opp = h ? f.a : f.h, d = h ? f.hd : f.ad; return `<${f.ev ? `button class="cl-m tap" onclick="openMatchC(${f.id},${f.ev})"` : 'div class="cl-m"'}><span class="cl-gw num">${f.ev || '—'}</span><div class="cl-op">${crest(tShort(opp), 22)}<b>${esc(tName(opp))}</b><small>${h ? tt('بملعبه', 'Home') : tt('خارج ملعبه', 'Away')}</small></div><div class="cl-kd"><span class="rate f${d}">${d}</span><small>${f.ko ? fmtTime(f.ko) : tt('موعد غير محدد', 'TBC')}</small></div></${f.ev ? 'button' : 'div'}>`; }).join('')}</div>` : `<p class="mut cl-e">${tt('ماكو مباريات جاية', 'No upcoming matches')}</p>`;
   if (TAB === 'pl') {
     const ps = G.players.filter((p) => p.team === tid && (POS === 'ALL' || p.pos === POS)).sort((a, b) => b.total - a.total || b.min - a.min);
     const seg = ['ALL', 'GK', 'DEF', 'MID', 'FWD'].map((k) => `<button class="${POS === k ? 'on' : ''}" onclick="clubPos('${k}')">${k === 'ALL' ? tt('الكل', 'All') : { GK: tt('حراس', 'GK'), DEF: tt('دفاع', 'DEF'), MID: tt('وسط', 'MID'), FWD: tt('هجوم', 'FWD') }[k]}</button>`).join('');
     body = `<div class="cl-seg sm">${seg}</div><div class="card cl-ls">${ps.map((p, i) => `<button class="cl-p" onclick="openPlayer(${p.id})"><span class="num cl-n">${i + 1}</span><span class="mini">${pShirt(p)}</span><span class="cl-pi"><b>${esc(p.name)}${mine.has(p.id) ? `<em class="tag lime">${tt('بفريقك', 'Yours')}</em>` : ''}</b><small><span class="pos ${p.pos}">${p.pos}</span><bdi>£${p.price.toFixed(1)}</bdi> · <bdi>${p.own}%</bdi> · ${tt(`${p.min} دقيقة`, `${p.min}'`)}</small></span><b class="num cl-pt">${p.total}<small>${tt('نقطة', 'pts')}</small></b></button>`).join('') || `<p class="mut cl-e">—</p>`}</div>`;
   }
-  return `<button class="cl-back" onclick="clubOpen(null)">${I('i-arrow', 'i')}${tt('كل الأندية', 'All clubs')}</button>
+  return `<div class="cl-top"><button class="cl-back" onclick="clubOpen(null)" aria-label="${tt('رجوع', 'Back')}">${I('i-back', 'i')}<span>${tt('رجوع', 'Back')}</span></button><span class="cl-crumb">${tt('النوادي', 'Clubs')} / <b>${esc(tName(tid))}</b></span></div>
   <div class="card cl-hero">${crest(tShort(tid), 52)}<div><b>${esc(tName(tid))}</b><small>${tt(`المركز ${rank}`, `Position ${rank}`)} · ${tt(`${row.pts} نقطة`, `${row.pts} pts`)}</small></div></div>
   <div class="cl-kv"><div><b class="num">${row.w}</b><small>${tt('فوز', 'Won')}</small></div><div><b class="num">${row.d}</b><small>${tt('تعادل', 'Drawn')}</small></div><div><b class="num">${row.l}</b><small>${tt('خسارة', 'Lost')}</small></div><div><b class="num">${row.gf}</b><small>${tt('سجّل', 'Scored')}</small></div><div><b class="num">${row.ga}</b><small>${tt('استقبل', 'Conceded')}</small></div></div>
   <div class="cl-seg">${tabs.map(([k, l]) => `<button class="${TAB === k ? 'on' : ''}" onclick="clubTab('${k}')">${l}</button>`).join('')}</div>${body}`;
@@ -64,7 +64,11 @@ export function vClubs() {
   return `<div class="cl">${SEL == null ? listHTML(R) : clubHTML(R)}</div>`;
 }
 Object.assign(window, {
-  clubOpen: (id) => { SEL = id; TAB = 'res'; POS = 'ALL'; window.render(); window.scrollTo(0, 0); },
+  clubOpen: (id) => { const opening = id != null && SEL == null; SEL = id; TAB = 'res'; POS = 'ALL'; if (opening) { try { history.pushState({ v: 'clubs', c: id }, '', '#clubs'); } catch {} } window.render(); window.scrollTo(0, 0); },
   clubTab: (k) => { TAB = k; window.render(); },
   clubPos: (k) => { POS = k; window.render(); },
 });
+
+/* رجوع الجهاز/الإيماءة/زر الرجوع العلوي: من صفحة النادي يرجع لقائمة الأندية */
+const prevHook = window.__backHook;
+window.__backHook = () => { if (ST.view === 'clubs' && SEL != null) { SEL = null; window.render(); window.scrollTo(0, 0); return true; } return prevHook ? prevHook() : false; };
