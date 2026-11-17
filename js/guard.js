@@ -58,8 +58,8 @@ export function checkRecommendation(plan, rec, ctx) {
   const after = applyTransfers(plan, trs, PM, ctx.sell10);
   if (after.bank10 < 0) out.push(issue('budget', 'block', `تتجاوز الميزانية بـ${(-after.bank10 / 10).toFixed(1)}م`));
   const paid = CHIP_FREE.has(chip) ? 0 : Math.max(0, trs.length - (plan.ft ?? 1));
-  if (paid > (ctx.maxHits ?? 1)) out.push(issue('too_many_hits', 'block', `الخطة تحتاج ${paid} ضربات (−${paid * 4})، أكثر من المسموح`));
-  else if (paid) out.push(issue('hit', 'warn', `الخطة بيها ضربة −${paid * 4}`));
+  if (paid > (ctx.maxHits ?? 1)) out.push(issue('too_many_hits', 'block', `الخطة تحتاج خصم ${paid * 4} نقطة (${paid} انتقالات إضافية)، أكثر من المسموح`));
+  else if (paid) out.push(issue('hit', 'warn', `الخطة بيها خصم −${paid * 4} نقطة`));
 
   // 4) قوانين الفريق: 15 لاعب، 2/5/5/3، حد 3 من نفس النادي
   const shape = { GK: 0, DEF: 0, MID: 0, FWD: 0 }, club = {};
@@ -97,7 +97,7 @@ export function checkRecommendation(plan, rec, ctx) {
     if (left != null && left <= 0) out.push(issue('chip_used', 'block', `ورقة ${chip} مستخدمة أو مو متاحة`));
     if (chip === '3xc' && cap != null && PM(cap) && avail(PM(cap), gw) < 1) out.push(issue('chip_cap_risk', 'block', 'الكابتن الثلاثي على لاعب مو مضمون المشاركة'));
     if (chip === 'bboost') { const bad = after.bench.filter((id) => PM(id) && (avail(PM(id), gw) < 0.75 || !fixturesFor(PM(id).team, gw).length)); if (bad.length) out.push(issue('chip_bench_weak', 'warn', `البنش بوست ويا ${bad.length} بدلاء ما مضمون يلعبون`, bad)); }
-    if (CHIP_FREE.has(chip) && trs.some((t) => t.cost > 0)) out.push(issue('chip_hit_conflict', 'warn', 'خصم ضربة محسوب ويا ورقة انتقالات مجانية'));
+    if (CHIP_FREE.has(chip) && trs.some((t) => t.cost > 0)) out.push(issue('chip_hit_conflict', 'warn', 'خصم انتقال محسوب ويا ورقة انتقالات مجانية'));
   }
   return { ok: !out.some((x) => x.sev === 'block'), issues: out, after };
 }

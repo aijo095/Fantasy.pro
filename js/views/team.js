@@ -135,7 +135,7 @@ function learnHTML(L, D, GU) {
   return `<div class="cz-learn"><small>${I('i-bot', 'i')}${tt('ذاكرة المدرب والتعلّم', 'Memory & learning')}</small><p>${body}</p>${last ? `<p>${esc(last)}</p>` : ''}${dm.map((x) => `<p>${esc(x)}</p>`).join('')}${notes.length ? `<ul>${notes.slice(0, 3).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}</div>`;
 }
 /** ذاكرة القرارات: جودة القرار بعيداً عن الحظ، دقة التوقع مقابل خط أساس، الأخطاء المتكررة، والتوصيات اللي استبعدها كاشف التضارب */
-const RG_T = () => ({ captain: tt('الكابتن', 'captain'), transfer: tt('الانتقالات', 'transfers'), hold: tt('تجاهل انتقال مقترح', 'ignored transfer'), roll: tt('الاحتفاظ بالانتقال', 'rolling'), missed_hit: tt('رفض ضربة', 'skipped hit'), sold_before_haul: tt('بيع لاعب قبل جولة قوية', 'selling before a haul'), ft_wasted: tt('ضياع انتقال مجاني', 'wasted free transfer') });
+const RG_T = () => ({ captain: tt('الكابتن', 'captain'), transfer: tt('الانتقالات', 'transfers'), hold: tt('تجاهل انتقال مقترح', 'ignored transfer'), roll: tt('الاحتفاظ بالانتقال', 'rolling'), missed_hit: tt('رفض انتقال بخصم', 'skipped hit'), sold_before_haul: tt('بيع لاعب قبل جولة قوية', 'selling before a haul'), ft_wasted: tt('ضياع انتقال مجاني', 'wasted free transfer') });
 function dmLines(D, GU) {
   const out = [];
   const nm = (id) => ST.G.PM?.[id]?.name || '';
@@ -179,7 +179,7 @@ function arTip(raw) {
     .replace(/\(xG\)/g, '(الأهداف المتوقعة)').replace(/\bxG\b/g, 'الأهداف المتوقعة').replace(/\bxA\b/g, 'الصناعة المتوقعة').replace(/\bxP\b/g, 'نقطة متوقعة')
     .replace(/\b([A-Z]{3})\b/g, (m) => SH[m] || m)
     .replace(/(\d+(?:\.\d+)?)م(?![\u0621-\u064A])/g, '$1 مليون');
-  const RX = /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.'\-]*(?:\s+[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.'\-]*)*)|([+−-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?%?)/g;
+  const RX = /(\p{Script=Latin}[\p{Script=Latin}\p{M}.'\-]*(?:\s+\p{Script=Latin}[\p{Script=Latin}\p{M}.'\-]*)*)|([+−-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?%?)/gu;
   let out = '', i = 0, m;
   while ((m = RX.exec(s))) { out += esc(s.slice(i, m.index)) + (m[1] ? `<bdi>${esc(m[1])}</bdi>` : `<bdi dir="ltr" class="num">${m[2]}</bdi>`); i = m.index + m[0].length; }
   s = out + esc(s.slice(i));
@@ -193,7 +193,7 @@ function coachCard(P) {
     return `<div class="card cz"><div class="cz-h"><span class="cz-ic">${I('i-bot', 'i')}</span><div><b>${tt('مدربك الذكي', 'Your smart coach')}</b><small>${coachErr ? tt('ما كدرنا نجيب جولاتك هسه، جرّب بعد شوية', 'Could not load your gameweeks') : tt('ديحلل جولاتك واختياراتك حتى يبني أسلوبك…', 'Reading your gameweeks to learn your style…')}</small></div></div>${coachErr ? '' : `<div class="cz-load"><i style="width:${Math.round(coachProg * 100)}%"></i></div>`}</div>`;
   }
   const C = CO.coachPlan(P), [an, ad] = CO.ARCH()[M.arch], T = M.T, S = M.S;
-  const TR = [['captain', tt('الكابتن', 'Captain choices'), tt('كم مرة الكابتن كان أفضل لاعب عندك أو قريب منه', 'How often your captain was your best or close')], ['transfers', tt('الانتقالات', 'Transfers'), tt('اللاعب اللي دخل جاب أكثر من اللي طلع بالجولات الثلاث بعد الانتقال', 'Player in vs player out over the next 3 GWs')], ['bench', tt('الدكة', 'Bench'), tt('كل ما قلت النقاط اللي تضيع على الدكة يرتفع الرقم', 'Higher = fewer points left on the bench')], ['discipline', tt('قلة الضربات', 'Few hits'), tt('كل ما قلت الضربات أو رجعت نقاطها يرتفع الرقم', 'Higher = fewer hits or hits that paid off')], ['patience', tt('الصبر', 'Patience'), tt('تحتفظ بالانتقال وباللاعبين بدل التغيير كل جولة', 'Keeping transfers and players instead of changing every week')], ['risk', tt('الفروقات', 'Differentials'), tt('كل ما ابتعدت عن لاعبين الأغلبية يرتفع الرقم', 'Higher = further from what most managers own')]];
+  const TR = [['captain', tt('الكابتن', 'Captain choices'), tt('كم مرة الكابتن كان أفضل لاعب عندك أو قريب منه', 'How often your captain was your best or close')], ['transfers', tt('الانتقالات', 'Transfers'), tt('اللاعب اللي دخل جاب أكثر من اللي طلع بالجولات الثلاث بعد الانتقال', 'Player in vs player out over the next 3 GWs')], ['bench', tt('الدكة', 'Bench'), tt('كل ما قلت النقاط اللي تضيع على الدكة يرتفع الرقم', 'Higher = fewer points left on the bench')], ['discipline', tt('قلة الخصومات', 'Few hits'), tt('كل ما قلت خصومات الانتقال أو رجعت نقاطها يرتفع الرقم', 'Higher = fewer hits or hits that paid off')], ['patience', tt('الصبر', 'Patience'), tt('تحتفظ بالانتقال وباللاعبين بدل التغيير كل جولة', 'Keeping transfers and players instead of changing every week')], ['risk', tt('الفروقات', 'Differentials'), tt('كل ما ابتعدت عن لاعبين الأغلبية يرتفع الرقم', 'Higher = further from what most managers own')]];
   const col = (v) => (v == null ? 'var(--mut)' : v >= 70 ? 'var(--acc)' : v >= 45 ? 'var(--warn)' : 'var(--bad)');
   const t = C.transfer, nm = (id) => ST.G.PM?.[id]?.name || '';
   const pn = (p) => `<button class="cz-p" onclick="openPlayer(${p.id})"><span class="mini">${pShirt(p)}</span><span><b>${esc(p.name)}</b><small><bdi>${tShort(p.team)}</bdi> · <bdi>£${p.price}</bdi></small></span></button>`;
@@ -201,7 +201,7 @@ function coachCard(P) {
   const best = C.bestScen, lbl = (k) => (k === 'roll' ? tt('احتفظ', 'Roll') : k === 'one' ? tt('انتقال', '1 move') : tt('انتقالين', '2 moves'));
   const main = t.kind === 'go'
     ? `<div class="cz-mv" dir="ltr">${pn(t.m.o)}<span class="cz-ar">${I('i-arrow', 'i flipx')}</span>${pn(t.m.c)}</div>`
-    : `<div class="cz-hold"><b>${t.kind === 'roll' ? tt('احتفظ بالانتقال هالجولة', 'Roll this week') : tt('لا تاخذ ضربة هالجولة', 'Skip the hit')}</b></div>`;
+    : `<div class="cz-hold"><b>${t.kind === 'roll' ? tt('احتفظ بالانتقال هالجولة', 'Roll this week') : tt('لا تسوي انتقال بخصم هالجولة', 'Skip the hit')}</b></div>`;
   const opts = C.scen?.length > 1 ? `<div class="cz-o3">${C.scen.map((x) => `<div class="${x === best ? 'on' : ''}"><small>${lbl(x.k)}</small>${gnum(x.g)}</div>`).join('')}</div>${best?.k === 'two' ? `<div class="cz-line">${tt('الانتقال الثاني', '2nd move')}${mvLine(best.m[1].o.name, best.m[1].c.name)}</div>` : ''}` : '';
   const urgent = C.timing?.k === 'now' ? `<div class="cz-line warn">${I('i-clock', 'i')}<span>${esc(C.timing.t)}</span></div>` : '';
   const sp = C.seq?.cls?.best, plan = sp?.steps?.some((x) => x.tr.length) ? `<div class="cz-sub"><h5>${tt('خطة 5 جولات', '5-GW plan')}<span class="cz-h5v">${gnum(sp.gain)}</span></h5><div class="cz-plan">${sp.steps.map((x) => `<div class="cz-gw${x.tr.length ? '' : ' q'}"><span class="cz-gn num">${x.gw}</span><div>${x.tr.length ? x.tr.map(([o, n]) => mvLine(nm(o), nm(n))).join('') : `<span class="cz-q">${tt('احتفظ', 'Roll')}</span>`}</div>${x.hit ? `<em class="cz-hit num" dir="ltr">−${x.hit}</em>` : ''}</div>`).join('')}</div></div>` : '';
@@ -211,7 +211,7 @@ function coachCard(P) {
   return `<div class="card cz">
     <div class="cz-h"><span class="cz-ic">${I('i-bot', 'i')}</span><div><b>${tt('مدربك الذكي', 'Your smart coach')}</b><small>${tt(`أسلوبك: ${an}`, `Style: ${an}`)}</small></div></div>
     ${C.focus ? `<div class="cz-line focus"><small>${tt('ركّز على', 'Focus')}</small><span>${esc(C.focus.t)}</span></div>` : ''}
-    <div class="cz-st"><span><b class="${S.vsAvg >= 0 ? 'up' : 'down'}" dir="ltr">${S.vsAvg >= 0 ? '+' : ''}${S.vsAvg}</b><small>${tt('عن المعدل', 'Vs avg')}</small></span><span><b dir="ltr">${S.hitsN}</b><small>${tt('ضربات', 'Hits')}</small></span><span><b dir="ltr">${S.benchPts}</b><small>${tt('ضاعت بالدكة', 'Bench lost')}</small></span><span><b>${S.favF || '—'}</b><small>${tt('تشكيلك', 'Formation')}</small></span></div>
+    <div class="cz-st"><span><b class="${S.vsAvg >= 0 ? 'up' : 'down'}" dir="ltr">${S.vsAvg >= 0 ? '+' : ''}${S.vsAvg}</b><small>${tt('عن المعدل', 'Vs avg')}</small></span><span><b dir="ltr">${S.hitsN}</b><small>${tt('انتقالات بخصم', 'Hits')}</small></span><span><b dir="ltr">${S.benchPts}</b><small>${tt('ضاعت بالدكة', 'Bench lost')}</small></span><span><b>${S.favF || '—'}</b><small>${tt('تشكيلك', 'Formation')}</small></span></div>
     <div class="cz-sec"><h4>${I('i-gauge', 'i')}${tt('تقييمك', 'Your scores')}${learn ? `<span class="cz-h4s">${learn}</span>` : ''}</h4><div class="cz-tr">${TR.map(([k, l]) => `<div class="cz-t"><span>${l}</span><div class="meter"><i style="width:${T[k] ?? 0}%;background:${col(T[k])}"></i></div><b class="num" style="color:${col(T[k])}">${T[k] ?? '—'}</b></div>`).join('')}</div></div>
     <div class="cz-sec"><h4>${I('i-swap', 'i')}${tt('الانتقال', 'Transfer')}${confChip(C.trConf)}</h4>${main}${opts}${urgent}${plan}</div>
     <div class="cz-sec"><h4>${I('i-star', 'i')}${tt('الكابتن', 'Captain')}${confChip(C.capConf)}</h4>${capHTML}</div>

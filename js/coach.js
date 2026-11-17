@@ -188,7 +188,7 @@ function archetype(T, S) {
 }
 export const ARCH = () => ({
   chaser: [tt('تشتري اللاعب بعد جولة وحدة قوية', 'Buys after one big week'), tt('لهذا نحكم على اللاعب من دقائقه وفرصه الحقيقية (xG/xA) ومبارياته الجاية، مو من جولة وحدة.', 'You buy after a haul. We weight consistency harder so you skip the bubbles.')],
-  gambler: [tt('تاخذ ضربات (−4) كثيرة', 'Takes many hits'), tt('لهذا ما ننصحك بضربة إلا إذا ترجع أكثر من نقاطها بوضوح بالجولات الجاية.', 'You take many hits. A hit must clearly pay back before we suggest it.')],
+  gambler: [tt('تسوي انتقالات بخصم (−4) كثير', 'Takes many hits'), tt('لهذا ما ننصحك بانتقال بخصم إلا إذا ترجع أكثر من نقاطها بوضوح بالجولات الجاية.', 'You take many hits. A hit must clearly pay back before we suggest it.')],
   maverick: [tt('تختار لاعبين قليلين الملكية', 'Picks low-owned players'), tt('لهذا نطلعلك لاعبين قليلين الملكية تسندهم أرقام حقيقية، مو أسماء عشوائية.', 'You like low-owned picks. We surface differentials backed by real numbers.')],
   template: [tt('تختار نفس لاعبين الأغلبية', 'Picks what most managers pick'), tt('لهذا نركز على الخيارات الآمنة اللي تحمي ترتيبك، ونكلك متى يستاهل تختلف عن الأغلبية.', 'You follow the crowd to protect rank. We focus on safety and when to break the template.')],
   strategist: [tt('صبور وتجمع الانتقالات', 'Patient, rolls transfers'), tt('لهذا نبنيلك خطط على كم جولة قدام بدل ردود الفعل السريعة.', 'You plan and roll. We build multi-week plans instead of reactions.')],
@@ -231,7 +231,7 @@ export function coachPlan(plan) {
   const ft = plan.ft ?? 1, top = moves[0];
   let transfer;
   if (!top || top.g < ftBar) transfer = { kind: 'roll', why: A === 'chaser' ? tt('ما أكو بديل أرقامه ثابتة يستاهل. لا تشتري لاعب لأن سجل هالجولة بس.', 'No sustained upgrade. Do not buy on one haul.') : tt('ما أكو انتقال يرجع ربح واضح. احتفظ بالانتقال وخليه لجولة جاية.', 'No clear gain. Roll the transfer.') };
-  else if (ft <= 0 && top.g < hitBar) transfer = { kind: 'nohit', m: top, why: tt(`أفضل انتقال يرجع ${top.g} نقطة بـ5 جولات، وأسلوبك يحتاج +${hitBar} حتى تستاهل الضربة.`, `Best move returns ${top.g} over 5 GWs; you need +${hitBar} for a hit.`) };
+  else if (ft <= 0 && top.g < hitBar) transfer = { kind: 'nohit', m: top, why: tt(`أفضل انتقال يرجع ${top.g} نقطة بـ5 جولات، وأسلوبك يحتاج +${hitBar} حتى يستاهل خصم النقاط.`, `Best move returns ${top.g} over 5 GWs; you need +${hitBar} for a hit.`) };
   else transfer = { kind: 'go', m: top, alt: moves.slice(1, 3) };
 
   // الكابتن: توازن بين المتوقع، السقف (نقاط كبيرة ممكنة)، والمخاطرة (الدقائق والمشاركة)
@@ -296,7 +296,7 @@ export function coachPlan(plan) {
   if (S.capN >= 3 && T.captain != null) F.push({ k: 'captain', sev: (60 - T.captain) / 10 + S.capLost / S.capN / 2, t: tt(`اختيار الكابتن: تخسر بالمعدل ${r1(S.capLost / S.capN)} نقطة كل جولة لأن الكابتن مو أفضل لاعب عندك`, `Captaincy: losing ${r1(S.capLost / S.capN)} pts/GW`) });
   if (S.benchPts >= 3) F.push({ k: 'bench', sev: S.benchPts / 1.5, t: tt(`الدكة: تترك ${S.benchPts} نقطة على الدكة كل جولة`, `Bench: ${S.benchPts} pts left per GW`) });
   if (S.roiN >= 3 && S.roiAvg != null && S.roiAvg < 0) F.push({ k: 'transfers', sev: 3 - S.roiAvg, t: tt(`الانتقالات: اللاعب اللي تشتريه يجيب أقل من اللي تبيعه بـ ${Math.abs(S.roiAvg)} نقطة (3 جولات)`, `Transfers lose ${Math.abs(S.roiAvg)} pts`) });
-  if (S.hitGWs && S.hitRoi < 0) F.push({ k: 'hits', sev: 3 + Math.abs(S.hitRoi) / 4, t: tt(`الضربات: خسرت منها ${Math.abs(S.hitRoi)} نقطة صافي`, `Hits cost ${Math.abs(S.hitRoi)} net`) });
+  if (S.hitGWs && S.hitRoi < 0) F.push({ k: 'hits', sev: 3 + Math.abs(S.hitRoi) / 4, t: tt(`خصم الانتقالات: خسرت منه ${Math.abs(S.hitRoi)} نقطة صافي`, `Hits cost ${Math.abs(S.hitRoi)} net`) });
   if (S.chase + S.panic >= 3) F.push({ k: 'stability', sev: 2 + (S.chase + S.panic) / 2, t: tt(`الاستقرار: ${S.chase} صفقات وراء جولة تألق و${S.panic} بيع بعد جولة ضعيفة`, `Stability: ${S.chase} chases, ${S.panic} panic sells`) });
   if (S.vsAvg < -3 && T.risk <= 28) F.push({ k: 'differ', sev: 2 + Math.abs(S.vsAvg) / 3, t: tt(`فريقك يشبه الأغلبية وتحت المعدل بـ ${Math.abs(S.vsAvg)} — تحتاج لاعب أو اثنين مختلفين`, `Too template while below average`) });
   if (S.vsAvg < -3 && T.risk >= 62) F.push({ k: 'risk', sev: 2 + Math.abs(S.vsAvg) / 3, t: tt(`مخاطرتك عالية وما ترجع: تحت المعدل بـ ${Math.abs(S.vsAvg)} — قلل الخيارات الغريبة`, `High risk not paying off`) });
@@ -360,7 +360,7 @@ export function coachPlan(plan) {
     const H = ST.E.hist?.current || [], lh = H[H.length - 1], lh2 = H[H.length - 2], la = lh ? G.events.find((e) => e.id === lh.event)?.avg : null;
     const ctxB = { bad: lh && la != null ? lh.points - la <= -8 : null, falling: lh && lh2 && lh.overall_rank && lh2.overall_rank ? lh.overall_rank > lh2.overall_rank : null };
     const pr = predictBehaviour(M.beh.M, ctxB), useful = M.beh.bt?.useful !== false;
-    if (transfer.kind !== 'go' && pr.hit >= 0.35 && ft <= 0) ideas.unshift({ ic: '🧠', t: tt(`من سجلك${ctxB.bad ? ' بعد الجولات السيئة' : ''}: تاخذ ضربة (−4) بنسبة ${Math.round(pr.hit * 100)}% — بس هالمرة أفضل انتقال يرجع ${top ? top.g : 0} نقطة بخمس جولات، أقل من الـ${hitBar} اللي تحتاجها الضربة. لا تاخذها`, `You often take hits (${Math.round(pr.hit * 100)}%); this one does not pay back`) });
+    if (transfer.kind !== 'go' && pr.hit >= 0.35 && ft <= 0) ideas.unshift({ ic: '🧠', t: tt(`من سجلك${ctxB.bad ? ' بعد الجولات السيئة' : ''}: تسوي انتقال بخصم (−4) بنسبة ${Math.round(pr.hit * 100)}% — بس هالمرة أفضل انتقال يرجع ${top ? top.g : 0} نقطة بخمس جولات، أقل من الـ${hitBar} اللي يحتاجها الخصم. لا تسويه`, `You often take hits (${Math.round(pr.hit * 100)}%); this one does not pay back`) });
     else if (transfer.kind === 'roll' && pr.tr >= 0.8) ideas.unshift({ ic: '🧠', t: tt(`عادةً تسوي انتقال ${Math.round(pr.tr * 100)}% من الجولات، بس هالجولة الاحتفاظ أفضل: يصير عندك ${Math.min(5, ft + 1)} انتقالات للجولة الجاية`, `You usually transfer (${Math.round(pr.tr * 100)}%), but rolling is better this week`) });
     if (useful && pr.tpl >= 0.7 && M.beh.M.tpl.n >= 4) { const mc = G.events.find((e) => e.id === G.cur)?.cap; if (mc && mc !== cap.p.id && plan.xi.includes(mc)) { const alt = capL.find((x) => x.p.id === mc); if (alt && cap.v - alt.v >= 0.5) ideas.push({ ic: '🧠', t: tt(`أغلب الجولات تختار كابتن الأغلبية (${Math.round(pr.tpl * 100)}%). هالمرة ${cap.p.name} متوقعه أعلى من ${alt.p.name} بـ${r1(cap.v - alt.v)} — الفرق يستاهل تختلف`, `You usually captain the template; this week the gap justifies differing`) }); } }
   }
@@ -466,7 +466,7 @@ export function coachAnswer(kind) {
   const M = coachReady(), P = ST.plan; if (!M || !P) return null; const C = coachPlan(P); if (!C) return null;
   const [an] = ARCH()[M.arch];
   if (kind === 'captain') return `**${tt('كابتنك المقترح', 'Your captain')}: ${C.cap.p.name}** (${C.cap.v} xP)\n${C.capL.map((x, i) => `${i + 1}. ${x.p.name} — ${x.v} xP · ${tt('ملكية', 'own')} ${x.own}%`).join('\n')}${C.capAlt ? `\n- ${tt('خيار فروقات على أسلوبك', 'Differential option')}: **${C.capAlt.p.name}**` : ''}\n- ${tt('أسلوبك', 'Your style')}: ${an}${M.T.captain != null ? ` · ${tt('دقة كابتنك', 'captain accuracy')} ${M.T.captain}%` : ''}`;
-  if (kind === 'transfer') { const t = C.transfer; return t.kind === 'go' ? `**${t.m.o.name} → ${t.m.c.name}** (+${t.m.g} xP / 5 ${tt('جولات', 'GWs')})\n${t.alt.map((x) => `- ${x.o.name} → ${x.c.name} (+${x.g})`).join('\n')}\n- ${tt('أسلوبك', 'Your style')}: ${an}` : `**${t.kind === 'roll' ? tt('احتفظ بالانتقال', 'Roll') : tt('لا تاخذ ضربة', 'No hit')}**\n- ${t.why}`; }
+  if (kind === 'transfer') { const t = C.transfer; return t.kind === 'go' ? `**${t.m.o.name} → ${t.m.c.name}** (+${t.m.g} xP / 5 ${tt('جولات', 'GWs')})\n${t.alt.map((x) => `- ${x.o.name} → ${x.c.name} (+${x.g})`).join('\n')}\n- ${tt('أسلوبك', 'Your style')}: ${an}` : `**${t.kind === 'roll' ? tt('احتفظ بالانتقال', 'Roll') : tt('لا تسوي انتقال بخصم', 'No hit')}**\n- ${t.why}`; }
   return null;
 }
 
