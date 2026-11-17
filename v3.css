@@ -433,3 +433,19 @@ html.ui2 #view[data-view=more] .pbig svg .ph [opacity]{opacity:.45}
 /* أيقونات الصفوف والقوائم: لون مميز خفيف */
 .row .pbig svg.i{--ic2:var(--acc)}
 .tag svg.i .ph [opacity]{opacity:.5}
+
+/* ===== هوية Solar: أيقونات ممتلئة بلونين + لون خاص لكل منطقة بالتطبيق ===== */
+svg.i .so [opacity]{opacity:.4;fill:var(--ic2,currentColor)}
+.tag svg.i .so [opacity]{opacity:.55}
+#view{--hue:var(--acc)}
+#view:is([data-view=live],[data-view=pulse]){--hue:#FF5D6C}
+#view:is([data-view=captains],[data-view=achievements],[data-view=chips]){--hue:#F5C451}
+#view:is([data-view=players],[data-view=market],[data-view=prices],[data-view=compare],[data-view=watch],[data-view=planner],[data-view=squads],[data-view=lab],[data-view=defcon],[data-view=setpieces]){--hue:#5AA9FF}
+#view:is([data-view=leagues],[data-view=rivals],[data-view=elite],[data-view=stats]){--hue:#A98BFF}
+#view:is([data-view=clubs],[data-view=season],[data-view=journey]){--hue:#3DD9E8}
+#view:is([data-view=news],[data-view=notifs]){--hue:#FF8A4C}
+html.v2 #view .sec h2 svg.i,html.v2 #view .h2-h svg.i,#view .cl .sec h2 svg.i{width:18px;height:18px;padding:7px;border-radius:12px;color:var(--hue);background:linear-gradient(150deg,color-mix(in srgb,var(--hue) 20%,transparent),color-mix(in srgb,var(--hue) 5%,transparent));border:1px solid color-mix(in srgb,var(--hue) 30%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 6px 18px -10px var(--hue)}
+html.v2 #view .sec h2::before{background:var(--hue)}
+#view .cl-seg button.on{background:color-mix(in srgb,var(--hue) 16%,transparent);color:var(--hue)}
+#view .cl-r:nth-child(-n+5) .cl-n{color:var(--hue)}
+html.ui2 #view[data-view=more] .pbig svg .so [opacity]{opacity:.5}

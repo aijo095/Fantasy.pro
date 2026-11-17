@@ -27,7 +27,7 @@ const RL = () => ({ W: tt('فوز', 'W'), D: tt('تعادل', 'D'), L: tt('خس�
 const fchip = (r) => `<i class="cl-f ${r}">${tt({ W: 'ف', D: 'ت', L: 'خ' }[r], r)}</i>`;
 
 function listHTML(R) {
-  return `<div class="sec"><h2>${I('i-list', 'i')}${tt('ترتيب الأندية', 'League table')}</h2></div>
+  return `<div class="sec"><h2>${I('i-club', 'i')}${tt('ترتيب الأندية', 'League table')}</h2></div>
   <div class="card cl-tb">
     <div class="cl-hd"><span>#</span><span>${tt('النادي', 'Club')}</span><span>${tt('لعب', 'P')}</span><span>${tt('الفرق', 'GD')}</span><span>${tt('نقاط', 'Pts')}</span></div>
     ${R.map((x, i) => `<button class="cl-r" onclick="clubOpen(${x.id})"><span class="num cl-n">${i + 1}</span><span class="cl-c">${crest(G_short(x.id), 24)}<b>${esc(tName(x.id))}</b><span class="cl-fm">${x.form.slice(-5).reverse().map(fchip).join('')}</span></span><span class="num">${x.p}</span><span class="num" dir="ltr">${x.gf - x.ga > 0 ? '+' : ''}${x.gf - x.ga}</span><b class="num">${x.pts}</b></button>`).join('')}
