@@ -200,7 +200,7 @@ function coachCard(P) {
     <div class="cz-sec"><h4>${I('i-gauge', 'i')}${tt('تقييمك', 'Your scores')}${learn ? `<span class="cz-h4s">${learn}</span>` : ''}</h4><div class="cz-tr">${TR.map(([k, l]) => `<div class="cz-t"><span>${l}</span><div class="meter"><i style="width:${T[k] ?? 0}%;background:${col(T[k])}"></i></div><b class="num" style="color:${col(T[k])}">${T[k] ?? '—'}</b></div>`).join('')}</div></div>
     <div class="cz-sec"><h4>${I('i-swap', 'i')}${tt('الانتقال', 'Transfer')}${confChip(C.trConf)}</h4>${main}${opts}${urgent}${plan}</div>
     <div class="cz-sec"><h4>${I('i-star', 'i')}${tt('الكابتن', 'Captain')}${confChip(C.capConf)}</h4>${capHTML}</div>
-    ${C.ideas.length ? `<div class="cz-sec"><h4>${I('i-sparkle', 'i')}${tt('نصائح', 'Tips')}</h4><div class="cz-ideas">${C.ideas.slice(0, 2).map((x) => `<div class="cz-idea${x.act ? ' tap' : ''}"${x.act ? ` onclick="${x.act}"` : ''}><span class="ms ${MS[x.ic] || 'ms-opp'}" role="img" aria-label="${MSL()[MS[x.ic] || 'ms-opp']}"></span><p>${esc(x.t)}</p></div>`).join('')}</div></div>` : ''}
+    ${C.ideas.length ? `<div class="cz-sec"><h4>${I('i-sparkle', 'i')}${tt('نصائح', 'Tips')}</h4><div class="cz-ideas">${C.ideas.map((x) => `<div class="cz-idea${x.act ? ' tap' : ''}"${x.act ? ` onclick="${x.act}"` : ''}><span class="ms ${MS[x.ic] || 'ms-opp'}" role="img" aria-label="${MSL()[MS[x.ic] || 'ms-opp']}"></span><p>${esc(x.t)}</p></div>`).join('')}</div></div>` : ''}
   </div>`;
 }
 function insight(P) {
