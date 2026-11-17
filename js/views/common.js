@@ -109,7 +109,7 @@ window.openClub = (tid) => {
    <div class="list">${past.map((f) => { const [r, c] = res(f); return `<div class="row"><span class="rate" style="background:${c};color:#0A0D14">${tt({ W: 'فوز', L: 'خسارة', D: 'تعادل' }[r], r)}</span><div class="info"><b style="font-size:13px">${tName(f.h)} ${scoreHTML(f.hs, f.as, 'num')} ${tName(f.a)}</b><span>GW${f.ev}</span></div></div>`; }).join('') || '<p class="mut" style="padding:10px">—</p>'}</div>
    <div class="sec"><h2 style="font-size:14px">${I('i-users', 'i', 'width:16px;height:16px')}${tt('أفضل اللاعبين', 'Top players')}</h2></div>
    <div class="list">${players.map((p) => `<div class="row tap" onclick="openPlayer(${p.id})"><div class="mini">${pShirt(p)}</div><div class="info"><b>${esc(p.name)} ${mine.has(p.id) ? `<span class="tag lime">${tt('بفريقك', 'Yours')}</span>` : ''}</b><span><span class="pos ${p.pos}">${p.pos}</span><bdi>${p.price.toFixed(1)}م</bdi> · ${p.own}%</span></div><div class="col">${p.total}<small>${tt('نقطة', 'pts')}</small></div></div>`).join('')}</div>
-   <button class="btn btn-g btn-b" style="margin-top:12px" onclick="closeSheet();goClub(${tid})">${tt('كل لاعبي النادي', 'All club players')}</button>`);
+   <button class="btn btn-g btn-b" style="margin-top:12px" onclick="closeSheet();go('clubs');clubOpen(${tid})">${tt('صفحة النادي الكاملة', 'Full club page')}</button>`);
 };
 
 /* ---------- تفاصيل اللاعب بجولة معيّنة (مباراته فقط) ---------- */

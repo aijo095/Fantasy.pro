@@ -256,7 +256,7 @@ function loadPlan() {
 /* ---------- التنقل ---------- */
 const NAV = [
   ['g_main', [['home', 'i-home'], ['check', 'i-check'], ['team', 'i-pitch'], ['season', 'i-season'], ['live', 'i-live'], ['pulse', 'i-activity'], ['news', 'i-news'], ['search', 'i-sparkle']]],
-  ['g_players', [['players', 'i-users'], ['market', 'i-swap'], ['prices', 'i-coin'], ['planner', 'i-season'], ['squads', 'i-layers'], ['watch', 'i-star'], ['lab', 'i-lab'], ['defcon', 'i-shield'], ['setpieces', 'i-target'], ['compare', 'i-compare']]],
+  ['g_players', [['players', 'i-users'], ['market', 'i-swap'], ['prices', 'i-coin'], ['planner', 'i-season'], ['squads', 'i-layers'], ['watch', 'i-star'], ['lab', 'i-lab'], ['defcon', 'i-shield'], ['setpieces', 'i-target'], ['compare', 'i-compare'], ['clubs', 'i-list']]],
   ['g_comp', [['leagues', 'i-trophy'], ['rivals', 'i-swords'], ['captains', 'i-crown'], ['elite', 'i-globe'], ['chips', 'i-bolt'], ['stats', 'i-history'], ['achievements', 'i-medal']]],
   ['g_more', [['notifs', 'i-bell'], ['settings', 'i-settings']]],
 ];
