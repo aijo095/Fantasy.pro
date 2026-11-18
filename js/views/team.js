@@ -26,7 +26,7 @@ function label(p) {
   const f = fixturesFor(p.team, G.next);
   if (!f.length) return `<div class="lb fxl blank">${tt('ما يلعب', 'Blank')}</div>`;
   // H = بملعبه، A = بملعب الخصم (مثل الفانتازي الرسمي)
-  const one = (x, sm) => `<span class="fxo"><b>${tShort(x.opp)}</b><i class="ha ${x.home ? 'h' : 'a'}${sm ? ' sm' : ''}">${x.home ? 'H' : 'A'}</i></span>`;
+  const one = (x, sm) => `<span class="fxo"><b>${tShort(x.opp)}</b><i class="ha ${x.home ? 'h' : 'a'}${sm ? ' sm' : ''}" title="${x.home ? tt('بملعبه', 'Home') : tt('برّه', 'Away')}">${x.home ? tt('أ', 'H') : tt('ب', 'A')}</i></span>`;
   return `<div class="lb fxl f${f[0].fdr}${f.length > 1 ? ' dbl' : ''}">${f.map((x) => one(x, f.length > 1)).join('')}</div>`;
 }
 function canSwap(a, b) {

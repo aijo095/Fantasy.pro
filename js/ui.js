@@ -12,7 +12,7 @@ export const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   del(k) { try { localStorage.removeItem(k); } catch {} },
 };
-export function toast(m) { const d = document.createElement('div'); d.className = 'tst'; d.textContent = m; $('#toast').appendChild(d); setTimeout(() => d.remove(), 3200); }
+export function toast(m) { const d = document.createElement('div'); d.className = 'tst'; d.textContent = m; $('#toast').appendChild(d); setTimeout(() => d.classList.add('out'), 3000); setTimeout(() => d.remove(), 3220); }
 /* الأوراق (sheets) مع زر رجوع: إذا انفتحت ورقة من داخل ورقة ثانية نحفظ السابقة ونرجعلها */
 let sheetStack = [], pendingBack = null;
 const curSnap = () => { const b = $('#sheetRoot .sh-body'); return b ? { html: b.innerHTML, y: $('#sheetRoot .sheet')?.scrollTop || 0 } : null; };
@@ -39,7 +39,16 @@ export function openSheet(html, after) {
 export function closeSheet(hard = false) {
   const snap = curSnap();
   pendingBack = !hard && snap ? { snap, stack: sheetStack, t: Date.now() } : null;
-  sheetStack = []; $('#sheetRoot').innerHTML = ''; unlockScroll();
+  sheetStack = []; exitClone(); $('#sheetRoot').innerHTML = ''; unlockScroll();
+}
+/* حركة الخروج: نسخة من الورقة تنزل لتحت وتختفي، والمنطق يكمل فوراً بدون انتظار */
+function exitClone() {
+  const ov = $('#sheetRoot .ov'); if (!ov) return;
+  let box = document.getElementById('sheetExit'); if (!box) { box = document.createElement('div'); box.id = 'sheetExit'; box.setAttribute('aria-hidden', 'true'); document.body.appendChild(box); }
+  const c = ov.cloneNode(true), sh = ov.querySelector('.sheet'), cs = c.querySelector('.sheet');
+  if (sh && cs) { cs.style.maxHeight = sh.offsetHeight + 'px'; requestAnimationFrame(() => { cs.scrollTop = sh.scrollTop; }); }
+  c.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'));
+  box.replaceChildren(c); setTimeout(() => { if (box.firstChild === c) box.replaceChildren(); }, 260);
 }
 export function sheetBack() { const prev = sheetStack.pop(); if (!prev) return closeSheet(true); renderSheet(prev.html, prev.y); }
 window.sheetBack = sheetBack;

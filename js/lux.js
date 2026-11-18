@@ -20,9 +20,7 @@ function size() {
 }
 size(); addEventListener('resize', size); addEventListener('fp-theme', size);
 let last = 0;
-function draw(t) {
-  requestAnimationFrame(draw);
-  if (!on() || document.hidden || t - last < 33) return; last = t;
+function paint() {
   const ox = tx * 14, oy = ty * 14 - scrollY * .04;
   ctx.clearRect(0, 0, W, H);
   for (const p of P) {
@@ -36,7 +34,12 @@ function draw(t) {
   }
   for (const p of P) { ctx.fillStyle = `rgba(${p.c},.55)`; ctx.beginPath(); ctx.arc(p.x + ox, p.y + oy, p.r, 0, 7); ctx.fill(); }
 }
-requestAnimationFrame(draw);
+function draw(t) {
+  requestAnimationFrame(draw);
+  if (!on() || document.hidden || t - last < 33) return; last = t;
+  paint();
+}
+if (reduced) { requestAnimationFrame(paint); addEventListener('resize', () => requestAnimationFrame(paint)); } else requestAnimationFrame(draw); // تقليل الحركة: صورة ثابتة بدل رسم مستمر
 
 let tx = 0, ty = 0; // الميلان ملغي بطلب المستخدم
 
@@ -67,7 +70,7 @@ document.addEventListener('pointerdown', (e) => {
   if (b) { mag = b; b.classList.add('mag', 'mag-on'); pull(b, e); }
   const pop = e.target.closest?.('.bnav button, .tabs2 button, .mc-tabs button');
   if (pop) { pop.classList.remove('pop'); void pop.offsetWidth; pop.classList.add('pop'); setTimeout(() => pop.classList.remove('pop'), 420); }
-  const sh = e.target.closest?.('.btn-p, .hero, .team-hero, .badge-c:not(.locked), .card.tap');
+  const sh = e.target.closest?.('.btn-p'); // اللمعة للزر الرئيسي بس، مو لكل بطاقة
   if (sh && !reduced) { const s = document.createElement('i'); s.className = 'lux-shine'; if (getComputedStyle(sh).position === 'static') sh.style.position = 'relative'; sh.appendChild(s); setTimeout(() => s.remove(), 650); }
   if (e.target.closest?.('button, .tap, .row, .card.tap, a')) haptic();
 }, { passive: true, capture: true });

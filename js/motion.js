@@ -28,17 +28,24 @@ export function countAll(root, firstView) {
   });
 }
 
-/* تموّج خفيف عند الضغط — يطلع بعد الضغطة (click) حتى ما يمنع الآيفون أول لمسة */
+/* ردّ فعل الضغط صار بالـ CSS (انكماش خفيف). هنا بس: اهتزاز خفيف للزر الرئيسي، ولفّة أيقونة التحديث */
 document.addEventListener('click', (e) => {
-  if (reduced()) return;
   if (e.target.closest('.bnav button')) { try { navigator.vibrate?.(6); } catch {} return; }
   const el = e.target.closest('.btn, .tap, .seg button, .chips2 button, .nb, .icon-btn'); if (!el) return;
-  const r = el.getBoundingClientRect(), s = Math.max(r.width, r.height) * 1.6, sp = document.createElement('span');
-  sp.className = 'ripple'; sp.style.cssText = `width:${s}px;height:${s}px;left:${e.clientX - r.left - s / 2}px;top:${e.clientY - r.top - s / 2}px`;
-  if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
-  el.style.overflow = 'hidden'; el.appendChild(sp); setTimeout(() => sp.remove(), 600);
   try { if (el.matches('.btn-p')) navigator.vibrate?.(6); } catch {}
+  if (reduced()) return;
+  const ic = el.querySelector('svg.i use[href="#i-refresh"]')?.parentElement;
+  if (ic) { ic.classList.remove('fp-spin'); void ic.getBoundingClientRect(); ic.classList.add('fp-spin'); setTimeout(() => ic.classList.remove('fp-spin'), 600); }
 }, { capture: true, passive: true });
+
+/* الجرس يرن مرة وحدة لما يزيد عدد التنبيهات */
+let lastUnread = null;
+window.addEventListener('fp-notif', () => {
+  const dot = document.getElementById('bellDot'); if (!dot) return;
+  const n = dot.classList.contains('hidden') ? 0 : 1, btn = dot.closest('.icon-btn');
+  if (lastUnread === 0 && n && btn && !reduced()) { btn.classList.remove('bell-ring'); void btn.offsetWidth; btn.classList.add('bell-ring'); setTimeout(() => btn.classList.remove('bell-ring'), 700); }
+  lastUnread = n;
+});
 
 /* السحب لتحت للتحديث (بالرئيسية والصفحات الرئيسية) */
 let y0 = null, pulled = 0;
@@ -71,7 +78,8 @@ export function animArrows(root) {
 export function decorate(root, first) { if (first) growBars(root); animArrows(root); }
 
 /* أحداث المباريات: فقاعة فوق قميص اللاعب أو شريط فوق الشاشة */
-const EV = { goal: ['⚽', 'سجّل هدف!'], assist: ['🅰️', 'صنع هدف!'], yellow: ['🟨', 'كرت أصفر'], red: ['🟥', 'كرت أحمر'], bonus: ['⭐', 'بونص'], save: ['🧤', 'صدّ جزاء'], bad: ['😬', 'حدث سلبي'], leak: ['🥅', 'استقبل هدف'], pts: ['', ''] };
+const IC = (id, c) => `<svg class="i evi" style="color:${c}"><use href="#${id}"/></svg>`;
+const EV = { goal: [IC('i-goal', 'var(--acc)'), 'سجّل هدف!'], assist: [IC('i-send', 'var(--info)'), 'صنع هدف!'], yellow: ['<span class="evc y"></span>', 'كرت أصفر'], red: ['<span class="evc r"></span>', 'كرت أحمر'], bonus: [IC('i-medal', 'var(--gold)'), 'بونص'], save: [IC('i-shieldcheck', 'var(--info)'), 'صدّ جزاء'], bad: [IC('i-alert', 'var(--bad)'), 'حدث سلبي'], leak: [IC('i-goal', 'var(--bad)'), 'استقبل هدف'], pts: ['', ''] };
 window.__fxEvents = (list) => {
   if (window.__glowNotify?.(list)) { list = list.filter((e) => document.querySelector(`#view [data-pid="${e.id}"]`)); if (!list.length) return; }
   if (reduced()) return;
@@ -82,7 +90,7 @@ window.__fxEvents = (list) => {
     const [emo, txt] = EV[e.k] || ['', ''];
     if (el && el.getBoundingClientRect().top > 0 && el.getBoundingClientRect().bottom < innerHeight) {
       const b = document.createElement('span');
-      b.className = `fx-pop ${e.k}`; b.textContent = e.k === 'pts' ? (e.n > 0 ? '+' : '') + e.n : e.k === 'bonus' ? `⭐+${e.n}` : emo;
+      b.className = `fx-pop ${e.k}`; if (e.k === 'pts') b.textContent = (e.n > 0 ? '+' : '') + e.n; else b.innerHTML = e.k === 'bonus' ? `${emo}<span>+${Number(e.n) || ''}</span>` : emo;
       el.appendChild(b); setTimeout(() => b.remove(), 1900);
       if (e.k === 'goal' || e.k === 'red' || e.k === 'yellow') { el.classList.remove('fx-hit'); void el.offsetWidth; el.classList.add('fx-hit'); }
     } else if (e.k !== 'pts' && banner < 3) {

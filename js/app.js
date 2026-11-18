@@ -255,9 +255,9 @@ function loadPlan() {
 
 /* ---------- التنقل ---------- */
 const NAV = [
-  ['g_main', [['home', 'i-home'], ['check', 'i-check'], ['team', 'i-pitch'], ['season', 'i-season'], ['live', 'i-live'], ['pulse', 'i-activity'], ['news', 'i-news'], ['search', 'i-sparkle']]],
+  ['g_main', [['home', 'i-home'], ['check', 'i-shieldcheck'], ['team', 'i-pitch'], ['season', 'i-season'], ['live', 'i-live'], ['pulse', 'i-activity'], ['news', 'i-news'], ['search', 'i-sparkle']]],
   ['g_players', [['players', 'i-users'], ['market', 'i-swap'], ['prices', 'i-coin'], ['planner', 'i-season'], ['squads', 'i-layers'], ['watch', 'i-star'], ['lab', 'i-lab'], ['defcon', 'i-shield'], ['setpieces', 'i-target'], ['compare', 'i-compare'], ['clubs', 'i-list']]],
-  ['g_comp', [['leagues', 'i-trophy'], ['rivals', 'i-swords'], ['captains', 'i-crown'], ['elite', 'i-globe'], ['chips', 'i-bolt'], ['stats', 'i-history'], ['achievements', 'i-medal']]],
+  ['g_comp', [['leagues', 'i-trophy'], ['rivals', 'i-swords'], ['captains', 'i-crown'], ['elite', 'i-medal'], ['chips', 'i-bolt'], ['stats', 'i-history'], ['achievements', 'i-medal']]],
   ['g_more', [['notifs', 'i-bell'], ['settings', 'i-settings']]],
 ];
 const BNAV = [['home', 'i-home'], ['team', 'i-pitch'], ['season', 'i-season'], ['players', 'i-users'], ['more', 'i-grid']];
@@ -317,13 +317,29 @@ export function render() {
   try {
     const html = (window.__EMBED && ST.view === 'home' ? window.__EMBED.note : '') + VIEWS[ST.view](), v = $('#view');
     // نفس القسم (تحديث تلقائي): نغيّر بس اللي تغيّر حتى ما ترمش الشاشة
-    if (lastPainted === ST.view && v.childNodes.length) morphHTML(v, html); else v.innerHTML = html;
+    // حركة اللاعبين بالتشكيلة (FLIP): نحفظ مكان كل لاعب قبل التحديث ونحرّكه لمكانه الجديد بعده
+    const same = lastPainted === ST.view && v.childNodes.length, flip = same && !RM() ? flipFirst(v) : null;
+    if (same) morphHTML(v, html); else v.innerHTML = html;
+    if (flip) flipPlay(v, flip);
     lastPainted = ST.view; v.dataset.view = ST.view;
     AFTER[ST.view] && AFTER[ST.view](); countUp();
   }
   catch (e) { console.error(e); AU.logError(ST.user?.uid, e.message, 'render:' + ST.view); $('#view').innerHTML = `<div class="empty">${I('i-alert', 'i', 'width:40px;height:40px')}<b>${tt('ما كدرنا نعرض هذا القسم', 'Couldn’t show this section')}</b><p class="mut">${tt('جرّب مرة ثانية، وإذا تكرر ارجع بعد شوية.', 'Try again; if it repeats, come back shortly.')}</p><button class="btn" style="margin-top:12px" onclick="render()">${I('i-refresh', 'i')}${tt('حاول مرة ثانية', 'Try again')}</button></div>`; }
 }
 window.addEventListener('error', (e) => AU.logError(ST.user?.uid, e.message, e.filename + ':' + e.lineno));
+
+/* ---------- حركة اللاعبين عند التبديل (FLIP) ---------- */
+const RM = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function flipFirst(v) { const m = new Map(); v.querySelectorAll('[data-pid]').forEach((el) => { const r = el.getBoundingClientRect(); if (r.width) m.set(el.dataset.pid, r); }); return m.size ? m : null; }
+function flipPlay(v, first) {
+  v.querySelectorAll('[data-pid]').forEach((el) => {
+    const a = first.get(el.dataset.pid); if (!a) return;
+    const b = el.getBoundingClientRect(), dx = a.left - b.left, dy = a.top - b.top;
+    if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+    el.style.animation = 'none'; // ما نعيد حركة الظهور للاعب اللي انتقل
+    el.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'none' }], { duration: 300, easing: 'cubic-bezier(.77,0,.175,1)' });
+  });
+}
 
 /* ---------- أفعال عامة ---------- */
 async function doLogout() { closeSheet(); LS.del('fp_local_session'); AU.srvLogout(); await AU.signOutUser(); Object.assign(ST, { user: null, profile: null, G: null, E: null, plan: null, admin: false }); try { history.replaceState(null, '', ' '); } catch {} renderAuth(); }

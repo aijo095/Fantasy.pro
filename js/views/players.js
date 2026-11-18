@@ -33,7 +33,7 @@ export function vPlayers() {
     <select id="pm" class="sel">${[16, 12, 10, 8, 7, 6.5, 6, 5.5, 5, 4.5].map((v) => `<option value="${v}" ${F.max == v ? 'selected' : ''}>${t('maxPrice')} ${v}م</option>`).join('')}</select>
     <select id="ps" class="sel">${SORTS().map((s) => `<option value="${s[0]}" ${F.sort === s[0] ? 'selected' : ''}>${t('sortBy')}: ${s[1]}</option>`).join('')}</select></div>
    <div id="plRes"><div class="mut" style="font-size:12px;margin:2px 2px 8px">${fmt(L.length)} ${tt('لاعب', 'players')}</div>
-   ${shown.map((p) => playerRow(p, `<div class="col">${spark([p.ppg, p.form, xp(p)].map(Number))}<small>${F.sort === 'price' || F.sort === 'cc' ? p.price.toFixed(1) + 'م' : F.sort === 'own' ? p.own + '%' : F.sort === 'xgi' ? p.xgi.toFixed(1) : F.sort === 'form' ? p.form : F.sort === 'xp' ? xpN(p, ST.G.next, 3) : F.sort === 'fix' ? avgFdr(p.team, ST.G.next, 5).toFixed(1) : F.sort === 'min' ? fmt(p.min) : F.sort === 'trend' ? '+' + fmt(Math.round((p.tin - p.tout) / 1000)) + 'k' : p.total + ' ' + t('points')}</small></div><button class="icon-btn star ${ST.watch.has(p.id) ? 'on' : ''}" onclick="event.stopPropagation();toggleWatch(${p.id})">${I('i-star')}</button>`)).join('') || `<div class="empty">${I('i-search', 'i', 'width:40px;height:40px')}<b>${tt('ما في نتائج', 'No results')}</b></div>`}
+   ${shown.map((p) => playerRow(p, `<div class="col">${spark([p.ppg, p.form, xp(p)].map(Number))}<small>${F.sort === 'price' || F.sort === 'cc' ? p.price.toFixed(1) + 'م' : F.sort === 'own' ? p.own + '%' : F.sort === 'xgi' ? p.xgi.toFixed(1) : F.sort === 'form' ? p.form : F.sort === 'xp' ? xpN(p, ST.G.next, 3) : F.sort === 'fix' ? avgFdr(p.team, ST.G.next, 5).toFixed(1) : F.sort === 'min' ? fmt(p.min) : F.sort === 'trend' ? '+' + fmt(Math.round((p.tin - p.tout) / 1000)) + 'k' : p.total + ' ' + t('points')}</small></div><button class="icon-btn star ${ST.watch.has(p.id) ? 'on' : ''}" onclick="event.stopPropagation();toggleWatch(${p.id})" aria-label="${tt('مراقبة', 'Watch')}">${I('i-eye')}</button>`)).join('') || `<div class="empty">${I('i-search', 'i', 'width:40px;height:40px')}<b>${tt('ما في نتائج', 'No results')}</b></div>`}
    ${L.length > shown.length ? `<button class="btn btn-g btn-b" onclick="pf('page',${F.page + 1})">${tt('عرض المزيد', 'Show more')} (${L.length - shown.length})</button>` : ''}</div>`;
 }
 export function afterPlayers() {
@@ -182,7 +182,7 @@ export function vCompare() {
    <div class="card" id="cmpLine"><div class="aiload"><i></i><i></i><i></i></div></div>
    <div class="sec"><h2>${I('i-swords')}${tt('وجهاً لوجه', 'Head to head')}</h2></div>
    <div class="card cmp-h2h">${legend}${rows}</div>
-   <div class="sec"><h2>${I('i-star')}${tt('من وين تجي نقاطه', 'Where the points come from')}</h2></div>
+   <div class="sec"><h2>${I('i-chart')}${tt('من وين تجي نقاطه', 'Where the points come from')}</h2></div>
    <div class="cmp-dns" style="grid-template-columns:repeat(${ps.length},1fr)">${ps.map((p, i) => `<div class="card"><b class="cmp-dnt"><i style="background:${CC[i]}"></i>${esc(p.name)}</b><div id="dn_${p.id}">${donut(p, i)}</div></div>`).join('')}</div>
    <div class="sec"><h2>${I('i-season')}${tt('المباريات الجاية', 'Next fixtures')}</h2></div>
    <div class="card">${nx}</div>`;

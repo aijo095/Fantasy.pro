@@ -58,3 +58,6 @@ input,textarea{caret-color:var(--acc)}
 
 /* سهم الصفوف: كان يطلع مثلث أسود صغير لأنه بدون إعدادات الخط */
 svg.chev{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--mut)}
+
+/* زر المراقبة صار عين: لما يتفعّل يتلوّن بلون التطبيق مع تعبئة خفيفة (التعبئة الكاملة كانت تخفي البؤبؤ) */
+.star.on{color:var(--acc)}.star.on svg{fill:rgba(var(--acc-rgb),.2)}

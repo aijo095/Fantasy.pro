@@ -69,14 +69,14 @@ function suggest(P) {
 
 function watch(P) {
   const gw = ST.G.next, L = [...ST.watch].map(PM).filter(Boolean).filter((p) => !P.squad.includes(p.id));
-  if (!L.length) return `<div class="empty">${I('i-star', 'i', 'width:36px;height:36px')}<b>${tt('قائمة المراقبة فارغة', 'Watchlist empty')}</b><p>${tt('افتح أي لاعب واضغط النجمة حتى يطلع هنا مع سعره ومبارياته.', 'Open any player and tap the star to track him here.')}</p></div>`;
+  if (!L.length) return `<div class="empty">${I('i-eye', 'i', 'width:36px;height:36px')}<b>${tt('قائمة المراقبة فارغة', 'Watchlist empty')}</b><p>${tt('افتح أي لاعب واضغط النجمة حتى يطلع هنا مع سعره ومبارياته.', 'Open any player and tap the star to track him here.')}</p></div>`;
   return `<div class="list">${L.map((p) => `<div class="row tap mk-row" onclick="openPlayer(${p.id})"><div class="mini">${pShirt(p)}</div><div class="info"><b>${esc(p.name)} ${stTag(p)}</b><span><bdi>${tShort(p.team)}</bdi> · <bdi>${p.price.toFixed(1)}م</bdi> ${trend(p)} · ${p.own}%</span></div>${heat(p)}<div class="col" style="color:var(--acc)">${xpN(p, gw, 5)}<small>xP/5</small></div><button class="btn btn-p btn-sm mk-buy" onclick="event.stopPropagation();buyFlow(${p.id})" aria-label="buy">${I('i-plus', 'i', 'width:16px;height:16px')}</button></div>`).join('')}</div>`;
 }
 
 export function vMarket() {
   const P = ST.plan; if (!P) return `<div class="empty">${t('noData')}</div>`;
   if (sellId && !P.squad.includes(sellId)) sellId = null;
-  const TABS = [['sell', tt('بيع وشراء', 'Sell & buy'), 'i-swap'], ['sugg', tt('اقتراحات', 'Suggestions'), 'i-sparkle'], ['watch', tt('المراقبة', 'Watchlist'), 'i-star']];
+  const TABS = [['sell', tt('بيع وشراء', 'Sell & buy'), 'i-swap'], ['sugg', tt('اقتراحات', 'Suggestions'), 'i-sparkle'], ['watch', tt('المراقبة', 'Watchlist'), 'i-eye']];
   let body;
   if (tab === 'sell') body = sellId ? replacements(P) : `<div class="mk-step">${I('i-info', 'i', 'width:16px;height:16px;color:var(--info)')}<span>${tt('اختار اللاعب اللي تريد تبيعه، وبعدها نطلعلك أفضل البدائل ضمن ميزانيتك.', 'Pick the player to sell, then we show the best replacements in budget.')}</span></div>${sellPicker(P)}`;
   else if (tab === 'sugg') body = suggest(P);

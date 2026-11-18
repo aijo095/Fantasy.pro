@@ -12,7 +12,7 @@ export const fdrChips = (team, from, n) => Array.from({ length: n }, (_, i) => f
 export const stTag = (p) => { const a = avail(p); if (p.st === 's') return `<span class="tag red" style="font-size:10px">${tt('موقوف', 'Susp.')}</span>`; return a === 1 ? '' : `<span class="tag ${a === 0 ? 'red' : 'amber'}" style="font-size:10px">${a === 0 ? tt('غائب', 'Out') : Math.round(a * 100) + '%'}</span>`; };
 export function playerRow(p, right = '', click = `openPlayer(${p.id})`) {
   const mine = ST.plan?.squad.includes(p.id);
-  return `<div class="row tap" onclick="${click}"><div class="mini">${pShirt(p)}</div><div class="info"><b>${posTag(p.pos)} ${esc(p.name)} ${stTag(p)} ${mine ? `<span class="tag lime" style="font-size:10px">${tt('بفريقك', 'Yours')}</span>` : ''}${ST.watch.has(p.id) ? I('i-star', 'i', 'width:13px;height:13px;color:#34D399;fill:#34D399;fill-opacity:1;vertical-align:middle') : ''}</b><span>${tName(p.team)} · <bdi>${p.price.toFixed(1)}م</bdi> · ${fxLabel(p.team)}</span></div>${right}</div>`;
+  return `<div class="row tap" onclick="${click}"><div class="mini">${pShirt(p)}</div><div class="info"><b>${posTag(p.pos)} ${esc(p.name)} ${stTag(p)} ${mine ? `<span class="tag lime" style="font-size:10px">${tt('بفريقك', 'Yours')}</span>` : ''}${ST.watch.has(p.id) ? I('i-eye', 'i', 'width:13px;height:13px;color:#34D399;fill-opacity:1;vertical-align:middle') : ''}</b><span>${tName(p.team)} · <bdi>${p.price.toFixed(1)}م</bdi> · ${fxLabel(p.team)}</span></div>${right}</div>`;
 }
 export const RISK_NOTE = (p) => (p.news ? `<div class="note" style="border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.07)">${I('i-alert', 'i', 'color:#F59E0B')}<span>${esc(p.news)}</span></div>` : '');
 
