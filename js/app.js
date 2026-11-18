@@ -321,7 +321,7 @@ export function render() {
     lastPainted = ST.view; v.dataset.view = ST.view;
     AFTER[ST.view] && AFTER[ST.view](); countUp();
   }
-  catch (e) { console.error(e); AU.logError(ST.user?.uid, e.message, 'render:' + ST.view); $('#view').innerHTML = `<div class="empty">${I('i-alert', 'i', 'width:40px;height:40px')}<b>${tt('صار خطأ بهذا القسم', 'Something went wrong')}</b><p class="mut">${esc(e.message)}</p></div>`; }
+  catch (e) { console.error(e); AU.logError(ST.user?.uid, e.message, 'render:' + ST.view); $('#view').innerHTML = `<div class="empty">${I('i-alert', 'i', 'width:40px;height:40px')}<b>${tt('ما كدرنا نعرض هذا القسم', 'Couldn’t show this section')}</b><p class="mut">${tt('جرّب مرة ثانية، وإذا تكرر ارجع بعد شوية.', 'Try again; if it repeats, come back shortly.')}</p><button class="btn" style="margin-top:12px" onclick="render()">${I('i-refresh', 'i')}${tt('حاول مرة ثانية', 'Try again')}</button></div>`; }
 }
 window.addEventListener('error', (e) => AU.logError(ST.user?.uid, e.message, e.filename + ':' + e.lineno));
 

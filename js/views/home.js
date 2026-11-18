@@ -32,17 +32,17 @@ export function liveTeamPoints() {
 function actions() {
   const P = ST.plan, G = ST.G; if (!P) return [];
   const out = [], a = analyze(P, esc), cap = captainRank(P, 1)[0];
-  if (cap && cap.id !== P.cap) out.push({ ic: 'i-crown', col: 'var(--gold)', h: tt('غيّر الكابتن', 'Change captain'), d: `${esc(cap.name)} ${xp(cap)} xP ${tt('بدل', 'vs')} ${esc(PM(P.cap).name)} ${xp(PM(P.cap))}`, b: [tt('اجعله كابتن', 'Make captain'), `setCap(${cap.id});render()`] });
+  if (cap && cap.id !== P.cap) out.push({ ic: 'i-crown', col: 'var(--gold)', h: tt('غيّر الكابتن', 'Change captain'), d: `<bdi>${esc(cap.name)}</bdi> ${tt(`متوقع <bdi class="num">${xp(cap)}</bdi> بدل`, `${xp(cap)} xP vs`)} <bdi>${esc(PM(P.cap).name)}</bdi> <bdi class="num">${xp(PM(P.cap))}</bdi>`, b: [tt('اجعله كابتن', 'Make captain'), `setCap(${cap.id});render()`] });
   else if (cap) out.push({ ic: 'i-crown', col: 'var(--gold)', h: tt('الكابتن مضبوط', 'Captain set'), d: `${esc(cap.name)} — ${tt('أعلى متوقع بفريقك', 'highest xP in your team')} (${xp(cap)})`, ok: 1 });
   if (a.opt - a.cur >= 1) out.push({ ic: 'i-pitch', col: 'var(--info)', h: tt(`تشكيلتك تضيّع ${(a.opt - a.cur).toFixed(1)} نقطة`, `Lineup leaves ${(a.opt - a.cur).toFixed(1)} pts`), d: tt('في لاعبين بالدكة متوقعهم أعلى من الأساسيين', 'Bench players project higher than starters'), b: [tt('رتّبها', 'Fix it'), "bestLineup();go('team')"] });
   const risk = P.xi.map(PM).filter((p) => avail(p) < 1);
   if (risk.length) out.push({ ic: 'i-alert', col: 'var(--warn)', h: tt(`${risk.length} لاعب أساسي غير مضمون`, `${risk.length} doubtful starters`), d: risk.map((p) => `${esc(p.name)} ${Math.round(avail(p) * 100)}%`).join(' · '), b: [tt('شوف الفريق', 'View team'), "go('team')"] });
   const s = suggestions(P, 1)[0];
-  if (s) out.push({ ic: 'i-swap', col: 'var(--acc)', h: tt('أفضل انتقال متاح', 'Best transfer'), d: `<span class="mv" dir="ltr">${esc(s.o.name)}<i class="mv-a">→</i><b>${esc(s.c.name)}</b></span> · <bdi dir="ltr">+${s.g} xP/3</bdi>`, b: [tt('جرّبه بالمختبر', 'Test in lab'), `labPreset(${s.o.id},${s.c.id})`] });
+  if (s) out.push({ ic: 'i-swap', col: 'var(--acc)', h: tt('أفضل انتقال متاح', 'Best transfer'), d: `<span class="mv" dir="ltr"><s class="mut">${esc(s.o.name)}</s><i class="mv-a">→</i><b>${esc(s.c.name)}</b></span> · ${tt(`<bdi class="num">+${s.g}</bdi> نقطة بـ3 جولات`, `+${s.g} xP/3`)}`, b: [tt('جرّبه بالمختبر', 'Test in lab'), `labPreset(${s.o.id},${s.c.id})`] });
   const pf = P.squad.map(PM).map((p) => [p, pricePredict(p)]).filter((x) => x[1].prog <= -70).sort((a, b) => a[1].prog - b[1].prog);
   if (pf.length) out.push({ ic: 'i-down', col: 'var(--bad)', h: tt(`${pf.length} من لاعبينك سعره ممكن ينزل`, `${pf.length} of your players may drop in price`), d: pf.slice(0, 3).map(([p, r]) => `${esc(p.name)} ${r.prog}%`).join(' · ') + (pricePredict(pf[0][0]).official ? '' : tt(' (تقدير)', ' (estimate)')), b: [t('prices'), "go('prices')"] });
   const dg = dgwBgw(G.next, Math.min(G.lastGW, G.next + 3)).find((x) => x.dbl.length);
-  if (dg) out.push({ ic: 'i-bolt', col: 'var(--violet)', h: tt(`جولة مزدوجة GW${dg.gw}`, `Double GW${dg.gw}`), d: dg.dbl.map(tShort).join('، ') + tt(' — وقت مناسب للأوراق', ' — chip opportunity'), b: [t('chips'), "go('chips')"] });
+  if (dg) out.push({ ic: 'i-cal', col: 'var(--violet)', h: tt(`جولة مزدوجة: الجولة <bdi class="num">${dg.gw}</bdi>`, `Double GW${dg.gw}`), d: dg.dbl.map(tShort).join('، ') + tt(' — وقت مناسب للأوراق', ' — chip opportunity'), b: [t('chips'), "go('chips')"] });
   return out.slice(0, 4);
 }
 export function vHome() {
@@ -90,7 +90,7 @@ function vHome2() {
   const R0 = officialRank(), U = upcoming(G);
   let ck = '';
   try { const C = runChecks(), bad = C.filter((c) => c.lvl === 'bad').length, warn = C.filter((c) => c.lvl === 'warn').length;
-    if (bad || warn) ck = `<button class="h2-ck ${bad ? 'bad' : 'warn'}" onclick="go('check')">${I('i-alert', 'i')}<span>${bad ? tt(`${bad} مشاكل بفريقك قبل الإغلاق`, `${bad} issues before deadline`) : tt(`${warn} تنبيهات بفريقك`, `${warn} warnings`)}</span>${I('i-chev', 'chev')}</button>`; } catch {}
+    if (bad || warn) ck = `<button class="h2-ck ${bad ? 'bad' : 'warn'}" onclick="go('check')">${I('i-alert', 'i')}<span>${bad ? tt(bad === 1 ? 'مشكلة وحدة بفريقك قبل الإغلاق' : `<bdi class="num">${bad}</bdi> مشاكل بفريقك قبل الإغلاق`, `${bad} issues before deadline`) : tt(warn === 1 ? 'تنبيه واحد بفريقك' : `<bdi class="num">${warn}</bdi> تنبيهات بفريقك`, `${warn} warnings`)}</span>${I('i-chev', 'chev')}</button>`; } catch {}
   const stat = (lbl, val, sub = '') => `<div class="h2-st"><small>${lbl}</small><b class="num">${val}</b>${sub}</div>`;
   return `<div class="h2">
     ${ck}
@@ -101,7 +101,7 @@ function vHome2() {
       <div class="h2-stats">
         ${stat(t('total'), fmt(en.summary_overall_points))}
         ${stat(t('overall'), R0.rank ? fmt(R0.rank) : '—', R0.move ? `<em class="${R0.move > 0 ? 'up' : 'down'}">${R0.move > 0 ? '▲' : '▼'} ${fmt(Math.abs(R0.move))}</em>` : '')}
-        ${stat(`${tt('متوقع', 'Proj.')} GW${G.next}`, plan ? projected(plan) : '—')}
+        ${stat(tt(`متوقع الجولة ${G.next}`, `Proj. GW${G.next}`), plan ? projected(plan) : '—')}
       </div>
     </section>
 

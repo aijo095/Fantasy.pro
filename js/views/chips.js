@@ -6,7 +6,7 @@ import { pShirt } from './common.js';
 import * as FPL from '../fpl.js';
 import { xp, projected, dgwBgw, bestXI, counts } from '../engine.js';
 
-const NAMES = () => ({ wildcard: [tt('وايلد كارد', 'Wildcard'), 'i-sparkle'], freehit: [tt('فري هيت', 'Free Hit'), 'i-bolt'], bboost: [tt('بنش بوست', 'Bench Boost'), 'i-bench'], '3xc': [tt('كابتن ثلاثي', 'Triple Captain'), 'i-star'], manager: [tt('المساعد', 'Assistant Manager'), 'i-users'] });
+const NAMES = () => ({ wildcard: [tt('وايلد كارد', 'Wildcard'), 'i-reset'], freehit: [tt('فري هيت', 'Free Hit'), 'i-bolt'], bboost: [tt('بنش بوست', 'Bench Boost'), 'i-bench'], '3xc': [tt('كابتن ثلاثي', 'Triple Captain'), 'i-star'], manager: [tt('المساعد', 'Assistant Manager'), 'i-users'] });
 /** فريق فري هيت تقريبي: أفضل 15 حسب المتوقع ضمن الميزانية وقواعد اللعبة */
 /* محاكاة الفري هيت لكل مدرب حسب فريقه: نبدأ من تشكيلته الحالية وميزانيته،
    ونسوي أفضل تبديلات (فردية وثنائية) ترفع المتوقع للجولة الجاية — فالنتيجة تختلف من مدرب لمدرب */

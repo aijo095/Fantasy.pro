@@ -9,7 +9,7 @@ const D = {
     gk: 'حارس', def: 'مدافع', mid: 'وسط', fwd: 'مهاجم', all: 'الكل', save: 'حفظ', cancel: 'إلغاء', close: 'إغلاق', back: 'رجوع',
     captain: 'كابتن', vice: 'نائب', bench: 'الدكة', xi: 'الأساسيين', formation: 'التشكيل', transfers: 'الانتقالات', fixtures: 'المباريات',
     days: 'يوم', hours: 'ساعة', mins: 'دقيقة', secs: 'ثانية', updated: 'آخر تحديث', refresh: 'تحديث', logout: 'تسجيل الخروج',
-    watchlist: 'قائمة المراقبة', loading: 'جارِ التحميل…', noData: 'ما متوفرة بيانات', home_s: 'H', away_s: 'A', minutes: 'دقائق',
+    watchlist: 'قائمة المراقبة', loading: 'جارِ التحميل…', noData: 'ما متوفرة بيانات', home_s: 'أرضه', away_s: 'برّه', minutes: 'دقائق',
     goals: 'أهداف', assists: 'صناعة', cs: 'شباك نظيفة', bonus: 'بونص', yc: 'صفراء', rc: 'حمراء', starts: 'مشاركات أساسي',
     sortBy: 'ترتيب حسب', filter: 'فلترة', club: 'النادي', position: 'المركز', maxPrice: 'السعر الأعلى', lang: 'اللغة',
   },

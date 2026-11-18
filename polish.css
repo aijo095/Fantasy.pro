@@ -1,0 +1,60 @@
+/* =========================================================
+   تلميع بصري (Impeccable polish) — تحسين التفاصيل بدون تغيير الهوية
+   • لون له معنى: نشيل ألوان قوس قزح العشوائية (المزيد + عناوين الأقسام)
+   • أيقونات بخط واحد (1.75) وحجمين ثابتين داخل المحتوى
+   • حد أدنى لحجم النص الصغير، وأزرار أسهل بالضغط
+   • الشريط السفلي ما ينلمس
+========================================================= */
+
+/* عناوين الأقسام: أيقونة واحدة بلون التطبيق بدل التدوير أخضر/أزرق/أصفر */
+html.ui2 .sec h2 svg.i,
+html.ui2 .sec:nth-of-type(3n+2) h2 svg.i,
+html.ui2 .sec:nth-of-type(3n) h2 svg.i{color:var(--acc);background:rgba(var(--acc-rgb),.1);stroke-width:1.75}
+
+/* صفحة المزيد: مربعات أيقونات موحّدة وهادئة، والأولوية تبين من الترتيب مو من اللون */
+html.ui2 #view[data-view=more] .row .pbig,
+html.ui2 #view[data-view=more] .row:nth-child(n) .pbig{
+  --c1:var(--acc);--c2:var(--acc);
+  background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02))!important;
+  color:var(--acc)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 6px 14px -10px rgba(0,0,0,.8)!important}
+html.ui2 #view[data-view=more] .pbig svg{stroke-width:1.75!important}
+
+/* حد أدنى للنص الصغير (كان 9–10px) */
+.cd small,.h2-cd small{font-size:11px!important;letter-spacing:0}
+.gwstrip .past small{font-size:11px;color:#8B93A4}
+.pst{font-size:10.5px}
+.h2-st small{font-size:11.5px}
+
+/* أزرار أسهل بالضغط: روابط «الكل/الجولات» وأزرار البطاقة الرئيسية */
+.h2-hrow>button{min-height:40px;padding:8px 6px;margin:-8px -6px}
+.h2-acts button{min-height:40px;min-width:40px}
+
+/* اتجاه الانتقالات: بالعربي يبدي من اليمين (اللي يطلع) والسهم يأشّر على اللي يدخل */
+html[dir=rtl] .mv,html[dir=rtl] .mv[dir]{direction:rtl}
+html[dir=rtl] .mv-a{font-size:0}
+html[dir=rtl] .mv-a::before{content:"←";font-size:13px}
+
+/* أيقونات الأحداث بدل الإيموجي */
+svg.i.evi{width:1.1em;height:1.1em;vertical-align:-.18em;stroke-width:1.9}
+.evc{display:inline-block;width:.62em;height:.86em;border-radius:2px;vertical-align:-.12em;transform:rotate(8deg);box-shadow:0 1px 2px rgba(0,0,0,.35)}
+.evc.y{background:#FACC15}.evc.r{background:#EF4444}
+.nt-ic svg.i.evi{width:22px;height:22px}
+.nt-ic .evc{width:13px;height:18px}
+
+/* بطاقات الأحداث بالنبض: إطار كامل خفيف بدل الشريط الجانبي */
+.ev2-p,[dir=ltr] .ev2-p{box-shadow:inset 0 0 0 1px rgba(var(--acc-rgb),.22)}
+.ev2-p.rv,[dir=ltr] .ev2-p.rv{box-shadow:inset 0 0 0 1px rgba(248,113,113,.3)}
+.ev2-p.sh,[dir=ltr] .ev2-p.sh{box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
+
+/* حركة الضغط: بدون ارتداد مطاطي */
+html.lux .card.tap,html.lux .row.tap,html.lux button.row,html.lux .badge-c{transition-timing-function:cubic-bezier(.16,1,.3,1)}
+
+/* تفاصيل المتصفح: لون التحديد والمؤشر من ألوان التطبيق، وأرقام الجداول متساوية العرض */
+::selection{background:rgba(var(--acc-rgb),.3);color:#fff}
+input,textarea{caret-color:var(--acc)}
+.num,.tbl td,.mx td{font-variant-numeric:tabular-nums}
+#view :focus-visible,.topbar :focus-visible{outline:2px solid rgba(var(--acc-rgb),.75);outline-offset:2px}
+
+/* سهم الصفوف: كان يطلع مثلث أسود صغير لأنه بدون إعدادات الخط */
+svg.chev{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--mut)}

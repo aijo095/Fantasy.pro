@@ -10,7 +10,7 @@ import { esc, I, fmt, LS, crest } from '../ui.js';
 import * as FPL from '../fpl.js';
 import { liveCalc } from '../live-engine.js';
 import { liveRankEstimate } from '../predict.js';
-import { pShirt } from './common.js';
+import { pShirt, EVX } from './common.js';
 
 let RV = { gw: 0, list: null, busy: false, sel: null, picks: {} };
 const fk = () => `fp_pulse_${ST.profile?.teamId}_${ST.G.cur}`;
@@ -183,8 +183,8 @@ function evList(p, s, C) {
   if (s.red_cards) add('red', tt('طرد', 'Red card'), -3);
   for (let i = 0; i < (s.own_goals || 0); i++) add('og', tt('هدف عكسي', 'Own goal'), -2);
   for (let i = 0; i < (s.penalties_missed || 0); i++) add('penmiss', tt('ضيّع ضربة جزاء', 'Penalty miss'), -2);
-  if (s.bonus) add('bonus', tt(`بونص ${s.bonus}`, `Bonus ${s.bonus}`), s.bonus, `<bdi dir="ltr">${s.bps} BPS</bdi>`);
-  else { const r = C.bps(p); if (r) add('bonus', tt(`دخل البونص ${4 - r}`, `Bonus ${4 - r}`), 4 - r, `<bdi dir="ltr">${s.bps} BPS</bdi>`); }
+  if (s.bonus) add('bonus', tt(`بونص ${s.bonus}`, `Bonus ${s.bonus}`), s.bonus, tt(`أداء <bdi class="num">${s.bps}</bdi>`, `${s.bps} BPS`));
+  else { const r = C.bps(p); if (r) add('bonus', tt(`دخل البونص ${4 - r}`, `Bonus ${4 - r}`), 4 - r, tt(`أداء <bdi class="num">${s.bps}</bdi>`, `${s.bps} BPS`)); }
   return E;
 }
 const EVI = { in: '↑', out: '↓', min: '⏱', goal: '⚽', assist: '🎯', cs: '🧱', gc: '🥅', save: '🧤', pensave: '🧤', dc: '🛡️', yellow: '🟨', red: '🟥', og: '😬', penmiss: '✖', bonus: '⭐' };
@@ -198,8 +198,8 @@ function evSection(rows, C, anyLive) {
   const bnote = (r) => { const t = r.sh ? (r.bMe && r.bRv ? tt('بالدكة عندك وعند خصمك', 'Benched by both') : r.bMe ? tt('عندك بالدكة', 'On your bench') : r.bRv ? tt('عند خصمك بالدكة', 'On rival bench') : '') : r.bMe ? tt('بالدكة عندك', 'On your bench') : r.bRv ? tt('بالدكة عند خصمك', 'On rival bench') : ''; return t ? `<span class="ev2-bn">${I('i-bench', 'i', 'width:12px;height:12px')}${t}</span>` : ''; };
   return `<div class="ev2-sum"><span class="me">${tt('لاعبينك', 'Yours')} <b dir="ltr">${sum('me')}</b></span><span class="rv">${tt('لاعبين خصمك', 'Rival')} <b dir="ltr">${sum('rv')}</b></span></div>
   <div class="ev2">${list.map((r) => `<div class="ev2-p ${r.who}${r.sh ? ' sh' : ''}${dead(r) ? ' bn' : ''}" onclick="playerGW(${r.p.id},${ST.G.cur})">
-      <div class="ev2-h"><span class="mini">${pShirt(r.p)}</span><span class="ev2-n"><b>${esc(r.p.name)}</b>${bnote(r)}<small><span class="ev2-who">${r.sh ? tt('لاعب مشترك', 'Shared') : r.who === 'me' ? tt('لاعبك', 'Yours') : tt('خصمك', 'Rival')}</span>${tShort(r.p.team)} · ${r.p.pos}${r.m > 1 ? ` · <i class="ev2-c">${r.m === 3 ? '3×' : 'C ×2'}</i>` : ''}${C.live(r.f) ? ` · <i class="ev2-live">${C.minute(r.f)}′</i>` : C.done(r.f) ? ` · ${tt('خلصت', 'FT')}` : ''}</small></span><b class="ev2-t" dir="ltr">${r.pts * Math.max(1, r.m)}</b></div>
-      <div class="ev2-e">${r.E.map((e) => `<span class="ev2-x ${e.k}"><i>${EVI[e.k] || '•'}</i>${e.txt}${e.extra ? ` <small>(${e.extra})</small>` : ''}${e.pts != null ? `<em class="${e.pts > 0 ? 'up' : e.pts < 0 ? 'down' : ''}" dir="ltr">${e.pts > 0 ? '+' : ''}${e.pts}</em>` : ''}</span>`).join('')}</div>
+      <div class="ev2-h"><span class="mini">${pShirt(r.p)}</span><span class="ev2-n"><b>${esc(r.p.name)}</b>${bnote(r)}<small><span class="ev2-who">${r.sh ? tt('لاعب مشترك', 'Shared') : r.who === 'me' ? tt('لاعبك', 'Yours') : tt('خصمك', 'Rival')}</span><bdi>${tShort(r.p.team)}</bdi> · ${t(r.p.pos.toLowerCase())}${r.m > 1 ? ` · <i class="ev2-c">${r.m === 3 ? tt('كابتن ×3', '3×') : tt('كابتن ×2', 'C ×2')}</i>` : ''}${C.live(r.f) ? ` · <i class="ev2-live">${C.minute(r.f)}′</i>` : C.done(r.f) ? ` · ${tt('خلصت', 'FT')}` : ''}</small></span><b class="ev2-t" dir="ltr">${r.pts * Math.max(1, r.m)}</b></div>
+      <div class="ev2-e">${r.E.map((e) => `<span class="ev2-x ${e.k}"><i>${EVX(e.k)}</i>${e.txt}${e.extra ? ` <small>(${e.extra})</small>` : ''}${e.pts != null ? `<em class="${e.pts > 0 ? 'up' : e.pts < 0 ? 'down' : ''}" dir="ltr">${e.pts > 0 ? '+' : ''}${e.pts}</em>` : ''}</span>`).join('')}</div>
     </div>`).join('')}</div>`;
 }
 
@@ -270,7 +270,7 @@ window.simCtl = (a) => { if (a === 'toggle') SIM.run = !SIM.run; if (a === 'rese
 
 export function vPulse() {
   const gw = ST.G.cur, ev = ST.G.events.find((e) => e.id === gw);
-  if (SIMON() && (!ST.E?.picks || !ST.live || ST.liveRawGW !== gw)) return `<div class="sec"><h2>${I('i-target')}${tt('الأحداث المباشرة', 'Live events')}</h2></div>` + simHTML();
+  if (SIMON() && (!ST.E?.picks || !ST.live || ST.liveRawGW !== gw)) return `<div class="sec"><h2>${I('i-activity')}${tt('الأحداث المباشرة', 'Live events')}</h2></div>` + simHTML();
   if (!ST.E?.picks || !ST.live || ST.liveRawGW !== gw) return `<section class="hero"><div class="mut" style="font-size:12.5px">${tt('نبض الجولة', 'GW pulse')}</div><p style="margin-top:8px;line-height:1.8">${tt('يشتغل وقت المباريات: أحداث فريقك ومنافسك لحظة بلحظة. ارجع أول ما تبدي مباريات الجولة.', 'Comes alive during matches. Check back at kick-off.')}</p></section>`;
   if (!RV.list || RV.gw !== gw) loadRivals(); else serverSync();
   const my = liveCalc(ST.E.picks, gw), rp = RV.picks[RV.sel], rc = rp ? liveCalc(rp, gw) : null, rv = RV.list?.find((x) => x.entry === RV.sel);
@@ -326,9 +326,9 @@ export function vPulse() {
       return `<button class="pu-h2r ${x.entry === RV.sel ? 'on' : ''}" onclick="puRv(${x.entry})"><div><b>${esc(x.name)}</b><small>${esc(x.leagues.join('، '))}</small></div><span class="pu-h2s"><b class="${d2 > 0 ? 'up' : ''}">${my.total}</b><i>-</i><b class="${d2 < 0 ? 'down' : ''}">${o ?? '…'}</b></span><em class="${d2 > 0 ? 'w' : d2 < 0 ? 'l' : 'd'}">${d2 == null ? '' : d2 > 0 ? tt('متقدم', 'ahead') : d2 < 0 ? tt('متأخر', 'behind') : tt('تعادل', 'level')}</em></button>`; }).join('')}</div>` : '';
   // سجل الأحداث
   const evs = f.ev.slice(0, 30);
-  const feedHTML = evs.length ? `<div class="card pu-feed">${evs.map((e) => `<div class="pu-ev ${e.tone}"><span class="pu-ei">${ICO[e.k] || '•'}</span><div><b>${esc(txtOf(e))}</b><small>${ago(e.at)}${e.who === 'rv' ? ` · ${tt('منافسك', 'rival')}` : ''}</small></div></div>`).join('')}</div>` : `<div class="card mut pu-empty">${tt('الأحداث تنسجل هنا أول ما تصير (هدف، صناعة، كلين شيت، بونص، تغيّر ترتيبك) — حتى لو التطبيق مسكّر', 'Events are logged here as they happen — even with the app closed')}</div>`;
+  const feedHTML = evs.length ? `<div class="card pu-feed">${evs.map((e) => `<div class="pu-ev ${e.tone}"><span class="pu-ei">${EVX(e.k)}</span><div><b>${esc(txtOf(e))}</b><small>${ago(e.at)}${e.who === 'rv' ? ` · ${tt('منافسك', 'rival')}` : ''}</small></div></div>`).join('')}</div>` : `<div class="card mut pu-empty">${tt('الأحداث تنسجل هنا أول ما تصير (هدف، صناعة، كلين شيت، بونص، تغيّر ترتيبك) — حتى لو التطبيق مسكّر', 'Events are logged here as they happen — even with the app closed')}</div>`;
   return hero + chips
-    + `<div class="sec"><h2>${I('i-target')}${tt('الأحداث المباشرة', 'Live events')}</h2></div>${nearHTML}`
+    + `<div class="sec"><h2>${I('i-activity')}${tt('الأحداث المباشرة', 'Live events')}</h2></div>${nearHTML}`
     + h2HTML + `<div class="sec"><h2>${I('i-swords')}${tt('أنت ومنافسك', 'You vs your rival')}</h2></div>${rvHTML}`;
 }
 window.puRv = (e) => { RV.sel = e; LS.set(`fp_pulse_rv_${ST.profile.teamId}`, e); loadRivalPicks(); window.render(); };
