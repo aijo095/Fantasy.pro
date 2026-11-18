@@ -4,6 +4,7 @@
    - كل استجابة تسجّل وقت آخر تحديث
 ========================================================= */
 import { LS } from './ui.js';
+import { simWrap, simOn } from './livesim.js';
 const POS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
 const mem = new Map();
 export const lastUpdated = {};
@@ -11,7 +12,12 @@ export const lastUpdated = {};
 /** وضع «الفانتازي يتحدث»: نعرض آخر بيانات محفوظة بدل ما يوكف التطبيق */
 export const staleState = { on: false, since: 0 };
 const markStale = (on) => { if (on && !staleState.on) staleState.since = Date.now(); staleState.on = on; };
-async function get(path, params = {}, { ttl = 0, fresh = false } = {}) {
+// محاكاة المباراة (?livesim=1): البيانات تمر عليها قبل ما توصل للتطبيق، وبدونها ما يتغير شي
+async function get(path, params = {}, opts = {}) {
+  const d = await getRaw(path, params, opts);
+  return simOn() ? simWrap(path, params, d) : d;
+}
+async function getRaw(path, params = {}, { ttl = 0, fresh = false } = {}) {
   const qs = new URLSearchParams({ path, ...params, ...(fresh ? { fresh: '1' } : {}) }).toString();
   const key = qs.replace('&fresh=1', '');
   const hit = mem.get(key);
