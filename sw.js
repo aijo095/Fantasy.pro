@@ -2,7 +2,7 @@
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('push', (e) => {
-  let d = {}; try { d = e.data ? e.data.json() : {}; } catch { d = { title: 'فانتازي برو', body: e.data && e.data.text() }; }
+  let d = {}; try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data && e.data.text() }; }
   e.waitUntil((async () => {
     // العنوان دائماً اسم التطبيق، والخبر كامل بالنص
     const body = d.title && d.body ? `${d.title}: ${d.body}` : (d.title || d.body || '');
