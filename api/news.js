@@ -5,6 +5,7 @@
       (عنوان + ملخص قصير + رابط للمصدر) — مصنّفة: إصابات / إيقافات / تصريحات / أخبار الفرق
    العناوين تتترجم للعربي (Gemini/Claude إذا متوفر) وتنحفظ بالكاش
 ========================================================= */
+import { endJSON } from './_etag.js';
 import crypto from 'node:crypto';
 import { newsAr } from '../js/newsar.js';
 import { kv, kvEnabled } from './_kv.js';
@@ -96,7 +97,7 @@ const fplList = (boot) => {
     .sort((a, b) => b.at - a.at).slice(0, 250);
 };
 export default async function handler(req, res) {
-  const send = (code, obj, ttl = 0) => { res.statusCode = code; res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.setHeader('Cache-Control', ttl ? `public, s-maxage=${ttl}, stale-while-revalidate=${Math.min(ttl * 2, 300)}` : 'no-store'); res.end(JSON.stringify(obj)); };
+  const send = (code, obj, ttl = 0) => { res.statusCode = code; res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.setHeader('Cache-Control', ttl ? `public, s-maxage=${ttl}, stale-while-revalidate=${Math.min(ttl * 2, 300)}` : 'no-store'); endJSON(res, obj, code); };
   const only = new URL(req.url, 'http://x').searchParams.get('src');
   // أخبار الفانتازي الرسمية لوحدها — سريعة ومحدّثة كل دقيقة
   if (only === 'fpl') {

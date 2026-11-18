@@ -3,6 +3,7 @@
    التشكيلة الرسمية للمباراة + التبديلات الحقيقية (منو دخل بدل منو وبأي دقيقة)
    الفانتازي ما ينشر التشكيلات، فنجيبها من بيانات ESPN العامة للمباريات.
 ========================================================= */
+import { endJSON } from './_etag.js';
 const BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/';
 const ABBR = { MCI: 'MNC', MUN: 'MAN' }; // رموز الفانتازي ← رموز ESPN
 const memo = new Map();
@@ -11,7 +12,7 @@ function send(res, code, data, ttl = 0) {
   res.statusCode = code;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', ttl ? `public, s-maxage=${ttl}, stale-while-revalidate=${Math.min(ttl, 120)}` : 'no-store');
-  res.end(JSON.stringify(data));
+  endJSON(res, data, code);
 }
 async function get(path) {
   const r = await fetch(BASE + path, { headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; FantasyPro/2.0)' } });

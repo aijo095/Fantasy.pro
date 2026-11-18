@@ -6,6 +6,7 @@
    - أفضل 10,000 عالمياً تنحسب بـ GitHub Actions (scripts/captains10k.mjs) وتنحفظ بـ /data/captains/
    الفانتازي ما ينشر نسب الكبتنة الكاملة، فهذي عيّنة موضّحة الحجم.
 ========================================================= */
+import { endJSON } from './_etag.js';
 export const config = { maxDuration: 60 };
 const BASE = 'https://fantasy.premierleague.com/api/';
 const UA = 'Mozilla/5.0 (compatible; FantasyPro/2.0)';
@@ -15,7 +16,7 @@ function send(res, code, data, ttl = 0) {
   res.statusCode = code;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', ttl ? `public, s-maxage=${ttl}, stale-while-revalidate=${Math.min(ttl, 600)}` : 'no-store');
-  res.end(JSON.stringify(data));
+  endJSON(res, data, code);
 }
 let SELF = '', blocked = 0;
 /* الفانتازي أحياناً يرد 403 على هذي الدالة (حماية Cloudflare) — نعيد المحاولة عبر وسيطنا /api/fpl اللي يشتغل وعنده كاش */

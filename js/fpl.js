@@ -15,7 +15,7 @@ async function get(path, params = {}, { ttl = 0, fresh = false } = {}) {
   const qs = new URLSearchParams({ path, ...params, ...(fresh ? { fresh: '1' } : {}) }).toString();
   const key = qs.replace('&fresh=1', '');
   const hit = mem.get(key);
-  if (!fresh && hit && Date.now() - hit.t < ttl * 1000) return hit.d;
+  if (!fresh && hit && Date.now() - hit.t < ttl * 1000) return expand(hit.d);
   // بيانات اللاعبين العامة: إذا التطبيق انفتح خلال 5 دقايق من آخر جلب ناخذها من التلفون بدون طلب
   if (!fresh && !hit && path === 'bootstrap-static/') {
     const c = LS.get('fpc_' + key);
@@ -23,12 +23,19 @@ async function get(path, params = {}, { ttl = 0, fresh = false } = {}) {
   }
   const fallback = (err) => {
     const cached = hit ? { t: hit.t, d: hit.d } : LS.get('fpc_' + key);
-    if (cached) { lastUpdated[path] = cached.t; markStale(true); return cached.d; }
+    if (cached) { lastUpdated[path] = cached.t; markStale(true); return expand(cached.d); }
     throw err;
   };
   let res;
-  try { res = await fetch('/api/fpl?' + qs); }
+  // إذا عندنا نسخة: نرسل بصمتها، والسيرفر يرجّع 304 (بدون بيانات) إذا ما تغيّر شي
+  const prev = hit || LS.get('fpc_' + key);
+  try { res = await fetch('/api/fpl?' + qs, prev?.e ? { headers: { 'If-None-Match': prev.e }, cache: 'no-store' } : undefined); }
   catch { return fallback(new Error('تعذّر الاتصال بالسيرفر — تأكد من الإنترنت')); }
+  if (res.status === 304 && !prev?.d) { try { res = await fetch('/api/fpl?' + qs, { cache: 'no-store' }); } catch { return fallback(new Error('تعذّر الاتصال بالسيرفر — تأكد من الإنترنت')); } }
+  if (res.status === 304 && prev?.d) {
+    const now = Date.now(); mem.set(key, { t: now, d: prev.d, e: prev.e }); lastUpdated[path] = now; markStale(false);
+    return expand(prev.d);
+  }
   const data = await res.json().catch(() => null);
   if (!res.ok || data == null) {
     if (res.status === 404) throw Object.assign(new Error(data?.error || 'غير موجود'), { status: 404 });
@@ -37,9 +44,20 @@ async function get(path, params = {}, { ttl = 0, fresh = false } = {}) {
   const stale = res.headers.get('X-FP-Stale') === '1';
   if (stale) markStale(true);
   const now = Date.now();
-  mem.set(key, { t: stale ? now - ttl * 1000 : now, d: data }); lastUpdated[path] = now;
-  if (!stale) { const str = JSON.stringify(data); if (str.length < (path === 'bootstrap-static/' ? 2500000 : 400000)) { try { localStorage.setItem('fpc_' + key, JSON.stringify({ t: now, d: data })); } catch { pruneLS(); } } }
-  return data;
+  const etag = stale ? null : res.headers.get('ETag');
+  mem.set(key, { t: stale ? now - ttl * 1000 : now, d: data, e: etag }); lastUpdated[path] = now;
+  if (path === 'bootstrap-static/' && Array.isArray(data.elements)) ALL_IDS = data.elements.map((e) => e.id);
+  if (!stale) { const str = JSON.stringify(data); if (str.length < (path === 'bootstrap-static/' ? 2500000 : 400000)) { try { localStorage.setItem('fpc_' + key, JSON.stringify({ t: now, d: data, e: etag })); } catch { pruneLS(); } } }
+  return expand(data);
+}
+/* المباشر المخفف: السيرفر يرسل بس اللاعبين اللي عندهم أرقام، وهنا نرجّع الباقين أصفار حتى كل الأقسام تشتغل مثل قبل */
+let ALL_IDS = null;
+function expand(d) {
+  if (!d || !d.slim || !Array.isArray(d.elements)) return d;
+  if (!ALL_IDS) { const b = mem.get(new URLSearchParams({ path: 'bootstrap-static/' }).toString()); if (b?.d?.elements) ALL_IDS = b.d.elements.map((e) => e.id); }
+  const have = new Set(d.elements.map((e) => e.id)), out = d.elements.slice();
+  if (ALL_IDS) for (const id of ALL_IDS) if (!have.has(id)) out.push({ id, stats: { ...d.zero }, explain: [] });
+  return { elements: out.sort((a, b) => a.id - b.id) };
 }
 function pruneLS() { try { Object.keys(localStorage).filter((k) => k.startsWith('fpc_') && !k.includes('bootstrap')).forEach((k) => localStorage.removeItem(k)); } catch {} }
 export const clearStale = () => markStale(false);

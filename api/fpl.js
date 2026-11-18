@@ -6,6 +6,7 @@
    - fresh=1 يتجاوز الكاش (محدود: مرة كل 30 ثانية لكل مسار)
 ========================================================= */
 import zlib from 'node:zlib';
+import crypto from 'node:crypto';
 import { kv, kvEnabled } from './_kv.js';
 const BASE = 'https://fantasy.premierleague.com/api/';
 const UA = 'Mozilla/5.0 (compatible; FantasyPro/2.0)';
@@ -44,7 +45,27 @@ function send(res, code, data, ttl = 0) {
   res.statusCode = code;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', ttl ? `public, s-maxage=${ttl}, stale-while-revalidate=${ttl <= 3 ? 1 : ttl <= 10 ? 3 : Math.min(ttl, 60)}` : 'no-store');
-  res.end(JSON.stringify(data));
+  const body = JSON.stringify(data);
+  if (code === 200) {
+    // بصمة للمحتوى: إذا التطبيق عنده نفس النسخة يرجعله 304 بدون أي بيانات
+    const tag = '"' + crypto.createHash('md5').update(body).digest('base64url').slice(0, 16) + '"';
+    res.setHeader('ETag', tag);
+    const inm = (res.req?.headers?.['if-none-match'] || '').split(',').map((x) => x.trim().replace(/^W\//, ''));
+    if (inm.includes(tag)) { res.statusCode = 304; res.setHeader("Cache-Control", "private, no-store"); return res.end(); } // الـ 304 ما ينحفظ بالـ CDN
+  }
+  res.end(body);
+}
+/* المباشر المخفف: نشيل اللاعبين اللي ما لعبوا ولا عندهم أي رقم (التطبيق يرجّعهم أصفار) */
+const isZero = (v) => v === 0 || v === false || v == null || (typeof v === 'string' && /^0(\.0+)?$/.test(v));
+function slimLive(d) {
+  if (!d || !Array.isArray(d.elements) || d.slim) return d;
+  let zero = null; const els = [];
+  for (const e of d.elements) {
+    const st = e.stats || {};
+    const quiet = Object.values(st).every(isZero) && (e.explain || []).every((x) => (x.stats || []).every((r) => isZero(r.value) && isZero(r.points)));
+    if (quiet) { if (!zero) zero = st; } else els.push(e);
+  }
+  return zero ? { slim: 1, zero, elements: els } : d;
 }
 const pick = (o, keys) => Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, o[k]]));
 function slimBootstrap(b) {
@@ -96,6 +117,7 @@ export default async function handler(req, res) {
       try { data = JSON.parse(txt); } catch { throw Object.assign(new Error('upstream updating'), { updating: true }); }
     }
     if (path === 'bootstrap-static/') data = slimBootstrap(data);
+    if (/^event\/\d+\/live\/$/.test(path)) data = slimLive(data);
     memo.set(key, { t: Date.now(), d: data });
     if (memo.size > 500) memo.delete(memo.keys().next().value);
     await saveBackup(key, data);
