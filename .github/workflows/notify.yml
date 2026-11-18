@@ -1,5 +1,8 @@
 name: notify
-# محرك الإشعارات شبه لحظي: وظيفة وحدة تشتغل ~55 دقيقة وتفحص كل 45 ثانية
+# محرك الإشعارات الذكي: وظيفة وحدة تشتغل ~55 دقيقة
+# • وقت المباريات (وقبلها بساعتين ونص، وقبل الإغلاق بساعتين): فحص كل 30 ثانية حتى الأهداف والصناعة والأحداث توصل بلحظتها
+# • باقي الأوقات (ما كو مباريات): فحص كل 5 دقايق لتوفير المعالج
+# الوضع يحدده /api/notify نفسه بالحقل mode، وإذا ما رجع شي نعتبره «مباشر» احتياطاً
 # (الجدول كل 10 دقايق احتياط إذا GitHub أخّر أو أسقط تشغيل؛ concurrency يمنع التكرار)
 on:
   schedule:
@@ -13,10 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Run notifier every 45s
+      - name: Smart notifier loop
         run: |
           end=$(( $(date +%s) + 55*60 ))
           while [ $(date +%s) -lt $end ]; do
-            curl -sS --max-time 50 https://fantasy-pro-aijo0.vercel.app/api/notify | head -c 300; echo
-            sleep 45
+            out=$(curl -sS --max-time 50 https://fantasy-pro-aijo0.vercel.app/api/notify || true)
+            echo "$out" | head -c 300; echo
+            if echo "$out" | grep -q '"mode":"idle"'; then sleep 300; else sleep 30; fi
           done

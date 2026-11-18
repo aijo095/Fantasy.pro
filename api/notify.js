@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   const u = new URL(req.url, 'http://x');
   const force = u.searchParams.get('force') === process.env.NOTIFY_KEY && !!process.env.NOTIFY_KEY;
   if (!force && !(await kv('SET', 'lock:notify', '1', 'NX', 'EX', 55))) return send(res, 200, { ok: true, skipped: 'locked' });
-  const log = { users: 0, sent: 0, gone: 0, events: [] };
+  const log = { users: 0, sent: 0, gone: 0, events: [], mode: 'live' };
   try {
     const boot = await fpl('bootstrap-static/');
     const P = Object.fromEntries(boot.elements.map((e) => [e.id, e]));
@@ -52,6 +52,10 @@ export default async function handler(req, res) {
     if (cur) {
       const fx = await fpl(`fixtures/?event=${cur.id}`);
       const anyLive = fx.some((f) => f.started && !f.finished_provisional) || fx.some((f) => f.finished_provisional && !f.finished);
+      // وضع الفحص: سريع وقت المباريات وقبلها بساعتين ونص (حتى ما يتأخر أي حدث)، وهادئ بباقي الأوقات
+      const soonKO = fx.some((f) => !f.started && f.kickoff_time && new Date(f.kickoff_time) - Date.now() < 2.5 * 36e5);
+      const soonDL = next && new Date(next.deadline_time) - Date.now() < 2 * 36e5 && new Date(next.deadline_time) > Date.now();
+      log.mode = anyLive || soonKO || soonDL ? 'live' : 'idle';
       const fxSnap = (await getJ('snap:fx:' + cur.id)) || null;
       const fxNow = Object.fromEntries(fx.map((f) => [f.id, f.started ? 1 : 0]));
       if (fxSnap) kick = fx.filter((f) => f.started && !fxSnap[f.id] && !f.finished_provisional);
