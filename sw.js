@@ -4,7 +4,9 @@ self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('push', (e) => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch { d = { title: 'فانتازي برو', body: e.data && e.data.text() }; }
   e.waitUntil((async () => {
-    await self.registration.showNotification(d.title || 'فانتازي برو', { body: d.body || '', icon: '/assets/icon-192.png', badge: '/assets/icon-192.png', tag: d.tag, data: { url: d.url || '/' }, dir: 'rtl', lang: 'ar' });
+    // العنوان دائماً اسم التطبيق، والخبر كامل بالنص
+    const body = d.title && d.body ? `${d.title}: ${d.body}` : (d.title || d.body || '');
+    await self.registration.showNotification('فانتازي برو', { body, icon: '/assets/icon-192.png', badge: '/assets/icon-192.png', tag: d.tag, data: { url: d.url || '/' }, dir: 'rtl', lang: 'ar' });
     const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     cs.forEach((c) => c.postMessage({ type: 'push', d }));
     if (self.navigator && 'setAppBadge' in self.navigator) { try { await self.navigator.setAppBadge(); } catch {} }
