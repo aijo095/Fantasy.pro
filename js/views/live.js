@@ -11,10 +11,16 @@ import { liveRankEstimate } from '../predict.js';
 
 let gwSel = null, poll = null, lastFetch = 0;
 const isLiveGW = (g) => (ST.G.fx[g] || []).some((f) => f.started && !f.fin);
+let liveBusy = false, liveSig = '', liveErrAt = 0;
 async function refreshLive(force = false) {
-  const g = ST.G.cur; if (!g) return;
+  const g = ST.G.cur; if (!g || liveBusy) return;
+  liveBusy = true;
   try {
     const [l, fx] = await Promise.all([FPL.loadLive(g, force), FPL.loadFixturesGW(g, force)]);
+    // إذا ما تغيّر شي من آخر مرة: نحدّث وقت الجلب بس، بدون إعادة رسم
+    const sig = g + JSON.stringify(l.elements) + JSON.stringify(fx);
+    if (sig === liveSig && ST.liveRawGW === g) { lastFetch = Date.now(); freshness(); return; }
+    liveSig = sig;
     const next = Object.fromEntries(l.elements.map((x) => [x.id, x.stats]));
     const fxNorm = fx.map((x) => ({ id: x.id, ev: x.event, h: x.team_h, a: x.team_a, hd: x.team_h_difficulty, ad: x.team_a_difficulty, ko: x.kickoff_time, fin: !!(x.finished || (x.finished_provisional && (x.minutes || 0) >= 90)), started: x.started, hs: x.team_h_score, as: x.team_a_score, min: x.minutes, stats: x.stats || [] }));
     scanLive(ST.live, next, ST.G.fx[g], fxNorm);
@@ -24,7 +30,7 @@ async function refreshLive(force = false) {
     ST.live = next; ST.liveRaw = l.elements; ST.liveRawGW = g; ST.G.fx[g] = fxNorm; lastFetch = Date.now(); freshness();
     if (Date.now() - (window.__entryAt || 0) > 110e3) { window.__entryAt = Date.now(); FPL.fetchEntry(ST.profile.teamId, true).then((en) => { if (en?.id) ST.E.entry = { ...ST.E.entry, ...en }; }).catch(() => {}); }
     if (!document.querySelector('.ov') && ['live', 'home', 'team', 'season', 'pulse'].includes(ST.view)) window.render();
-  } catch (e) { if (force) toast(e.message); }
+  } catch (e) { if (force && Date.now() - liveErrAt > 60e3) { liveErrAt = Date.now(); toast(e.message); } } finally { liveBusy = false; }
 }
 /* تحديث لحظي ذكي: كل 30 ثانية وقت المباريات، كل 10 دقائق بباقي الأوقات، ويتوقف إذا التطبيق بالخلفية */
 const nearKickoff = () => { const now = Date.now(); return [ST.G.cur, ST.G.next].some((g) => (ST.G.fx[g] || []).some((f) => f.ko && !f.fin && Math.abs(new Date(f.ko) - now) < 2.5 * 3600e3 && new Date(f.ko) - now < 15 * 60e3)); };
@@ -54,8 +60,8 @@ export function freshness() {
 }
 export function startLivePolling() {
   clearInterval(poll); clearInterval(freshT); lastFetch = lastFetch || Date.now(); idleAt = Date.now();
-  const step = () => { if (!ST.G || document.hidden) return; if (liveMode()) { if (Date.now() - lastFetch >= 14e3) refreshLive(true); } else if (Date.now() - idleAt >= 2 * 60e3) idleRefresh(); };
-  poll = setInterval(step, 5000); freshT = setInterval(freshness, 5000); freshness();
+  const step = () => { if (!ST.G || document.hidden) return; if (liveMode()) { if (Date.now() - lastFetch >= 3.5e3) refreshLive(true); } else if (Date.now() - idleAt >= 2 * 60e3) idleRefresh(); };
+  poll = setInterval(step, 1000); freshT = setInterval(freshness, 5000); freshness();
   if (!window.__visBound) { window.__visBound = 1; document.addEventListener('visibilitychange', () => { if (!document.hidden && ST.G) { if (liveMode()) refreshLive(true); else if (Date.now() - idleAt > 20e3) idleRefresh(); } }); }
   if (liveMode()) refreshLive(true);
 }

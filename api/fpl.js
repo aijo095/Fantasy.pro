@@ -20,7 +20,7 @@ const ROUTES = [
   { re: /^leagues-classic\/\d{1,10}\/standings\/$/, ttl: 180 },
   { re: /^leagues-h2h\/\d{1,10}\/standings\/$/, ttl: 120 },
   { re: /^leagues-h2h-matches\/league\/\d{1,10}\/$/, ttl: 60 },
-  { re: /^event\/\d{1,2}\/live\/$/, ttl: 10 },
+  { re: /^event\/\d{1,2}\/live\/$/, ttl: 3 },
   { re: /^element-summary\/\d{1,5}\/$/, ttl: 900 },
   { re: /^team\/set-piece-notes\/$/, ttl: 3600 },
 ];
@@ -43,7 +43,7 @@ const lastFresh = new Map();
 function send(res, code, data, ttl = 0) {
   res.statusCode = code;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', ttl ? `public, s-maxage=${ttl}, stale-while-revalidate=${ttl <= 10 ? 3 : Math.min(ttl, 60)}` : 'no-store');
+  res.setHeader('Cache-Control', ttl ? `public, s-maxage=${ttl}, stale-while-revalidate=${ttl <= 3 ? 1 : ttl <= 10 ? 3 : Math.min(ttl, 60)}` : 'no-store');
   res.end(JSON.stringify(data));
 }
 const pick = (o, keys) => Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, o[k]]));
@@ -74,10 +74,10 @@ export default async function handler(req, res) {
   const ev = parseInt(url.searchParams.get('event') || '0', 10);
   if (path.startsWith('leagues-h2h-matches')) qs = `?page=${Math.min(page, 100)}${ev >= 1 && ev <= 38 ? `&event=${ev}` : ''}`;
   let ttl = route.ttl;
-  if (path === 'fixtures/' && ev >= 1 && ev <= 38) { qs = `?event=${ev}`; ttl = 10; }
+  if (path === 'fixtures/' && ev >= 1 && ev <= 38) { qs = `?event=${ev}`; ttl = 3; }
   const key = path + qs;
   let fresh = url.searchParams.get('fresh') === '1';
-  if (fresh) { const lf = lastFresh.get(key) || 0; if (Date.now() - lf < 8000) fresh = false; else lastFresh.set(key, Date.now()); }
+  if (fresh) { const lf = lastFresh.get(key) || 0; if (Date.now() - lf < (ttl <= 3 ? 2500 : 8000)) fresh = false; else lastFresh.set(key, Date.now()); } // المباشر: تحديث كل ~3 ثواني
   const hit = memo.get(key);
   if (!fresh && hit && Date.now() - hit.t < ttl * 1000) { stats.hits++; return send(res, 200, hit.d, ttl); }
   stats.misses++;
