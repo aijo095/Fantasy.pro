@@ -284,6 +284,8 @@ export function go(v, opts = {}) {
   ST.view = v;
   $('#tbSubT').textContent = t(v === 'more' ? 'more' : v) + (ST.G ? ` · ${t('gw')} ${ST.G.next}` : '');
   updateBack();
+  // الرجوع (زر أو سحبة الآيفون): رسم مباشر بدون حركات دخول، ونرجع لنفس مكان التمرير فوراً حتى يطابق لقطة الآيفون وما يعلّق
+  if (opts.back) { window.__navBack = true; $('#view')?.classList.remove('fx-first'); try { render(); } finally { window.__navBack = false; } const y = opts.y || 0; window.scrollTo({ top: y, behavior: 'instant' }); requestAnimationFrame(() => window.scrollTo({ top: y, behavior: 'instant' })); return; }
   render(); window.scrollTo({ top: opts.y || 0 });
 }
 function updateBack() { const b = $('#tbBack'); if (b) b.classList.toggle('hidden', !NAV_STACK.length && ST.view === 'home'); }
@@ -293,16 +295,17 @@ export function goBack() {
   if (NAV_STACK.length) return history.back();
   if (ST.view !== 'home') go('home', { back: true });
 }
+try { history.scrollRestoration = 'manual'; } catch {}
 window.addEventListener('popstate', () => {
   if (!ST.G) return;
   if (document.querySelector('.ov')) { document.querySelector('.sh-back') ? window.sheetBack() : window.closeSheet(true); try { history.pushState({ v: ST.view }, '', '#' + ST.view); } catch {} return; }
-  { const r = window.__backHook && window.__backHook(true); if (r) { if (r !== 'popped') { try { history.pushState({ v: ST.view }, '', '#' + ST.view); } catch {} } return; } }
+  { window.__navBack = window.__noMorph = true; let r; try { r = window.__backHook && window.__backHook(true); } finally { window.__navBack = window.__noMorph = false; } if (r) { if (r !== 'popped') { try { history.pushState({ v: ST.view }, '', '#' + ST.view); } catch {} } return; } }
   const e = NAV_STACK.pop(); const v = e?.v || location.hash.slice(1) || 'home';
   go(v, { back: true, y: e?.y || 0 });
 });
 window.goBack = goBack;
 let lastCount = '';
-function countUp() { const first = lastCount !== ST.view || window.__recount; window.__recount = false; lastCount = ST.view; const v = document.getElementById('view'); countAll(v, first); decorate(v, first); if (first) { v.classList.add('fx-first'); clearTimeout(window.__fxF); window.__fxF = setTimeout(() => v.classList.remove('fx-first'), 1500); } }
+function countUp() { const first = (lastCount !== ST.view || window.__recount) && !window.__navBack; window.__recount = false; lastCount = ST.view; const v = document.getElementById('view'); countAll(v, first); decorate(v, first); if (first) { v.classList.add('fx-first'); clearTimeout(window.__fxF); window.__fxF = setTimeout(() => v.classList.remove('fx-first'), 1500); } }
 window.__fxName = (id) => ST.G?.PM?.[id]?.name || '#' + id;
 
 window.__canPull = () => ['home', 'team', 'live', 'season', 'leagues', 'prices'].includes(ST.view);
