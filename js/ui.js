@@ -154,15 +154,29 @@ export function lineChart(labels, series, { h = 170, invert = false, fmtV = (v) 
   const Y = (v) => { const r = (v - mn) / (mx - mn); return invert ? P + r * (h - 2 * P) : h - P - r * (h - 2 * P); };
   const id = 'lc' + Math.random().toString(36).slice(2, 7);
   const paths = series.map((s, si) => { const pts = s.vals.map((v, i) => (v == null ? null : [X(i), Y(v)])).filter(Boolean);
-    return `${si === 0 ? `<path d="M${pts[0][0]},${h - P} ${pts.map((p) => `L${p[0]},${p[1]}`).join(' ')} L${pts[pts.length - 1][0]},${h - P}Z" fill="url(#${id})"/>` : ''}<polyline points="${pts.map((p) => p.join(',')).join(' ')}" fill="none" stroke="${s.color}" stroke-width="${si === 0 ? 3 : 2}" ${si ? 'stroke-dasharray="5 5"' : ''} stroke-linejoin="round"/>
-    ${si === 0 ? s.vals.map((v, i) => (v == null ? '' : `<circle cx="${X(i)}" cy="${Y(v)}" r="4" fill="${s.color}"><title>${labels[i]}: ${fmtV(v)}</title></circle>`)).join('') : ''}`; }).join('');
+    return `${si === 0 ? `<path d="M${pts[0][0]},${h - P} ${pts.map((p) => `L${p[0]},${p[1]}`).join(' ')} L${pts[pts.length - 1][0]},${h - P}Z" fill="url(#${id})"/>` : ''}<polyline points="${pts.map((p) => p.join(',')).join(' ')}" fill="none" stroke="${s.color}" stroke-width="${si === 0 ? 2.5 : 2}" ${s.dash ? `stroke-dasharray="${s.dash}"` : si ? 'stroke-dasharray="5 5"' : ''} stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    ${si === 0 ? s.vals.map((v, i) => (v == null ? '' : `<circle cx="${X(i)}" cy="${Y(v)}" r="${i === s.vals.length - 1 ? 5 : 3.5}" fill="${s.color}" stroke="var(--s1,#12161E)" stroke-width="2"><title>${labels[i]}: ${fmtV(v)}</title></circle>`)).join('') : ''}${si === 0 ? (() => { const li = s.vals.length - 1, lv = s.vals[li]; return lv == null ? '' : `<text x="${X(li) - 8}" y="${Y(lv) - 10}" fill="#E2E8F0" font-size="13" font-weight="600" text-anchor="end" font-family="Inter,sans-serif">${fmtV(lv)}</text>`; })() : ''}`; }).join('');
   return `<svg viewBox="0 0 ${W} ${h}" width="100%" style="direction:ltr;display:block"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${series[0].color}" stop-opacity=".25"/><stop offset="1" stop-color="${series[0].color}" stop-opacity="0"/></linearGradient></defs>${paths}
    ${labels.map((l, i) => (labels.length > 20 && i % 2 ? '' : `<text x="${X(i)}" y="${h - 8}" fill="#94A3B8" font-size="11" text-anchor="middle">${l}</text>`)).join('')}</svg>
-   <div style="display:flex;gap:14px;font-size:11.5px;flex-wrap:wrap" class="mut">${series.map((s, i) => `<span><b style="color:${s.color}">${i ? '┅' : '━'}</b> ${s.name}</span>`).join('')}</div>`;
+   <div class="lc-leg">${series.length > 1 ? series.map((s, i) => `<span><i style="--c:${s.color}" class="${s.dash || i ? 'd' : ''}"></i>${s.name}</span>`).join('') : ''}${invert ? `<span class="lc-hint">${tt('فوق = ترتيب أحسن', 'Up = better rank')}</span>` : ''}</div>`;
 }
-export function barChart(labels, vals, { h = 150, color = 'var(--g1)', onclick = null, sel = null, max = null } = {}) {
-  const mx = Math.max(max || 0, ...vals.map((v) => v || 0), 1);
-  return `<div class="bars" style="height:${h}px">${vals.map((v, i) => `<button class="${sel === i ? 'sel' : ''}" style="height:${Math.max(3, (v || 0) / mx * 100)}%;background:${color}" ${onclick ? `onclick="${onclick}(${i})"` : ''}><b>${v ?? '—'}</b><span>${labels[i]}</span></button>`).join('')}</div>`;
+/** أعمدة: سلسلة وحدة بلون واحد، أرقام فقط على الأعلى والأدنى والأخير (والمحدد)، خط مرجعي اختياري (المعدل)، والقيم السالبة تحت خط الصفر.
+ *  كل عمود يعرض قيمته عند اللمس/التركيز، والأرقام بلون النص مو بلون العمود. */
+export function barChart(labels, vals, { h = 150, color = null, onclick = null, sel = null, max = null, ref = null, refLabel = '', fmtL = (l) => l } = {}) {
+  const n = vals.length; if (!n) return `<p class="mut">${t('noData')}</p>`;
+  const num = vals.map((v) => (v == null ? null : Number(v)));
+  const ok = num.filter((v) => v != null), mx = Math.max(max || 0, ...ok, ref ?? 0, 1), mn = Math.min(0, ...ok), R = mx - mn || 1;
+  const z = (-mn / R) * 100, iMax = num.indexOf(Math.max(...ok)), iMin = num.indexOf(Math.min(...ok));
+  const show = new Set([iMax, iMin, n - 1, sel].filter((i) => i != null && i >= 0));
+  const every = n > 14 ? 2 : 1;
+  const bars = num.map((v, i) => {
+    const neg = v != null && v < 0, hgt = v == null ? 0 : Math.max(v === 0 ? 0 : 2, (Math.abs(v) / R) * 100);
+    const cls = ['b', neg ? 'neg' : '', i === iMax && v > 0 ? 'hi' : '', sel === i ? 'sel' : '', show.has(i) ? 'lbl' : ''].filter(Boolean).join(' ');
+    const lab = i === n - 1 || i % every === 0 ? fmtL(labels[i]) : '';
+    return `<button class="${cls}" style="--z:${z.toFixed(2)}%;--v:${hgt.toFixed(2)}%${color ? `;--c:${color}` : ''}" aria-label="${esc(String(fmtL(labels[i])))}: ${v ?? '—'}" ${onclick ? `onclick="${onclick}(${i})"` : ''}><i></i><b>${v ?? '—'}</b><span>${lab}</span></button>`;
+  }).join('');
+  const refLine = ref != null ? `<div class="b2-ref" style="bottom:${(z + (ref / R) * 100).toFixed(2)}%"><em>${refLabel || ''} <bdi>${ref}</bdi></em></div>` : '';
+  return `<div class="bars2" style="height:${h}px">${mn < 0 ? `<div class="b2-zero" style="bottom:${z.toFixed(2)}%"></div>` : ''}${refLine}${bars}</div>`;
 }
 export function gauge(v, label, col = '#34D399') { const C = 2 * Math.PI * 30; return `<div class="gauge"><svg viewBox="0 0 72 72" width="72" height="72"><circle cx="36" cy="36" r="30" stroke="rgba(255,255,255,.08)" stroke-width="7" fill="none"/><circle cx="36" cy="36" r="30" stroke="${col}" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - Math.max(0, Math.min(100, v)) / 100)}" transform="rotate(-90 36 36)"/></svg><b>${Math.round(v)}</b><span>${label}</span></div>`; }
 export function ring(v, sub = '') { const C = 2 * Math.PI * 62, col = v >= 65 ? '#34D399' : v >= 50 ? '#F59E0B' : '#EF4444'; return `<div class="ring"><svg width="150" height="150"><circle cx="75" cy="75" r="62" stroke="rgba(255,255,255,.08)" stroke-width="13" fill="none"/><circle cx="75" cy="75" r="62" stroke="${col}" stroke-width="13" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - v / 100)}"/></svg><div class="c"><div><b>${v}</b><div class="mut" style="font-size:12px">${sub}</div></div></div></div>`; }

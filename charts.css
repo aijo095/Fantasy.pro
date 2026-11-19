@@ -1,0 +1,76 @@
+/* =========================================================
+   الإحصائيات والرسوم — ترتيب وإبراز
+   • رقم رئيسي واحد لكل قسم، وحوله أرقام مساندة أصغر
+   • الأرقام بلون النص، والاتجاه (فوق/تحت) بعلامة ملوّنة صغيرة
+   • أعمدة رفيعة بلون واحد، رقم على الأعلى والأدنى والأخير بس، وخط المعدل منقّط
+   • ألوان السلاسل متحققة لعمى الألوان على الخلفية الداكنة
+========================================================= */
+:root{--ch-1:#16A37A;--ch-2:#3B82F6;--ch-ref:#7C8798;--ch-neg:#E05252;--ch-grid:rgba(255,255,255,.06)}
+
+/* ---------- البطاقة الرئيسية للأرقام ---------- */
+.st-hero{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px;padding:16px}
+.st-main{display:flex;flex-direction:column;gap:2px;grid-row:span 1}
+.st-main .k,.st-side .k,.st-cap .k,.st-pill span{font-size:12px;color:var(--mut);font-weight:500;display:flex;align-items:center;gap:6px}
+.st-main .big-num{font-size:44px;line-height:1.05;font-weight:600;letter-spacing:-.03em;color:var(--txt);font-variant-numeric:tabular-nums}
+.st-sub{font-size:12px;color:var(--mut)}
+.st-side{display:flex;flex-direction:column;gap:8px;padding-inline-start:12px;border-inline-start:1px solid var(--line)}
+.st-side>div{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.st-side b{font-size:16px;font-weight:600;color:var(--txt);display:inline-flex;align-items:center;gap:5px;font-variant-numeric:tabular-nums}
+.st-bw{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.st-pill{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:0 8px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px var(--line);text-align:start;color:inherit;border:0;font:inherit;cursor:pointer;min-height:44px}
+.st-pill b{grid-row:span 2;font-size:24px;font-weight:600;color:var(--txt);font-variant-numeric:tabular-nums}
+.st-pill small{font-size:11.5px;color:var(--mut)}
+.st-pill span::before{content:"";width:7px;height:7px;border-radius:2px;background:var(--ch-1)}
+.st-pill.down span::before{background:var(--ch-neg)}
+
+/* علامة الاتجاه: لون + شكل (▲▼) حتى ما يعتمد المعنى على اللون بس */
+.st-chip{font-style:normal;font-size:.62em;line-height:1;display:inline-grid;place-items:center;width:1.5em;height:1.5em;border-radius:6px;vertical-align:.12em}
+.st-chip.up{color:var(--ch-1);background:rgba(22,163,122,.14)}
+.st-chip.down{color:var(--ch-neg);background:rgba(224,82,82,.14)}
+
+/* بطاقات الأرقام: الرقم بلون النص دائماً */
+#view .stat .v{color:var(--txt);display:inline-flex;align-items:center;gap:6px}
+#view .stat .v.up,#view .stat .v.down{color:var(--txt)}
+.st-meter{display:block;height:4px;border-radius:99px;background:rgba(255,255,255,.07);margin-top:8px;overflow:hidden}
+.st-meter i{display:block;height:100%;border-radius:99px;background:var(--ch-1)}
+.st-cap{display:flex;flex-direction:column;gap:3px}
+.st-cap b{font-size:16px}
+.st-foot{font-size:12px;color:var(--mut);margin-top:6px}
+.st-foot b{color:var(--txt)}
+/* مراجعة القرارات: الأرقام بلون النص، والخسارة بنقطة حمرة جنب العنوان */
+#view .rv-kpis b.num.down,#view .rv-kpis b.num.up,html.ui2 #view .rv-kpis b{color:var(--txt)!important}
+.rv-kpis b.num.down+span::before,.rv-kpis b.num.up+span::before{content:"";display:inline-block;width:6px;height:6px;border-radius:2px;margin-inline-end:5px;vertical-align:.1em;background:var(--ch-neg)}
+.rv-kpis b.num.up+span::before{background:var(--ch-1)}
+
+/* ---------- الأعمدة ---------- */
+.bars2{position:relative;display:flex;align-items:stretch;gap:2px;direction:ltr;padding:22px 2px 22px;margin-top:4px;
+  background:linear-gradient(var(--ch-grid),var(--ch-grid)) 0 calc(100% - 22px)/100% 1px no-repeat}
+.bars2>button{position:relative;flex:1;min-width:0;border:0;background:none;padding:0;cursor:pointer;color:inherit;font:inherit}
+.bars2>button>i{position:absolute;left:50%;transform:translateX(-50%);width:min(70%,18px);bottom:var(--z);height:var(--v);border-radius:4px 4px 1px 1px;background:var(--c,var(--ch-1));opacity:.55;transition:opacity var(--m-fast,160ms) ease}
+.bars2>button.neg>i{bottom:auto;top:calc(100% - var(--z));border-radius:1px 1px 4px 4px;background:var(--ch-neg);opacity:.8}
+.bars2>button.hi>i,.bars2>button.sel>i{opacity:1}
+.bars2>button>b{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--z) + var(--v) + 4px);font:600 11.5px Inter,sans-serif;color:var(--txt);white-space:nowrap;opacity:0;transition:opacity var(--m-fast,160ms) ease;font-variant-numeric:tabular-nums;pointer-events:none}
+.bars2>button.neg>b{bottom:calc(var(--z) + 4px);color:var(--ch-neg)}
+.bars2>button.lbl>b{opacity:1}
+.bars2>button.hi>b{color:var(--txt);font-size:12.5px}
+.bars2>button:is(:hover,:focus-visible,:active)>i{opacity:1}
+.bars2>button:is(:hover,:focus-visible,:active)>b{opacity:1}
+.bars2>button>span{position:absolute;left:0;right:0;bottom:-20px;text-align:center;font:500 10.5px Inter,sans-serif;color:var(--mut)}
+.bars2>button:focus-visible{outline:none}
+.bars2>button:focus-visible>i{outline:2px solid rgba(255,255,255,.6);outline-offset:2px}
+.b2-zero{position:absolute;left:2px;right:2px;height:1px;background:rgba(255,255,255,.18);pointer-events:none}
+.b2-ref{position:absolute;left:2px;right:2px;height:0;border-top:1.5px dashed var(--ch-ref);pointer-events:none;z-index:1}
+.b2-ref em{position:absolute;right:0;bottom:3px;font:500 10.5px 'IBM Plex Sans Arabic',sans-serif;font-style:normal;color:var(--mut);background:var(--s1,#12161E);padding:0 4px;border-radius:4px;direction:rtl}
+@media (prefers-reduced-motion:no-preference){
+  .bars2>button>i{transform-origin:bottom;animation:b2Grow 420ms var(--m-ease-out,cubic-bezier(.23,1,.32,1)) both;animation-delay:calc(var(--bi,0) * 20ms)}
+  .bars2>button.neg>i{transform-origin:top}
+}
+@keyframes b2Grow{from{transform:translateX(-50%) scaleY(0)}}
+
+/* ---------- الخطوط ---------- */
+.lc-leg{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--mut);margin-top:6px}
+.lc-leg span{display:inline-flex;align-items:center;gap:6px}
+.lc-leg i{width:16px;height:0;border-top:2.5px solid var(--c);border-radius:2px}
+.lc-leg i.d{border-top-style:dashed;border-top-width:2px}
+.lc-hint{margin-inline-start:auto;font-size:11.5px}
+.bars2:has(.b2-zero){background:none}
