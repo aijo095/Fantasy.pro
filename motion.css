@@ -1,0 +1,115 @@
+/* =========================================================
+   نظام الحركة — Fantasy Pro Motion System
+   مرجع واحد للمنحنيات والمدد، وكل حركة إلها سبب:
+   • ردّ فعل الضغط  • ظهور منسّق للأقسام  • أوراق وإشعارات تطلع وتنزل من نفس الطريق
+   • حركة اللاعبين بالتشكيلة  • احتفال بالنقاط والإنجازات (نادر = مسموح يكون أوضح)
+   الشريط السفلي ما ينلمس. وتقليل الحركة = حركات أقل وأهدأ، مو صفر.
+========================================================= */
+:root{
+  --m-ease-out:cubic-bezier(.23,1,.32,1);      /* دخول وخروج وردّ فعل */
+  --m-ease-in-out:cubic-bezier(.77,0,.175,1);  /* شي يتحرك من مكان لمكان على الشاشة */
+  --m-ease-drawer:cubic-bezier(.32,.72,0,1);   /* الأوراق السفلية مثل iOS */
+  --m-press:120ms;  /* الضغط */
+  --m-fast:160ms;   /* أيقونات وتبديل حالات */
+  --m-base:220ms;   /* ظهور الأقسام والبطاقات */
+  --m-slow:320ms;   /* الأوراق السفلية */
+  --m-step:35ms;    /* فرق التتابع بين العناصر */
+  --ease:var(--m-ease-out); /* كل الحركات القديمة تمشي على نفس المنحنى */
+}
+
+/* ---------- 1. ردّ فعل الضغط: انكماش خفيف وسريع، بدون ارتداد مطاطي ---------- */
+#view :is(.btn,.icon-btn,.tbtn,.seg button,.chips2 button,.tabs2 button,.h2-act em,.h2-acts button,.gwstrip button,.cp-pod,.pl),
+.topbar :is(.icon-btn,.sbar,.av),
+html.lux #view :is(.card.tap,.row.tap,button.row){
+  transition-property:transform,background-color,color,border-color,box-shadow,opacity;
+  transition-duration:var(--m-press);transition-timing-function:var(--m-ease-out)}
+#view :is(.btn,.icon-btn,.tbtn,.seg button,.chips2 button,.tabs2 button,.h2-act em,.h2-acts button,.gwstrip button):active,
+.topbar :is(.icon-btn,.sbar,.av):active{transform:scale(.96)}
+html.lux #view :is(.card.tap,.row.tap,button.row):active,#view .cp-pod:active{transform:scale(.985)}
+#view .pl:active .sh{transform:scale(.94)}
+#view .pl .sh{transition:transform var(--m-press) var(--m-ease-out)}
+
+/* المغناطيس: على اللمس ما يسحب الزر (كان يتحرك تحت الإصبع)، وبالماوس يرجع بدون ارتداد */
+html.lux .mag{transition:transform var(--m-base) var(--m-ease-out),translate var(--m-base) var(--m-ease-out)!important}
+@media (hover:none),(pointer:coarse){html.lux #view .mag,html.lux .topbar .mag{translate:none!important}}
+/* نبضة التبويبات كانت تكبر 22% وترتد — يكفي التبويب يتلوّن */
+html.lux .tabs2 button.pop,html.lux .mc-tabs button.pop{animation:none}
+
+/* ---------- 2. حركات الأيقونات الدقيقة ---------- */
+#view svg.i,.topbar svg.i{transition:transform var(--m-fast) var(--m-ease-out)}
+#view :is(.btn,.icon-btn,.tbtn,.h2-act em,.seg button,.chips2 button):active svg.i,.topbar .icon-btn:active svg.i{transform:scale(.88)}
+/* السهم يتقدم خطوة باتجاه الدخول لما تضغط الصف */
+#view svg.chev{transition:transform var(--m-fast) var(--m-ease-out)}
+#view :is(.row.tap,button.row,.h2-hrow>button,.h2-ck,.h2-dl):active svg.chev{transform:translateX(-3px)}
+[dir=ltr] #view :is(.row.tap,button.row,.h2-hrow>button,.h2-ck,.h2-dl):active svg.chev{transform:scaleX(-1) translateX(-3px)}
+/* الجرس يرن مرة وحدة لما يوصل تنبيه جديد (يشغّله الجافاسكربت) */
+.topbar .bell-ring svg.i{animation:fpRing .6s var(--m-ease-out)}
+@keyframes fpRing{20%{transform:rotate(14deg)}45%{transform:rotate(-10deg)}70%{transform:rotate(5deg)}}
+.topbar .icon-btn svg.i{transform-origin:50% 15%}
+/* أيقونة التحديث تلف لفة وحدة كتأكيد */
+svg.i.fp-spin{animation:fpSpin .55s var(--m-ease-out)}
+@keyframes fpSpin{to{transform:rotate(-360deg)}}
+
+/* ---------- 3. ظهور الأقسام: كتلة وحدة بتتابع قصير (مو كل شي مرة وحدة، ولا بطء) ---------- */
+#view>*{animation:fpEnter var(--m-base) var(--m-ease-out) both}
+#view>*:nth-child(2){animation-delay:calc(var(--m-step) * 1)}
+#view>*:nth-child(3){animation-delay:calc(var(--m-step) * 2)}
+#view>*:nth-child(4){animation-delay:calc(var(--m-step) * 3)}
+#view>*:nth-child(5){animation-delay:calc(var(--m-step) * 4)}
+#view>*:nth-child(n+6){animation-delay:calc(var(--m-step) * 5)}
+@keyframes fpEnter{from{opacity:0;transform:translateY(8px)}}
+/* الصفوف داخل القائمة: ظهور بالشفافية بس (القائمة نفسها هي اللي تتحرك) */
+#view .list>.row:nth-child(-n+8){animation:fpFade var(--m-base) var(--m-ease-out) both}
+#view .list>.row:nth-child(2){animation-delay:30ms}#view .list>.row:nth-child(3){animation-delay:60ms}
+#view .list>.row:nth-child(4){animation-delay:90ms}#view .list>.row:nth-child(5){animation-delay:120ms}
+#view .list>.row:nth-child(6){animation-delay:150ms}#view .list>.row:nth-child(7){animation-delay:180ms}
+#view .list>.row:nth-child(8){animation-delay:210ms}
+@keyframes fpFade{from{opacity:0}}
+/* لاعبين التشكيلة: يطلعون من الصف بتتابع، بدون تصغير زايد */
+.pl{animation:fpPl 260ms var(--m-ease-out) both;animation-delay:var(--d,0ms)}
+@keyframes fpPl{from{opacity:0;transform:translateY(6px) scale(.97)}}
+
+/* ---------- 4. الأوراق السفلية: تطلع وتنزل من نفس الطريق ---------- */
+.ov{animation:fpFade 200ms var(--m-ease-out) both}
+.sheet{animation:fpSheetIn var(--m-slow) var(--m-ease-drawer) both}
+@keyframes fpSheetIn{from{transform:translateY(100%)}}
+@media (min-width:760px){.sheet{animation:fpPopIn var(--m-base) var(--m-ease-out) both}}
+@keyframes fpPopIn{from{opacity:0;transform:scale(.96)}}
+#sheetExit{position:fixed;inset:0;z-index:61;pointer-events:none}
+#sheetExit .ov{animation:fpOvOut 220ms var(--m-ease-out) forwards}
+@keyframes fpOvOut{to{background-color:rgba(3,5,9,0);-webkit-backdrop-filter:blur(0);backdrop-filter:blur(0)}}
+#sheetExit .sheet{animation:fpSheetOut 220ms var(--m-ease-out) forwards}
+@keyframes fpFadeOut{to{opacity:0}}
+@keyframes fpSheetOut{to{transform:translateY(100%)}}
+@media (min-width:760px){#sheetExit .sheet{animation:fpFadeOut 160ms var(--m-ease-out) forwards}}
+
+/* ---------- 5. الإشعارات الصغيرة (التوست): تطلع من تحت وترجع من تحت ---------- */
+.tst{animation:fpToastIn 260ms var(--m-ease-out) both;transition:opacity 200ms var(--m-ease-out),transform 200ms var(--m-ease-out)}
+.tst.out{opacity:0;transform:translateY(8px)}
+@keyframes fpToastIn{from{opacity:0;transform:translateY(12px) scale(.98)}}
+
+/* ---------- 6. البطاقة الرئيسية: الإطار المضيء ثابت (كان يلف للأبد فوق أهم أرقام بالتطبيق) ---------- */
+html.lux .hero::after,html.lux .team-hero::after,html.lux .ss-hero::after{animation:none}
+
+/* ---------- 7. النقاط والأحداث: فقاعة النقطة تطلع وتختفي بنعومة ---------- */
+.fx-pop{animation:fpGain 1.6s var(--m-ease-out) forwards}
+@keyframes fpGain{0%{opacity:0;transform:translate(-50%,8px) scale(.9)}14%{opacity:1;transform:translate(-50%,-4px) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-34px)}}
+.fx-pop svg.i{width:22px;height:22px;vertical-align:middle}
+.fx-pop .evc{width:13px;height:18px}
+.fx-banner .e svg.i{width:20px;height:20px}
+.fx-banner .e{animation:none}
+@media (prefers-reduced-motion:no-preference){.pl.fx-hit .sh{animation:fpHit 520ms var(--m-ease-out)}}
+@keyframes fpHit{30%{transform:translateY(-6px) scale(1.06)}}
+/* الشارات (الإنجازات): لمعة الألوان تمر مرتين بالدخول بدل ما تبقى تتحرك للأبد */
+html.lux .badge-c:not(.locked)::before{animation-iteration-count:2}
+html.lux .mvp-b{animation-iteration-count:2}
+#view .badge-c{animation:fpBadge 300ms var(--m-ease-out) both;animation-delay:calc(var(--bi,0) * 30ms)}
+@keyframes fpBadge{from{opacity:0;transform:scale(.94)}}
+
+/* ---------- 8. تقليل الحركة: نشيل الحركة والانتقال، ونخلي التلاشي الهادئ اللي يوضّح ---------- */
+@media (prefers-reduced-motion:reduce){
+  html #view>*,html .ov,html .sheet,html .tst{animation:fpFade 160ms ease-out both!important}
+  html #sheetExit .ov,html #sheetExit .sheet{animation:fpFadeOut 140ms ease-out forwards!important}
+  html .tst{transition:opacity 160ms ease-out!important}
+  html .tst.out{transform:none}
+}

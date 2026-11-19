@@ -317,13 +317,29 @@ export function render() {
   try {
     const html = (window.__EMBED && ST.view === 'home' ? window.__EMBED.note : '') + VIEWS[ST.view](), v = $('#view');
     // نفس القسم (تحديث تلقائي): نغيّر بس اللي تغيّر حتى ما ترمش الشاشة
-    if (lastPainted === ST.view && v.childNodes.length) morphHTML(v, html); else v.innerHTML = html;
+    // حركة اللاعبين بالتشكيلة (FLIP): نحفظ مكان كل لاعب قبل التحديث ونحرّكه لمكانه الجديد بعده
+    const same = lastPainted === ST.view && v.childNodes.length, flip = same && !RM() ? flipFirst(v) : null;
+    if (same) morphHTML(v, html); else v.innerHTML = html;
+    if (flip) flipPlay(v, flip);
     lastPainted = ST.view; v.dataset.view = ST.view;
     AFTER[ST.view] && AFTER[ST.view](); countUp();
   }
   catch (e) { console.error(e); AU.logError(ST.user?.uid, e.message, 'render:' + ST.view); $('#view').innerHTML = `<div class="empty">${I('i-alert', 'i', 'width:40px;height:40px')}<b>${tt('صار خطأ بهذا القسم', 'Something went wrong')}</b><p class="mut">${esc(e.message)}</p></div>`; }
 }
 window.addEventListener('error', (e) => AU.logError(ST.user?.uid, e.message, e.filename + ':' + e.lineno));
+
+/* ---------- حركة اللاعبين عند التبديل (FLIP) ---------- */
+const RM = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function flipFirst(v) { const m = new Map(); v.querySelectorAll('[data-pid]').forEach((el) => { const r = el.getBoundingClientRect(); if (r.width) m.set(el.dataset.pid, r); }); return m.size ? m : null; }
+function flipPlay(v, first) {
+  v.querySelectorAll('[data-pid]').forEach((el) => {
+    const a = first.get(el.dataset.pid); if (!a) return;
+    const b = el.getBoundingClientRect(), dx = a.left - b.left, dy = a.top - b.top;
+    if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+    el.style.animation = 'none'; // ما نعيد حركة الظهور للاعب اللي انتقل
+    el.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'none' }], { duration: 300, easing: 'cubic-bezier(.77,0,.175,1)' });
+  });
+}
 
 /* ---------- أفعال عامة ---------- */
 async function doLogout() { closeSheet(); LS.del('fp_local_session'); AU.srvLogout(); await AU.signOutUser(); Object.assign(ST, { user: null, profile: null, G: null, E: null, plan: null, admin: false }); try { history.replaceState(null, '', ' '); } catch {} renderAuth(); }
