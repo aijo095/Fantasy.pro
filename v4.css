@@ -200,3 +200,19 @@ html[dir=ltr] .ld-d{transform:translateX(-50%)}
 /* إطار الساعة لتركيبة النقاط */
 .bz .bz-t line{stroke:rgba(255,255,255,.14);stroke-width:1}
 .bz .bz-core{fill:rgba(255,255,255,.025)}
+
+/* =====================================================================
+   توحيد الدوائر بكل التطبيق: عداد 270° بعلامات (نفس لغة مخططات المقارنة)
+===================================================================== */
+.ring-arc.g270{animation:g270 1s cubic-bezier(.22,1,.36,1) both}
+@keyframes g270{from{stroke-dasharray:0 999}}
+html.v4 .score-ring svg circle.ring-arc{filter:drop-shadow(0 0 4px rgba(127,230,166,.45))}
+/* الدوائر المبنية بـ conic (المساهمات الدفاعية، تقييم القرارات، احتمال الفوز) */
+html.v4 .dc-ring,html.v4 .rv-grade,html.v4 .rv-prob{background:none!important;position:relative;isolation:isolate}
+html.v4 .dc-ring::before,html.v4 .rv-grade::before,html.v4 .rv-prob::before{content:""!important;position:absolute!important;inset:0!important;border-radius:50%;z-index:-1;background:repeating-conic-gradient(from 225deg,rgba(255,255,255,.28) 0 1.2deg,transparent 1.2deg 27deg)!important;
+  -webkit-mask:conic-gradient(from 225deg,#000 0 271deg,transparent 0),radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px));-webkit-mask-composite:source-in;mask:conic-gradient(from 225deg,#000 0 271deg,transparent 0) intersect,radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px))}
+html.v4 .dc-ring::after,html.v4 .rv-grade::after,html.v4 .rv-prob::after{content:"";position:absolute;inset:5px;border-radius:50%;z-index:-1;background:conic-gradient(from 225deg,var(--c,var(--acc)) 0 calc(var(--p) * 2.7deg),rgba(255,255,255,.08) 0 270deg,transparent 0);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 5px));mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 5px));filter:drop-shadow(0 0 4px color-mix(in srgb,var(--c,var(--acc)) 60%,transparent))}
+html.v4 .rv-prob::after{background:conic-gradient(from 225deg,var(--c-mint) 0 calc(var(--p) * 2.7deg),rgba(255,142,142,.55) 0 270deg,transparent 0)}
+html.v4 .dc-ring::after,html.v4 .rv-grade::after,html.v4 .rv-prob::after{--p:inherit}
+html.v4 .dc-ring{width:56px!important;height:56px!important}html.v4 .dc-ring b{font-size:12.5px!important}html.v4 .dc-ring::after{inset:6px}
