@@ -179,3 +179,24 @@ html[dir=ltr] .ld-d{transform:translateX(-50%)}
 .cb li b{font:700 12px Inter,sans-serif}.cb li em{font:500 10.5px Inter,sans-serif;font-style:normal;color:var(--mut2,#6B756D);text-align:end}
 .cb li.ded>i{background:var(--bad,#F87171)}.cb li.ded b{color:var(--bad,#F87171)}
 .cmp-rd .ld,.cmp-rd .ld-ax{width:100%;align-self:stretch}.cmp-rd{align-items:stretch!important}.ld-ax div b{min-width:0}
+
+/* وردة المؤشرات */
+.rs{width:100%;max-width:380px;display:block;margin:4px auto 0;overflow:visible}
+.rs-ring{fill:none;stroke:rgba(255,255,255,.05);stroke-width:1}.rs-ring.o{stroke:rgba(255,255,255,.1)}
+.rs-bg{fill:rgba(255,255,255,.025)}
+.rs-w{transform-origin:160px 160px}
+.rs-core{fill:var(--s1,#151916);stroke:rgba(255,255,255,.08)}
+.rs-l{font:600 11px 'IBM Plex Sans Arabic',sans-serif;fill:var(--mut)}
+.rs-v{font:800 12.5px Inter,sans-serif}
+@media (prefers-reduced-motion:no-preference){.rs-w{animation:rsIn .7s var(--d) cubic-bezier(.22,1,.36,1) both}}
+@keyframes rsIn{from{transform:scale(.3);opacity:0}}
+/* المقياس 270° */
+.gg{position:relative;width:96px;margin:8px auto 0}.gg svg{display:block;width:100%}
+.gg-t line{stroke-width:1.6;stroke-linecap:round}
+.gg>b{position:absolute;left:0;right:0;top:38%;text-align:center;font:800 24px Inter,sans-serif;letter-spacing:-.02em;color:var(--txt)}
+.gg-a{filter:drop-shadow(0 0 5px var(--c))}
+@media (prefers-reduced-motion:no-preference){.gg-a{animation:ggIn .9s cubic-bezier(.22,1,.36,1) both}}
+@keyframes ggIn{from{stroke-dasharray:0 999}}
+/* إطار الساعة لتركيبة النقاط */
+.bz .bz-t line{stroke:rgba(255,255,255,.14);stroke-width:1}
+.bz .bz-core{fill:rgba(255,255,255,.025)}
