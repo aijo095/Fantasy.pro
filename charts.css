@@ -74,3 +74,29 @@
 .lc-leg i.d{border-top-style:dashed;border-top-width:2px}
 .lc-hint{margin-inline-start:auto;font-size:11.5px}
 .bars2:has(.b2-zero){background:none}
+
+/* ---------- آخر الجولات (الرئيسية): الرقم على الأعلى والأدنى والأخير بس، والباقي عند اللمس ---------- */
+.h2-chart button .v{opacity:0;transition:opacity var(--m-fast,160ms) ease}
+.h2-chart button.lbl .v,.h2-chart button:is(:hover,:focus-visible,:active) .v{opacity:1}
+.h2-chart .bar{max-width:18px}
+.h2-chart .bar i{border-radius:4px 4px 1px 1px;background:rgba(255,255,255,.14)}
+.h2-chart .bar i.up{background:var(--ch-1)}
+.h2-chart .bar s{height:0;background:none;border-top:1.5px dashed rgba(226,232,240,.6)}
+
+/* ---------- مسار الموسم (الجولات) ---------- */
+.ss-chart .b{fill:var(--ch-1);opacity:.45}
+.ss-chart .b.hi,.ss-chart .b.on{opacity:1}
+.ss-chart .b.on{fill:#2BC48F}
+.ss-chart .avg{stroke:#E2E8F0;stroke-width:1.2;opacity:.55;stroke-dasharray:2 1.5}
+.ss-chart .lbl{font:600 10px Inter,sans-serif;fill:var(--mut)}
+.ss-chart .lbl.on{fill:var(--txt)}
+.ss-chart .ax{font-size:8.5px}
+.ss-leg .sw{background:var(--ch-1)}
+.ss-leg .tk{height:0;background:none;border-top:1.5px dashed rgba(226,232,240,.7)}
+
+/* مربعات البطاقة الرئيسية: إطار واحد هادئ بدل الحواف الملوّنة (أخضر/أزرق/أصفر بدون معنى) */
+html.ui2 .hero .kpis>div,html.ui2 .hero .kpis>div:nth-child(2),html.ui2 .hero .kpis>div:nth-child(3){border-top:0;box-shadow:inset 0 0 0 1px var(--line);animation-name:tileIn;animation-iteration-count:1}
+#view .kpis em.st-sub{display:block;font-style:normal;margin-top:2px}
+#view .kpis b{color:var(--txt)}
+/* عنوان الرقم الكبير بلون نص هادئ، والرقم نفسه هو اللي يبرز */
+html.ui2 .hero .big-num span,html.ui2 .team-hero .big-num span{color:var(--mut);-webkit-text-fill-color:var(--mut)}

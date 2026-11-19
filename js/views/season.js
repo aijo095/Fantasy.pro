@@ -110,13 +110,14 @@ function seasonChart(dg) {
   const vals = evs.map((e) => { const h = e.id === G.cur ? liveHist(e.id) : histOf(e.id); return { e, me: e.id <= G.cur && h ? h.points : null, avg: e.id <= G.cur ? e.avg ?? null : null }; });
   const mx = Math.max(10, ...vals.map((v) => Math.max(v.me || 0, v.avg || 0)));
   const y = (v) => H - (v / mx) * (H - pad);
+  const played = vals.filter((v) => v.me != null), top = played.length ? played.reduce((a, b) => (b.me > a.me ? b : a)) : null;
   const bars = vals.map((v, i) => {
-    const x = i * W, on = v.e.id === gwSel, cur = v.e.id === G.cur && !v.e.fin;
+    const x = i * W, on = v.e.id === gwSel, cur = v.e.id === G.cur && !v.e.fin, hi = top && v === top;
     let g = '';
-    if (v.me != null) { const yy = y(Math.max(0, v.me)); g += `<rect x="${x + 2}" y="${yy}" width="${W - 4}" height="${Math.max(2, H - yy)}" rx="2" class="b${on ? ' on' : ''}${cur ? ' cur' : ''}" style="--i:${i}"/>`; }
+    if (v.me != null) { const yy = y(Math.max(0, v.me)); g += `<rect x="${x + 2}" y="${yy}" width="${W - 4}" height="${Math.max(2, H - yy)}" rx="2" class="b${on ? ' on' : ''}${hi ? ' hi' : ''}${cur ? ' cur' : ''}" style="--i:${i}"/>`; }
     else g += `<circle cx="${x + W / 2}" cy="${H - 2}" r="1.6" class="fut${dg[v.e.id]?.dbl.length ? ' dbl' : ''}"/>`;
     if (v.avg != null) g += `<line x1="${x + 1}" x2="${x + W - 1}" y1="${y(v.avg)}" y2="${y(v.avg)}" class="avg"/>`;
-    if (on && v.me != null) g += `<text x="${x + W / 2}" y="${y(Math.max(0, v.me)) - 4}" class="lbl">${v.me}</text>`;
+    if ((on || hi) && v.me != null) g += `<text x="${x + W / 2}" y="${y(Math.max(0, v.me)) - 4}" class="lbl${on ? ' on' : ''}">${v.me}</text>`;
     g += `<rect x="${x}" y="0" width="${W}" height="${H + 14}" class="hit" onclick="seasonGo(${v.e.id})"><title>${t('gw')} ${v.e.id}${v.me != null ? ` · ${v.me}` : ''}${v.avg != null ? ` · ${tt('المعدل', 'avg')} ${v.avg}` : ''}</title></rect>`;
     if (v.e.id % 5 === 0 || v.e.id === 1) g += `<text x="${x + W / 2}" y="${H + 11}" class="ax${on ? ' on' : ''}">${v.e.id}</text>`;
     return g;
@@ -170,9 +171,9 @@ function futureGW(g, d) {
   const cap = [...(P?.xi || [])].map(PM).sort((a, b) => xp(b, g) - xp(a, g))[0];
   const playing = sq.filter((p) => fixturesFor(p.team, g).length).length;
   return `<div class="hero"><div class="flex between"><div><div class="mut" style="font-size:13px">${t('gw')} ${g} · ${tt('الإغلاق', 'Deadline')} ${fmtTime(ev.deadline)}</div><div class="big-num" style="font-size:36px">${P ? projected(P, g) : '—'} <span class="mut" style="font-size:14px">${tt('متوقع لفريقك', 'projected')}</span></div></div>${d?.dbl.length ? `<span class="tag violet">${tt('جولة مزدوجة', 'Double GW')}</span>` : d?.blank.length && (G.fx[g] || []).length ? `<span class="tag amber">${tt('جولة فارغة', 'Blank GW')}</span>` : ''}</div>
-   <div class="kpis"><div><small>${tt('لاعبينك يلعبون', 'Your players playing')}</small><b>${playing}/15</b></div><div><small>${tt('الكابتن المقترح', 'Suggested captain')}</small><b style="font-size:15px">${cap ? esc(cap.name) : '—'}</b>${cap ? `<em class="up"> ${xp(cap, g)} xP</em>` : ''}</div><div><small>${tt('مزدوجة/فارغة', 'Double/blank')}</small><b style="font-size:15px">${d ? `${d.dbl.length}/${d.blank.length}` : '0/0'}</b></div></div></div>
+   <div class="kpis"><div><small>${tt('لاعبينك يلعبون', 'Your players playing')}</small><b>${playing}/15</b></div><div><small>${tt('الكابتن المقترح', 'Suggested captain')}</small><b style="font-size:15px">${cap ? esc(cap.name) : '—'}</b>${cap ? `<em class="st-sub">${tt(`متوقع <bdi class="num">${xp(cap, g)}</bdi>`, `${xp(cap, g)} xP`)}</em>` : ''}</div><div><small>${tt('مزدوجة/فارغة', 'Double/blank')}</small><b style="font-size:15px">${d ? `${d.dbl.length}/${d.blank.length}` : '0/0'}</b></div></div></div>
    <div class="sec"><h2>${I('i-users')}${tt('لاعبينك بهالجولة', 'Your players')}</h2></div>
-   <div class="list">${sq.sort((a, b) => xp(b, g) - xp(a, g)).map((p) => { const f = fixturesFor(p.team, g); return `<div class="row tap" onclick="openPlayer(${p.id})"><div class="mini">${pShirt(p)}</div><div class="info"><b>${esc(p.name)}</b><span>${f.length ? f.map((x) => `<span class="rate f${x.fdr}">${tShort(x.opp)} ${x.home ? t('home_s') : t('away_s')}</span>`).join(' ') : `<span class="tag amber">${tt('ما يلعب', 'Blank')}</span>`}</span></div><div class="col" style="color:var(--acc)">${xp(p, g)}<small>xP</small></div></div>`; }).join('')}</div>
+   <div class="list">${sq.sort((a, b) => xp(b, g) - xp(a, g)).map((p) => { const f = fixturesFor(p.team, g); return `<div class="row tap" onclick="openPlayer(${p.id})"><div class="mini">${pShirt(p)}</div><div class="info"><b>${esc(p.name)}</b><span>${f.length ? f.map((x) => `<span class="rate f${x.fdr}">${tShort(x.opp)} ${x.home ? t('home_s') : t('away_s')}</span>`).join(' ') : `<span class="tag amber">${tt('ما يلعب', 'Blank')}</span>`}</span></div><div class="col">${xp(p, g)}<small>${tt('متوقع', 'xP')}</small></div></div>`; }).join('')}</div>
    <div class="sec"><h2>${I('i-cal')}${tt('مباريات الجولة', 'Fixtures')}</h2></div>${fixtures(g)}`;
 }
 function matrix() {
