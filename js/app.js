@@ -296,7 +296,7 @@ export function goBack() {
 window.addEventListener('popstate', () => {
   if (!ST.G) return;
   if (document.querySelector('.ov')) { document.querySelector('.sh-back') ? window.sheetBack() : window.closeSheet(true); try { history.pushState({ v: ST.view }, '', '#' + ST.view); } catch {} return; }
-  if (window.__backHook && window.__backHook()) { try { history.pushState({ v: ST.view }, '', '#' + ST.view); } catch {} return; }
+  { const r = window.__backHook && window.__backHook(true); if (r) { if (r !== 'popped') { try { history.pushState({ v: ST.view }, '', '#' + ST.view); } catch {} } return; } }
   const e = NAV_STACK.pop(); const v = e?.v || location.hash.slice(1) || 'home';
   go(v, { back: true, y: e?.y || 0 });
 });
@@ -318,8 +318,8 @@ export function render() {
     const html = (window.__EMBED && ST.view === 'home' ? window.__EMBED.note : '') + VIEWS[ST.view](), v = $('#view');
     // نفس القسم (تحديث تلقائي): نغيّر بس اللي تغيّر حتى ما ترمش الشاشة
     // حركة اللاعبين بالتشكيلة (FLIP): نحفظ مكان كل لاعب قبل التحديث ونحرّكه لمكانه الجديد بعده
-    const same = lastPainted === ST.view && v.childNodes.length, flip = same && !RM() ? flipFirst(v) : null;
-    if (same) morphHTML(v, html); else v.innerHTML = html;
+    const same = lastPainted === ST.view && v.childNodes.length, flip = same && !window.__noMorph && !RM() ? flipFirst(v) : null;
+    if (same && !window.__noMorph) morphHTML(v, html); else v.innerHTML = html;
     if (flip) flipPlay(v, flip);
     lastPainted = ST.view; v.dataset.view = ST.view;
     AFTER[ST.view] && AFTER[ST.view](); countUp();

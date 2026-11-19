@@ -8,7 +8,7 @@ import { tt } from '../i18n.js';
 import { esc, I, crest, scoreHTML, fmtTime } from '../ui.js';
 import { pShirt } from './common.js';
 
-let SEL = null, TAB = 'res', POS = 'ALL';
+let SEL = null, TAB = 'res', POS = 'ALL', LISTY = 0;
 
 /** جدول الترتيب محسوب من المباريات المنتهية */
 function table() {
@@ -51,7 +51,7 @@ function clubHTML(R) {
     const seg = ['ALL', 'GK', 'DEF', 'MID', 'FWD'].map((k) => `<button class="${POS === k ? 'on' : ''}" onclick="clubPos('${k}')">${k === 'ALL' ? tt('الكل', 'All') : { GK: tt('حراس', 'GK'), DEF: tt('دفاع', 'DEF'), MID: tt('وسط', 'MID'), FWD: tt('هجوم', 'FWD') }[k]}</button>`).join('');
     body = `<div class="cl-seg sm">${seg}</div><div class="card cl-ls">${ps.map((p, i) => `<button class="cl-p" onclick="openPlayer(${p.id})"><span class="num cl-n">${i + 1}</span><span class="mini">${pShirt(p)}</span><span class="cl-pi"><b>${esc(p.name)}${mine.has(p.id) ? `<em class="tag lime">${tt('بفريقك', 'Yours')}</em>` : ''}</b><small><span class="pos ${p.pos}">${p.pos}</span><bdi>£${p.price.toFixed(1)}</bdi> · <bdi>${p.own}%</bdi> · ${tt(`${p.min} دقيقة`, `${p.min}'`)}</small></span><b class="num cl-pt">${p.total}<small>${tt('نقطة', 'pts')}</small></b></button>`).join('') || `<p class="mut cl-e">—</p>`}</div>`;
   }
-  return `<div class="cl-top"><button class="cl-back" onclick="clubOpen(null)" aria-label="${tt('رجوع', 'Back')}">${I('i-back', 'i')}<span>${tt('رجوع', 'Back')}</span></button><span class="cl-crumb">${tt('النوادي', 'Clubs')} / <b>${esc(tName(tid))}</b></span></div>
+  return `<div class="cl-top"><button class="cl-back" onclick="clubBack()" aria-label="${tt('رجوع', 'Back')}">${I('i-back', 'i')}<span>${tt('رجوع', 'Back')}</span></button><span class="cl-crumb">${tt('النوادي', 'Clubs')} / <b>${esc(tName(tid))}</b></span></div>
   <div class="card cl-hero">${crest(tShort(tid), 52)}<div><b>${esc(tName(tid))}</b><small>${tt(`المركز ${rank}`, `Position ${rank}`)} · ${tt(`${row.pts} نقطة`, `${row.pts} pts`)}</small></div></div>
   <div class="cl-kv"><div><b class="num">${row.w}</b><small>${tt('فوز', 'Won')}</small></div><div><b class="num">${row.d}</b><small>${tt('تعادل', 'Drawn')}</small></div><div><b class="num">${row.l}</b><small>${tt('خسارة', 'Lost')}</small></div><div><b class="num">${row.gf}</b><small>${tt('سجّل', 'Scored')}</small></div><div><b class="num">${row.ga}</b><small>${tt('استقبل', 'Conceded')}</small></div></div>
   <div class="cl-seg">${tabs.map(([k, l]) => `<button class="${TAB === k ? 'on' : ''}" onclick="clubTab('${k}')">${l}</button>`).join('')}</div>${body}`;
@@ -64,11 +64,26 @@ export function vClubs() {
   return `<div class="cl">${SEL == null ? listHTML(R) : clubHTML(R)}</div>`;
 }
 Object.assign(window, {
-  clubOpen: (id) => { const opening = id != null && SEL == null; SEL = id; TAB = 'res'; POS = 'ALL'; if (opening) { try { history.pushState({ v: 'clubs', c: id }, '', '#clubs'); } catch {} } window.render(); window.scrollTo(0, 0); },
+  clubOpen: (id) => {
+    if (id == null) return closeClub();
+    const opening = SEL == null; if (opening) LISTY = window.scrollY;
+    SEL = id; TAB = 'res'; POS = 'ALL';
+    if (opening) { try { history.pushState({ v: 'clubs', c: id }, '', '#clubs'); } catch {} }
+    paint(); window.scrollTo(0, 0);
+  },
+  // زر الرجوع يمر بنفس طريق سحبة الآيفون (history.back) حتى يبقى السجل مرتب
+  clubBack: () => { if (history.state && history.state.c != null) history.back(); else closeClub(); },
   clubTab: (k) => { TAB = k; window.render(); },
   clubPos: (k) => { POS = k; window.render(); },
 });
 
 /* رجوع الجهاز/الإيماءة/زر الرجوع العلوي: من صفحة النادي يرجع لقائمة الأندية */
+/** رسم مباشر بدل المقارنة (morph): صفحة النادي والقائمة مختلفات كلياً فالاستبدال أسرع وما يعلّق */
+function paint() { window.__noMorph = true; try { window.render(); } finally { window.__noMorph = false; } }
+/** رجوع لقائمة الأندية بنفس مكان التمرير اللي جان بي — نفس اللقطة اللي يعرضها الآيفون أثناء السحب */
+function closeClub() { SEL = null; TAB = 'res'; POS = 'ALL'; paint(); window.scrollTo(0, LISTY); requestAnimationFrame(() => window.scrollTo(0, LISTY)); }
 const prevHook = window.__backHook;
-window.__backHook = () => { if (ST.view === 'clubs' && SEL != null) { SEL = null; window.render(); window.scrollTo(0, 0); return true; } return prevHook ? prevHook() : false; };
+window.__backHook = (fromPop) => {
+  if (ST.view === 'clubs' && SEL != null) { if (fromPop) { closeClub(); return 'popped'; } window.clubBack(); return true; }
+  return prevHook ? prevHook(fromPop) : false;
+};

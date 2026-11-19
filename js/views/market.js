@@ -100,4 +100,4 @@ Object.assign(window, {
   mkDiff: () => { diffOnly = !diffOnly; window.render(); },
 });
 const prevHook = window.__backHook;
-window.__backHook = () => { if (ST.view === 'market' && sellId) { sellId = null; window.render(); return true; } return prevHook ? prevHook() : false; };
+window.__backHook = (fromPop) => { if (ST.view === 'market' && sellId) { sellId = null; window.render(); return true; } return prevHook ? prevHook(fromPop) : false; };

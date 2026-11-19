@@ -122,7 +122,8 @@ window.lgLive = async () => {
   lgLiveBusy = false; window.render();
 };
 
-window.__backHook = () => { if (ST.view === 'leagues' && h2hOpen) { window.openH2H(null); return true; } if (ST.view === 'leagues' && open) { window.openLg(null); return true; } return false; };
+const prevHookL = window.__backHook;
+window.__backHook = (fromPop) => { if (ST.view === 'leagues' && h2hOpen) { window.openH2H(null); return true; } if (ST.view === 'leagues' && open) { window.openLg(null); return true; } return prevHookL ? prevHookL(fromPop) : false; };
 
 /* ---------- دوريات المواجهات (H2H) ---------- */
 function h2hList() {
