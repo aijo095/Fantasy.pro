@@ -94,15 +94,15 @@ function pctl(p, f) {
   const v = f(p); let below = 0, eq = 0; for (const x of pool) { const y = f(x); if (y < v) below++; else if (y === v) eq++; }
   return Math.round(((below + eq / 2) / pool.length) * 100);
 }
-function radar(ps, A) {
-  const S = 300, c = S / 2, R = 108, n = A.length;
-  const pt = (k, v) => { const a = -Math.PI / 2 + (k * 2 * Math.PI) / n, r = (R * Math.max(4, v)) / 100; return [c + r * Math.cos(a), c + r * Math.sin(a)]; };
-  const rings = [25, 50, 75, 100].map((v) => `<path d="${smooth(A.map((_, k) => pt(k, v)), true)}" class="rd-ring"/>`).join('');
-  const spokes = A.map((_, k) => { const [x, y] = pt(k, 100); return `<line x1="${c}" y1="${c}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="rd-spoke"/>`; }).join('');
-  const labels = A.map(([, l], k) => { const a = -Math.PI / 2 + (k * 2 * Math.PI) / n, x = c + (R + 24) * Math.cos(a), y = c + (R + 24) * Math.sin(a); return `<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle" class="rd-lbl">${l}</text>`; }).join('');
-  const blobs = ps.map((p, i) => { const vs = A.map(([, , f]) => pctl(p, f)), path = smooth(vs.map((v, k) => pt(k, v)), true);
-    return `<g class="rd-blob" style="--c:${CC[i]};--d:${i * 120}ms"><path d="${path}" fill="${CC[i]}" fill-opacity=".16" stroke="${CC[i]}" stroke-width="2" stroke-linejoin="round"/>${vs.map((v, k) => { const [x, y] = pt(k, v); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${CC[i]}" stroke="#0E1116" stroke-width="2"><title>${esc(p.name)} · ${A[k][1]}: ${v}%</title></circle>`; }).join('')}</g>`; }).join('');
-  return `<svg viewBox="0 0 ${S} ${S}" class="rd" role="img" aria-label="${tt('مخطط مقارنة المؤشرات', 'Attribute radar')}">${rings}${spokes}${blobs}${labels}</svg>`;
+/** سلّم المؤشرات (Dumbbell): كل محور سطر بمسطرة 0–100، نقطة لكل لاعب، والشريط بيناتهم يبين حجم الفرق ومنو متقدم */
+function ladder(ps, A) {
+  return `<div class="ld" role="img" aria-label="${tt('مقارنة المؤشرات بالترتيب المئوي', 'Percentile comparison')}">${A.map(([, l, f]) => {
+    const vs = ps.map((p) => pctl(p, f)), mx = Math.max(...vs), mn = Math.min(...vs), lead = vs.filter((v) => v === mx).length === 1 ? vs.indexOf(mx) : -1;
+    return `<div class="ld-r"><span class="ld-l">${l}</span><div class="ld-t"><i class="ld-q" style="inset-inline-start:25%"></i><i class="ld-q" style="inset-inline-start:50%"></i><i class="ld-q" style="inset-inline-start:75%"></i>
+      <i class="ld-g" style="inset-inline-start:${mn}%;width:${Math.max(0, mx - mn)}%;${lead >= 0 ? `background:linear-gradient(${document.documentElement.dir !== 'ltr' ? 'to left' : 'to right'},transparent,${CC[lead]}55)` : ''}"></i>
+      ${vs.map((v, i) => `<i class="ld-d${i === lead ? ' on' : ''}" style="inset-inline-start:${v}%;--c:${CC[i]};--z:${i === lead ? 3 : 2}" title="${esc(ps[i].name)} · ${l}: ${v}"></i>`).join('')}</div>
+      <b class="ld-v num" style="color:${lead >= 0 ? CC[lead] : 'var(--mut)'}">${mx}</b></div>`; }).join('')}
+    <div class="ld-ax"><span></span><div><b>0</b><b>25</b><b>50</b><b>75</b><b>100</b></div><span></span></div></div>`;
 }
 /** مصادر نقاط اللاعب. ويا سجل مبارياته (h) الحساب دقيق مباراة بمباراة، وبدونه تقريبي من أرقام الموسم */
 function sources(p, h) {
@@ -124,12 +124,13 @@ function sources(p, h) {
   const pos = [[tt('أهداف', 'Goals'), g], [tt('صناعة', 'Assists'), a], [tt('شباك نظيفة', 'Clean sheets'), cs], [tt('بونص', 'Bonus'), b], [tt('تصديات', 'Saves'), sv], [tt('صد ركلة جزاء', 'Pen saves'), psv], [tt('مشاركة', 'Appearances'), app], [tt('مساهمات دفاعية', 'Def. contributions'), dc]].filter((x) => x[1] > 0);
   return { pos, ded, exact: !!(h && h.length) };
 }
+/** تركيبة النقاط: شريط واحد 100% مقسّم حسب المصدر، وتحته القائمة بالأرقام */
 function donut(p, i, h) {
-  const { pos: L, ded, exact } = sources(p, h), tot = L.reduce((x, y) => x + y[1], 0) || 1, R = 42, C = 2 * Math.PI * R, gap = 3;
-  let off = 0; const op = [1, 0.82, 0.66, 0.52, 0.42, 0.34, 0.27, 0.2];
-  const arcs = L.map(([l, v], k) => { const len = Math.max(0, (v / tot) * C - gap), s = `<circle r="${R}" cx="60" cy="60" fill="none" stroke="${CC[i]}" stroke-opacity="${op[k] || .2}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${len.toFixed(1)} ${C.toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 60 60)" class="dn-arc"><title>${l}: ${v}</title></circle>`; off += (v / tot) * C; return s; }).join('');
-  return `<div class="cmp-dn"><div class="cmp-dn-c"><svg viewBox="0 0 120 120"><circle r="${R}" cx="60" cy="60" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="12"/>${arcs}</svg><div><b class="num">${p.total}</b><small>${tt('نقطة', 'pts')}</small></div></div>
-    <ul>${L.map(([l, v], k) => `<li><i style="background:${CC[i]};opacity:${op[k] || .2}"></i><span>${l}</span><b class="num">${v}</b><em class="num">${Math.round((v / tot) * 100)}%</em></li>`).join('')}${ded > 0 ? `<li class="ded"><i></i><span>${tt('خصومات', 'Deductions')}</span><b class="num">−${ded}</b><em></em></li>` : ''}</ul>
+  const { pos: L, ded, exact } = sources(p, h), tot = L.reduce((x, y) => x + y[1], 0) || 1;
+  const op = [1, 0.78, 0.6, 0.46, 0.36, 0.28, 0.22, 0.17];
+  return `<div class="cb"><div class="cb-top"><b class="num">${p.total}</b><small>${tt('نقطة', 'pts')}</small></div>
+    <div class="cb-bar">${L.map(([l, v], k) => `<i style="flex:${v};background:${CC[i]};opacity:${op[k] || .17}" title="${l}: ${v}"></i>`).join('')}</div>
+    <ul>${L.map(([l, v], k) => `<li><i style="background:${CC[i]};opacity:${op[k] || .17}"></i><span>${l}</span><b class="num">${v}</b><em class="num">${Math.round((v / tot) * 100)}%</em></li>`).join('')}${ded > 0 ? `<li class="ded"><i></i><span>${tt('خصومات', 'Deductions')}</span><b class="num">−${ded}</b><em></em></li>` : ''}</ul>
     ${exact ? '' : `<small class="cmp-dn-n">${tt('تقريبي — يتحدث بعد تحميل سجل المباريات', 'Approximate until match log loads')}</small>`}</div>`;
 }
 export function vCompare() {
@@ -145,7 +146,7 @@ export function vCompare() {
   // الحكم النهائي: 55% مؤشرات الموسم + 45% المتوقع الذكي (المصحَّح بالتعلّم) — والجاهزية تنقص منه
   const judge = (p) => (0.55 * score(p) + 0.45 * (XS.get(p) / xmax) * 100) * (0.5 + 0.5 * avail(p));
   const ranked = [...ps].sort((a, b) => judge(b) - judge(a)), best = ranked[0], bi = ps.indexOf(best);
-  const ring = (v, i) => { const R = 22, C = 2 * Math.PI * R; return `<div class="cmp-ring"><svg viewBox="0 0 54 54"><circle r="${R}" cx="27" cy="27" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="5"/><circle r="${R}" cx="27" cy="27" fill="none" stroke="${CC[i]}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${((v / 100) * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 27 27)" class="cmp-ring-a"/></svg><b class="num">${v}</b></div>`; };
+  const ring = (v, i) => `<div class="sg" style="--c:${CC[i]}"><b class="num">${v}<small>/100</small></b><div class="sg-b">${Array.from({ length: 10 }, (_, k) => `<i class="${v >= (k + 1) * 10 ? 'f' : v > k * 10 ? 'h' : ''}" style="--k:${k}"></i>`).join('')}</div></div>`;
   const head = `<div class="cmp-heads" style="grid-template-columns:repeat(${ps.length},1fr)">${ps.map((p, i) => `<div class="cmp-h${p === best ? ' top' : ''}" style="--c:${CC[i]}" onclick="openPlayer(${p.id})"><button class="cmp-x" onclick="event.stopPropagation();rmCompare(${p.id})" aria-label="${tt('شيل', 'Remove')}">${I('i-x', 'i')}</button>
      <div class="cmp-sh">${pShirt(p)}</div><b>${esc(p.name)}</b><small><bdi>${tShort(p.team)}</bdi> · ${t(p.pos.toLowerCase())}</small>
      <div class="cmp-meta"><span class="num">£${p.price.toFixed(1)}</span><span class="num">${p.own}%</span></div>${ring(score(p), i)}<small class="cmp-sc">${tt('التقييم العام', 'Overall')}</small>${avail(p) < 1 ? `<span class="cmp-warn">${p.st === 'i' || avail(p) === 0 ? tt('غير جاهز', 'Unavailable') : tt(`مشاركة ${Math.round(avail(p) * 100)}%`, `${Math.round(avail(p) * 100)}% to play`)}</span>` : ''}</div>`).join('')}</div>`;
@@ -177,7 +178,7 @@ export function vCompare() {
    ${head}
    <div class="card cmp-verdict" style="--c:${CC[bi]}"><span class="ms ms-opp"></span><div><small>${tt('التوصية', 'Verdict')}</small><b>${esc(best.name)}</b><p>${verdictTxt}</p>${verdictSub ? `<small class="cmp-vs">${verdictSub}</small>` : ''}</div></div>
    <div class="sec"><h2>${I('i-target')}${tt('بصمة اللاعب', 'Player profile')}</h2></div>
-   <div class="card cmp-rd">${radar(ps, A)}${legend}<p class="cmp-note">${tt('كل محور = ترتيب اللاعب بين لاعبين نفس مركزه (100 = الأفضل)، وضمان الدقائق = نسبة مشاركته أساسي', 'Each axis = percentile vs same-position players')}</p></div>
+   <div class="card cmp-rd">${legend}${ladder(ps, A)}<p class="cmp-note">${tt('كل سطر = ترتيب اللاعب بين لاعبين نفس مركزه (100 = الأفضل)، والرقم = المتقدم بلونه. ضمان الدقائق = نسبة مشاركته أساسي', 'Each row = percentile vs same-position players')}</p></div>
    <div class="sec"><h2>${I('i-chart')}${tt('آخر 6 جولات', 'Last 6 GWs')}</h2></div>
    <div class="card" id="cmpLine"><div class="aiload"><i></i><i></i><i></i></div></div>
    <div class="sec"><h2>${I('i-swords')}${tt('وجهاً لوجه', 'Head to head')}</h2></div>
@@ -187,17 +188,14 @@ export function vCompare() {
    <div class="sec"><h2>${I('i-season')}${tt('المباريات الجاية', 'Next fixtures')}</h2></div>
    <div class="card">${nx}</div>`;
 }
+/** آخر 6 جولات: أعمدة متجاورة لكل جولة، والعمود الأعلى بالجولة عليه رقمه */
 function lineChart(series) {
-  const W = 340, H = 170, pl = 26, pr = 10, pt = 16, pb = 24;
   const gws = [...new Set(series.flatMap((s) => s.h.map((r) => r.round)))].sort((a, b) => a - b).slice(-6);
   if (!gws.length) return `<p class="mut" style="font-size:12.5px">${tt('ماكو بيانات كافية', 'Not enough data')}</p>`;
-  const mx = Math.max(4, ...series.flatMap((s) => s.h.filter((r) => gws.includes(r.round)).map((r) => r.total_points || 0)));
-  const top = Math.ceil(mx / 4) * 4, X = (k) => pl + (k * (W - pl - pr)) / Math.max(1, gws.length - 1), Y = (v) => pt + (1 - Math.max(0, v) / top) * (H - pt - pb);
-  const grid = [0, top / 2, top].map((v) => `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" class="ln-grid"/><text x="${pl - 6}" y="${Y(v) + 3}" text-anchor="end" class="ln-ax">${v}</text>`).join('');
-  const xs = gws.map((g, k) => `<text x="${X(k)}" y="${H - 6}" text-anchor="middle" class="ln-ax">${g}</text>`).join('');
-  const lines = series.map((s) => { const pts = gws.map((g, k) => { const r = s.h.filter((x) => x.round === g); return [X(k), Y(r.reduce((a, x) => a + (x.total_points || 0), 0)), r.reduce((a, x) => a + (x.total_points || 0), 0), g]; });
-    return `<g style="--c:${s.c}"><path d="${smooth(pts, false)}" fill="none" stroke="${s.c}" stroke-width="2.2" stroke-linecap="round" class="ln-path"/>${pts.map(([x, y, v, g]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="${s.c}" stroke="#0E1116" stroke-width="2"><title>${esc(s.n)} · GW${g}: ${v}</title></circle>`).join('')}</g>`; }).join('');
-  return `<svg viewBox="0 0 ${W} ${H}" class="ln" role="img" aria-label="${tt('نقاط آخر الجولات', 'Recent GW points')}">${grid}${xs}${lines}</svg>`;
+  const val = (s, g) => s.h.filter((x) => x.round === g).reduce((a, x) => a + (x.total_points || 0), 0);
+  const mx = Math.max(4, ...series.flatMap((s) => gws.map((g) => val(s, g)))), top = Math.ceil(mx / 4) * 4;
+  return `<div class="gc" role="img" aria-label="${tt('نقاط آخر الجولات', 'Recent GW points')}"><div class="gc-y"><b class="num">${top}</b><b class="num">${top / 2}</b><b class="num">0</b></div><div class="gc-p">${gws.map((g) => { const vs = series.map((s) => val(s, g)), m = Math.max(...vs);
+    return `<div class="gc-g"><div class="gc-cols">${vs.map((v, i) => `<i style="height:${Math.max(2, (Math.max(0, v) / top) * 100)}%;background:${series[i].c}" title="${esc(series[i].n)} · GW${g}: ${v}">${v === m && v > 0 ? `<b class="num">${v}</b>` : ''}</i>`).join('')}</div><small class="num">${g}</small></div>`; }).join('')}</div></div>`;
 }
 export function afterCompare() {
   const box = document.getElementById('cmpLine'); if (!box || box.dataset.done) return;
