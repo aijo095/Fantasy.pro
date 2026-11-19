@@ -26,6 +26,7 @@ import { opportunities as crossOpps } from './intel/cross.js';
 import { detectBias, captainRepeat } from './intel/bias.js';
 import { wins as winsOf, successPatterns } from './intel/positive.js';
 import { stress as stressPlan, compare as compareStress, withTransfer } from './intel/stress.js';
+import { capProfile, capTilts, pickCaptain, capWhyText } from './intel/capstyle.js';
 
 const VER = 2, WIN = 10; // نحلل آخر 10 جولات منتهية
 const key = () => `fp_coach_v${VER}_${ST.E?.entry?.id}`;
@@ -173,7 +174,7 @@ function profile(c, gws) {
     discipline: clamp(Math.round(100 - hitsN / N * 120 - (hitGWs && hitRoi < 0 ? 15 : 0)), 0, 100),
   };
   const S = { capBest, capNear, capTpl, capN, capLost, benchPts: r1(benchPts), hitsN, actv: r1(actv), rolled, roiAvg: roiN ? r1(roiSum / roiN) : null, roiN, chase, chaseFail, panic, hitRoi: r1(hitRoi), hitGWs, ownAvg: r1(ownAvg), diffN, hold: r1(hold), favF, prem, vsAvg: r1(vsAvg), rkMove, chips, N };
-  return { T, S, arch: archetype(T, S) };
+  return { T, S, arch: archetype(T, S), cp: capProfile(c, gws), lastPts: (id) => c.pts[G.finished]?.[id]?.[0] ?? 0 };
 }
 
 function archetype(T, S) {
@@ -194,6 +195,12 @@ export const ARCH = () => ({
   strategist: [tt('صبور وتجمع الانتقالات', 'Patient, rolls transfers'), tt('لهذا نبنيلك خطط على كم جولة قدام بدل ردود الفعل السريعة.', 'You plan and roll. We build multi-week plans instead of reactions.')],
   balanced: [tt('أسلوبك متوازن', 'Balanced style'), tt('ما عندك ميل واضح لجهة وحدة. نشتغل على أكثر نقطة تخسر منها نقاط.', 'A balanced style. We target where you leak the most points.')],
 });
+
+/** أول جولة يشتغل بيها الكابتن المفصّل لهذا المدرب: إذا سبق وانعرضله كابتن الجولة الحالية تبقى، ونبدي من اللي بعدها */
+function capFrom(gw) {
+  const k = `fp_capv2_from_${ST.E?.entry?.id}`;
+  try { const v = +localStorage.getItem(k); if (v) return v; const saw = !!LR.brain().snaps?.[gw]?.rec?.cap; const f = saw ? gw + 1 : gw; localStorage.setItem(k, String(f)); return f; } catch { return gw + 1; }
+}
 
 /* ---------- قرارات الجولة على مقاس المدرب ---------- */
 export function coachPlan(plan) {
@@ -245,8 +252,13 @@ export function coachPlan(plan) {
     for (let i = capL.length - 1; i >= 0; i--) { const bl = captainBlocks(plan, capL[i].p.id, GC, capL[i].risk); if (bl.length) { blockedCaps.push({ ...capL[i], blocked: bl[0].code }); gIss.push(...bl); capL.splice(i, 1); } }
     if (!capL.length) { capL.push(...blockedCaps.splice(0).sort((a, b) => b.v - a.v)); gIss.push({ code: 'no_valid_captain', sev: 'warn', msg: 'ما أكو كابتن مضمون بالتشكيلة' }); }
   }
-  let cap = capL[0], capAlt = null;
-  if (A === 'template' || (T.captain != null && T.captain < 55)) { const safe = capL.slice(0, 3).filter((x) => x.v >= capL[0].v - 0.6).sort((a, b) => b.v + b.own / 40 - (a.v + a.own / 40))[0]; if (safe) cap = safe; }
+  let cap = capL[0], capAlt = null, capWhy = '';
+  // من الجولة الجاية وطالع: كابتن مفصّل على أسلوب كل مدرب (شجرة ذكاء الكابتن). الجولة اللي انعرض كابتنها قبل تبقى مثل ما هي
+  const capV2 = M.cp && gw >= capFrom(gw);
+  if (capV2) {
+    const CT = capTilts(M.cp, A, LR.brain().capK ?? 1), r = pickCaptain(capL, M.cp, CT, gw, M.lastPts);
+    if (r) { cap = r.pick; if (r.pick !== capL[0]) capWhy = capWhyText(r.why, tt); }
+  } else if (A === 'template' || (T.captain != null && T.captain < 55)) { const safe = capL.slice(0, 3).filter((x) => x.v >= capL[0].v - 0.6).sort((a, b) => b.v + b.own / 40 - (a.v + a.own / 40))[0]; if (safe) cap = safe; }
   if (A === 'maverick') capAlt = capL.slice(1, 4).find((x) => x.own < 15 && x.v >= cap.v - 1.2) || null;
   const capSafe = [...capL.slice(0, 4)].sort((a, b) => (b.v * (1 - b.risk / 200) + b.own / 80) - (a.v * (1 - a.risk / 200) + a.own / 80))[0];
   const capRisk = capL.slice(0, 6).filter((x) => x.p.id !== capSafe.p.id && x.v >= capL[0].v - 1.6 && x.own < 25).sort((a, b) => b.ceil - a.ceil)[0] || null;
@@ -394,7 +406,7 @@ export function coachPlan(plan) {
   let guard = null;
   if (useGuard) { const fin = checkRecommendation(plan, { transfers: transfer.kind === 'go' ? [{ out: transfer.m.o.id, in: transfer.m.c.id }] : [], cap: cap.p.id, vc: cap.p.id === plan.vc ? plan.cap : plan.vc, capRisk: cap.risk, chip: plan.chip || '' }, GC); guard = { ok: fin.ok, issues: [...gIss, ...fin.issues] }; }
   // نحفظ التوصية حتى نقيّمها بعد الجولة (ونتعلم منها)
-  try { LR.snapshot({ cap: cap.p.id, tr: transfer.kind === 'go' ? { in: transfer.m.c.id, out: transfer.m.o.id } : null }); } catch {}
+  try { LR.snapshot({ cap: cap.p.id, capTop: capL[0]?.p.id, capV2: !!capV2, tr: transfer.kind === 'go' ? { in: transfer.m.c.id, out: transfer.m.o.id } : null }); } catch {}
   if (flag('decisionMemory')) { try { recordDecision(plan, { transfer, moves, blockedMoves, capL, blockedCaps, cap, capConf, trConf, hitBar, ftBar, arch: A, guard }); } catch {} }
   const dm = flag('decisionMemory') ? (() => { try { return DM.summary(ST.E.entry.id); } catch { return null; } })() : null;
   if (dm) {
@@ -403,7 +415,7 @@ export function coachPlan(plan) {
       if (flag('positiveLearn')) dm.pos = { wins: winsOf(b.evals), patterns: successPatterns(b.evals) };
     } catch {}
   }
-  return { transfer, cap, capAlt, capL: capL.slice(0, 3), capSafe, capRisk, capConf, scen, bestScen, timing, trConf, focus, ideas: ideasAll.slice(0, 6), hitBar, ftBar, learn: LR.summary(), dm, guard, seq, stress: stressR, at: ST.G.fetchedAt || Date.now() };
+  return { transfer, cap, capAlt, capWhy, capL: capL.slice(0, 3).some((x) => x === cap) ? capL.slice(0, 3) : [cap, ...capL.slice(0, 2)], capSafe, capRisk, capConf, scen, bestScen, timing, trConf, focus, ideas: ideasAll.slice(0, 6), hitBar, ftBar, learn: LR.summary(), dm, guard, seq, stress: stressR, at: ST.G.fetchedAt || Date.now() };
 }
 
 /* ---------- (9) خطط متعددة الجولات: تنحسب بالخلفية مرة وحدة لكل وضع ---------- */

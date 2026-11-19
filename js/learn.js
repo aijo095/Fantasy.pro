@@ -94,6 +94,11 @@ function learnFrom(b, g, P, act, rec, P2) {
     const best = xi.length ? Math.max(...xi) : null, mineCap = P2?.find((x) => x[3] === 1)?.[0];
     e.cap = { id: rec.cap, pts: capA, best, followed: mineCap ? mineCap === rec.cap : null, good: best != null ? capA >= best - 2 : null };
   }
+  // تعلّم ميل الكابتن المفصّل: إذا اختيارنا على أسلوبه طلع أحسن من أعلى توقع نقوّي الميل، وإذا خسّر نضعّفه
+  if (rec?.capV2 && rec.capTop && rec.cap && rec.capTop !== rec.cap) {
+    const d = (act[rec.cap]?.[0] ?? 0) - (act[rec.capTop]?.[0] ?? 0);
+    b.capK = clamp((b.capK ?? 1) + clamp(d, -6, 6) * 0.04, 0.3, 1.5); e.capStyle = { d, k: +b.capK.toFixed(2) };
+  }
   if (rec?.tr?.in) { const done = (ST.E.transfers || []).some((t) => t.event === g && t.element_in === rec.tr.in); e.tr = { in: rec.tr.in, out: rec.tr.out, gain: (act[rec.tr.in]?.[0] ?? 0) - (act[rec.tr.out]?.[0] ?? 0), done }; }
   b.evals.push(e); b.nEval++;
 }

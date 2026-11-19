@@ -424,3 +424,4 @@ button.cl-m{width:100%;text-align:start}
 button.cl-m:active{background:rgba(255,255,255,.04)}
 button.cl-m::after{content:"";flex:none;width:6px;height:6px;border-top:1.5px solid currentColor;border-left:1.5px solid currentColor;transform:rotate(-45deg);opacity:.35;margin-inline-start:2px}
 html[dir=ltr] button.cl-m::after{transform:rotate(135deg)}
+.cz-cw{margin:8px 2px 0;font-size:11.5px;color:var(--fp-steel,#8A93A3);line-height:1.6}
