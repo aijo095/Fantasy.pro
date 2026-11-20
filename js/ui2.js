@@ -36,6 +36,21 @@ addEventListener('resize', tick); tick(); setTimeout(tick, 400);
 const tb = $('.topbar');
 addEventListener('scroll', () => tb?.classList.toggle('scrolled', scrollY > 8), { passive: true });
 
+/* 4ب) الشريط السفلي مثل إنستغرام: كبير وثابت، ومن تمرّر للأسفل يصغر لكبسولة عائمة، ومن ترجع للأعلى يكبر */
+{
+  const nav = $('.bnav'), root = document.documentElement; let lastY = scrollY, acc = 0, syncT = 0;
+  // أثناء تحوّل الشريط نعيد قياس مؤشر القسم الفعّال كل فريم حتى يتحرك وياه بالضبط
+  const sync = () => { root.classList.add('ind-sync'); const t0 = performance.now(); cancelAnimationFrame(syncT); const loop = () => { navInd(); if (performance.now() - t0 < 520) syncT = requestAnimationFrame(loop); else { navInd(); root.classList.remove('ind-sync'); } }; syncT = requestAnimationFrame(loop); };
+  const set = (v) => { if (root.classList.contains('nav-mini') === v) return; root.classList.toggle('nav-mini', v); sync(); };
+  addEventListener('scroll', () => {
+    const y = scrollY, d = y - lastY; lastY = y;
+    if (y < 60 || innerHeight + y >= document.documentElement.scrollHeight - 4 && d < 0) { acc = 0; set(false); return; }
+    acc = Math.sign(d) === Math.sign(acc) ? acc + d : d;
+    if (acc > 28) set(true); else if (acc < -22) set(false);
+  }, { passive: true });
+  nav?.addEventListener('click', () => set(false));
+}
+
 /* 5) سحب الورقة للأسفل للإغلاق (من المقبض، أو من أي مكان إذا الورقة بأعلاها) */
 let drag = null;
 document.addEventListener('touchstart', (e) => {

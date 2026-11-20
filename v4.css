@@ -227,3 +227,19 @@ html.v4 .dc-ring{width:56px!important;height:56px!important}html.v4 .dc-ring b{f
 .cmp-dns .cmp-dn li span{white-space:nowrap;overflow:visible}
 .cmp-dns .cmp-dn-n{grid-column:1/-1}
 @media (max-width:340px){.cmp-dns .cmp-dn{grid-template-columns:1fr;justify-items:center}}
+
+/* =====================================================================
+   الشريط السفلي مثل إنستغرام: يصغر لكبسولة عائمة أثناء التمرير للأسفل
+===================================================================== */
+html.ui2 .bnav{transition:left .48s cubic-bezier(.22,1,.36,1),right .48s cubic-bezier(.22,1,.36,1),bottom .48s cubic-bezier(.22,1,.36,1),border-radius .48s cubic-bezier(.22,1,.36,1),padding .48s cubic-bezier(.22,1,.36,1),box-shadow .4s}
+html.ui2 .bnav button{transition:min-height .48s cubic-bezier(.22,1,.36,1),font-size .3s ease,gap .3s,color .1s}
+html.ui2 .bnav button svg.i{transition:width .4s cubic-bezier(.22,1,.36,1),height .4s cubic-bezier(.22,1,.36,1),transform .15s ease}
+html.ui2.nav-mini .bnav{left:15%;right:15%;bottom:calc(env(safe-area-inset-bottom,0px) * .5 + 8px);border-radius:999px;padding:5px 6px;box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 0 0 1px rgba(255,255,255,.08),0 16px 34px -12px rgba(0,0,0,.9)}
+html.ui2.nav-mini .bnav button{min-height:42px;font-size:0;gap:0}
+html.ui2.nav-mini .bnav button svg.i{width:21px;height:21px}
+html.ui2.nav-mini .bnav .nav-ind{top:5px;bottom:5px;border-radius:999px}
+html.ind-sync .bnav .nav-ind{transition:none!important}
+/* لمسة عند اختيار قسم: الأيقونة تنبض نبضة وحدة */
+html.ui2 .bnav button.on svg.i{animation:navPop .42s cubic-bezier(.34,1.56,.64,1)}
+@keyframes navPop{0%{transform:scale(.82)}60%{transform:translateY(-1px) scale(1.14)}100%{transform:translateY(-1px) scale(1.08)}}
+@media (prefers-reduced-motion:reduce){html.ui2 .bnav,html.ui2 .bnav button,html.ui2 .bnav button svg.i{transition:none!important}html.ui2 .bnav button.on svg.i{animation:none}}
