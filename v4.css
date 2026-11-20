@@ -216,3 +216,14 @@ html.v4 .dc-ring::after,html.v4 .rv-grade::after,html.v4 .rv-prob::after{content
 html.v4 .rv-prob::after{background:conic-gradient(from 225deg,var(--c-mint) 0 calc(var(--p) * 2.7deg),rgba(255,142,142,.55) 0 270deg,transparent 0)}
 html.v4 .dc-ring::after,html.v4 .rv-grade::after,html.v4 .rv-prob::after{--p:inherit}
 html.v4 .dc-ring{width:56px!important;height:56px!important}html.v4 .dc-ring b{font-size:12.5px!important}html.v4 .dc-ring::after{inset:6px}
+
+/* من وين تجي نقاطه: كرت لكل لاعب بعرض كامل (الحلقة جنب القائمة) — يكفي لـ3 لاعبين بدون قص */
+.cmp-dns{grid-template-columns:1fr!important;gap:12px}
+.cmp-dns>.card{padding:16px 18px}
+.cmp-dns .cmp-dn{display:grid;grid-template-columns:118px 1fr;align-items:center;gap:16px;margin-top:10px}
+.cmp-dns .cmp-dn-c{width:118px;height:118px}
+.cmp-dns .cmp-dn ul{gap:6px}
+.cmp-dns .cmp-dn li{grid-template-columns:10px 1fr auto 36px;font-size:12px}
+.cmp-dns .cmp-dn li span{white-space:nowrap;overflow:visible}
+.cmp-dns .cmp-dn-n{grid-column:1/-1}
+@media (max-width:340px){.cmp-dns .cmp-dn{grid-template-columns:1fr;justify-items:center}}
