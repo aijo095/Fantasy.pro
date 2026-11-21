@@ -438,7 +438,8 @@ window.walkAgain = () => { walkKey = ''; document.getElementById('view').dataset
 const LUB = {};
 function benchState(p, gw) {
   const f = (ST.G.fx[gw] || []).find((x) => (x.h === p.team || x.a === p.team) && x.started && !x.fin); if (!f) return null;
-  const c = LUB[f.id];
+  let c = LUB[f.id];
+  if (c?.res && !Object.keys(c.res).length && Date.now() - c.at > 120e3) { delete LUB[f.id]; c = null; } // التشكيلة ما كانت واصلة: نعيد المحاولة
   if (!c) {
     LUB[f.id] = { busy: true };
     Promise.all([fetch(`/api/lineups?ko=${encodeURIComponent(f.ko)}&h=${ST.G.teams[f.h].short}&a=${ST.G.teams[f.a].short}&v=2`).then((r) => (r.ok ? r.json() : null)).catch(() => null), import('./live.js')]).then(([d, L]) => {
@@ -458,10 +459,15 @@ function liveCard(r, i, gw = ST.G.cur) {
   let [st, stl] = pState(p, gw); const shown = r.pts * Math.max(1, r.m);
   if (GLOW_DEMO() && !r.subOut && (r.m > 0 || r.subIn)) { st = 'live'; stl = `${48 + ((i * 7) % 40)}′`; }
   // بدت مباراته وبعده ما نزل: نكتب حالته بدل الصفر (على الدكة / خارج القائمة / ما نزل بعد)
-  const wait = st === 'live' && !r.min && !r.subOut && !GLOW_DEMO(), ls = wait ? benchState(p, gw) : null;
+  // بدت مباراته ودقائقه صفر: نعتمد التشكيلة الرسمية — الأساسي يبقى طبيعي (الفانتازي يتأخر بتحديث الدقائق)،
+  // البديل «ما نزل بعد»، واللي مو بالقائمة «خارج القائمة». إذا التشكيلة ما وصلت ننتظر 20 دقيقة قبل ما نكتب شي
+  let ls = st === 'live' && !r.min && !r.subOut && !GLOW_DEMO() ? benchState(p, gw) : null;
+  if (ls === 'xi') ls = null;
+  else if (ls == null && st === 'live' && !r.min && !r.subOut && !GLOW_DEMO()) { const fm = Math.max(0, ...(ST.G.fx[gw] || []).filter((x) => (x.h === p.team || x.a === p.team) && x.started && !x.fin).map((x) => x.min || 0)); if (fm >= 20) ls = 'late'; }
+  const wait = !!ls;
   const bg = wait ? '#CBD5E1' : r.m === 0 && !r.subIn ? '#CBD5E1' : st === 'soon' ? '#E2E8F0' : shown >= 10 ? '#34D399' : shown >= 5 ? '#A7F3D0' : shown >= 2 ? '#F1F5F9' : shown > 0 ? '#FED7AA' : '#FECACA';
   const mvp = mvpId === r.id;
-  return `<div class="pl ${r.cap ? 'capt' : ''} ${r.subOut ? 'dim' : ''} ${mvp ? 'mvp' : ''}" data-pid="${p.id}" style="--d:${i * 35}ms" onclick="playerGW(${p.id},${gw},${Math.max(1, r.m)})" role="button">${mvp ? `<span class="mvp-b"><svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="m12 2 2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8Z"/></svg>${tt('نجم الجولة', 'Star')}</span>` : ''}${r.cap ? `<span class="cb">${r.m === 3 ? '3×' : 'C'}</span>` : r.vc ? `<span class="cb v">${r.m > 1 ? 'C' : 'V'}</span>` : ''}${r.subIn ? `<span class="rk" style="background:var(--acc);color:var(--on-acc)">⇅</span>` : r.subOut ? `<span class="rk r2">⇅</span>` : ''}${pzRing(p, r, wait ? 'wait' : st, gw, i)}<div class="sh">${pShirt(p)}</div><div class="nm">${esc(p.name)}</div><div class="lb lpts" style="background:${bg}">${(st === 'soon' || wait) && !shown ? '—' : shown}${r.bonus ? `<sup>+${r.bonus}</sup>` : ''}</div>${wait ? `<div class="pst wait">${ls === 'bench' ? tt('على الدكة', 'On the bench') : ls === 'out' ? tt('خارج القائمة', 'Not in squad') : tt('ما نزل بعد', 'Not on yet')}</div>` : `<div class="pst ${st}">${st === 'live' ? '<i></i>' : ''}${stl}</div>`}</div>`;
+  return `<div class="pl ${r.cap ? 'capt' : ''} ${r.subOut ? 'dim' : ''} ${mvp ? 'mvp' : ''}" data-pid="${p.id}" style="--d:${i * 35}ms" onclick="playerGW(${p.id},${gw},${Math.max(1, r.m)})" role="button">${mvp ? `<span class="mvp-b"><svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="m12 2 2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8Z"/></svg>${tt('نجم الجولة', 'Star')}</span>` : ''}${r.cap ? `<span class="cb">${r.m === 3 ? '3×' : 'C'}</span>` : r.vc ? `<span class="cb v">${r.m > 1 ? 'C' : 'V'}</span>` : ''}${r.subIn ? `<span class="rk" style="background:var(--acc);color:var(--on-acc)">⇅</span>` : r.subOut ? `<span class="rk r2">⇅</span>` : ''}${pzRing(p, r, wait ? 'wait' : st, gw, i)}<div class="sh">${pShirt(p)}</div><div class="nm">${esc(p.name)}</div><div class="lb lpts" style="background:${bg}">${(st === 'soon' || wait) && !shown ? '—' : shown}${r.bonus ? `<sup>+${r.bonus}</sup>` : ''}</div>${wait ? `<div class="pst wait">${ls === 'out' ? tt('خارج القائمة', 'Not in squad') : tt('ما نزل بعد', 'Not on yet')}</div>` : `<div class="pst ${st}">${st === 'live' ? '<i></i>' : ''}${stl}</div>`}</div>`;
 }
 async function loadGW(g) {
   if (gwCache[g]) return;
