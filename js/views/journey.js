@@ -78,6 +78,36 @@ const trophy = (cx, y) => `<g class="jr-trophy" transform="translate(${cx},${y})
 </g>`;
 
 /* ---------- الواجهة ---------- */
+/* تحليل الرحلة: اختيار الفترة، نقاطك مقابل المعدل، تطور الترتيب، الميزانية، الانتقالات — أرقام سجلك الرسمي فقط */
+let JRP = 0;
+function jrStats(D) {
+  const all = D.rows, rows = JRP ? all.slice(-JRP) : all; if (!rows.length) return '';
+  const avgs = rows.filter((r) => r.avg != null), my = r1(rows.reduce((a, r) => a + r.net, 0) / rows.length), lg = avgs.length ? r1(avgs.reduce((a, r) => a + r.avg, 0) / avgs.length) : null;
+  const best = rows.reduce((a, r) => (r.pts > a.pts ? r : a)), worst = rows.reduce((a, r) => (r.pts < a.pts ? r : a));
+  const tr = rows.reduce((a, r) => a + r.tr, 0), hit = rows.reduce((a, r) => a + r.hit, 0), bench = rows.reduce((a, r) => a + r.bench, 0);
+  const v0 = rows[0].value, v1 = rows.at(-1).value, dv = v0 && v1 ? r1((v1 - v0) / 10) : null;
+  const W = 300, Hh = 90, n = rows.length, bw = Math.max(3, Math.min(18, (W - 10) / n - 3)), mx = Math.max(...rows.map((r) => Math.max(r.pts, r.avg || 0)), 10);
+  const bars = rows.map((r, i) => { const x = 5 + i * ((W - 10) / n) + ((W - 10) / n - bw) / 2, h = (r.pts / mx) * (Hh - 14); return `<rect x="${x.toFixed(1)}" y="${(Hh - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${r.avg != null && r.pts >= r.avg ? '#7FE6A6' : 'rgba(255,255,255,.28)'}"><title>${tt('ج', 'GW')}${r.g}: ${r.pts}</title></rect>`; }).join('');
+  const avgLine = avgs.length > 1 ? `<polyline fill="none" stroke="#FFD66E" stroke-width="1.6" stroke-dasharray="3 3" points="${rows.map((r, i) => r.avg == null ? '' : `${(5 + (i + 0.5) * ((W - 10) / n)).toFixed(1)},${(Hh - (r.avg / mx) * (Hh - 14)).toFixed(1)}`).filter(Boolean).join(' ')}"/>` : '';
+  const rk = rows.filter((r) => r.rank), rl = rk.length > 1 ? (() => { const lg2 = (v) => Math.log10(v), a = Math.min(...rk.map((r) => lg2(r.rank))), b = Math.max(...rk.map((r) => lg2(r.rank))); return `<polyline fill="none" stroke="#8CC8FF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${rk.map((r, i) => `${(5 + (i / (rk.length - 1)) * (W - 10)).toFixed(1)},${(8 + ((lg2(r.rank) - a) / (b - a || 1)) * (Hh - 20)).toFixed(1)}`).join(' ')}"/>`; })() : '';
+  const seg = [[0, tt('كل الموسم', 'Season')], [10, tt('آخر 10', 'Last 10')], [5, tt('آخر 5', 'Last 5')]].filter(([k]) => !k || all.length > k);
+  return `<div class="card jrs">
+    <div class="seg jrs-seg">${seg.map(([k, l]) => `<button class="${JRP === k ? 'on' : ''}" onclick="jrPeriod(${k})">${l}</button>`).join('')}</div>
+    <div class="jrs-k"><div><small>${tt('معدلك', 'Your avg')}</small><b class="num">${my}</b></div><div><small>${tt('معدل الجولة', 'GW avg')}</small><b class="num">${lg ?? '—'}</b></div><div><small>${tt('الفرق', 'Diff')}</small><b class="num ${lg != null && my >= lg ? 'up' : 'down'}" dir="ltr">${lg != null ? (my - lg >= 0 ? '+' : '') + r1(my - lg) : '—'}</b></div></div>
+    <div class="jrs-c"><small>${tt('نقاطك بكل جولة · الخط = معدل الجولة', 'Points per GW · line = GW average')}</small><svg viewBox="0 0 ${W} ${Hh}" class="jrs-svg">${bars}${avgLine}</svg></div>
+    ${rl ? `<div class="jrs-c"><small>${tt('تطور ترتيبك · الأعلى = أحسن', 'Overall rank · higher = better')}</small><svg viewBox="0 0 ${W} ${Hh}" class="jrs-svg">${rl}</svg></div>` : ''}
+    <div class="jrs-g">
+      <div onclick="jrOpen(${best.g})"><small>${tt('أفضل جولة', 'Best GW')}</small><b>${tt('ج', 'GW')}${best.g} · <span class="num">${best.pts}</span></b></div>
+      <div onclick="jrOpen(${worst.g})"><small>${tt('أضعف جولة', 'Worst GW')}</small><b>${tt('ج', 'GW')}${worst.g} · <span class="num">${worst.pts}</span></b></div>
+      <div><small>${tt('الانتقالات', 'Transfers')}</small><b class="num">${tr}${hit ? ` <em class="down">−${hit}</em>` : ''}</b></div>
+      <div><small>${tt('ضاعت بالدكة', 'Bench pts')}</small><b class="num">${bench}</b></div>
+      ${dv != null ? `<div><small>${tt('تغير قيمة الفريق', 'Team value change')}</small><b class="num ${dv >= 0 ? 'up' : 'down'}"><bdi>${dv >= 0 ? '+' : ''}${dv.toFixed(1)}م</bdi></b></div>` : ''}
+      <div><small>${tt('الجولات', 'GWs')}</small><b class="num">${rows.length}</b></div>
+    </div></div>`;
+}
+const r1 = (x) => Math.round(x * 10) / 10;
+window.jrPeriod = (k) => { JRP = k; window.render(); };
+
 export function vJourney() {
   const D = data();
   if (!D.rows.length) return `<div class="empty">${I('i-season', 'i', 'width:40px;height:40px')}<b>${tt('الرحلة تبدي بعد أول جولة', 'Your journey starts after GW1')}</b></div>`;
@@ -93,7 +123,8 @@ export function vJourney() {
       <div class="jr-legend">${[['best', 'i-star', tt('أعلى جولة', 'Best')], ['rank', 'i-medal', tt('أفضل ترتيب', 'Best rank')], ['climb', 'i-up', tt('أكبر صعود', 'Climb')], ['chip', 'i-bolt', tt('ورقة', 'Chip')], ['worst', 'i-down', tt('أصعب', 'Toughest')]].map(([k, ic, l]) => `<span class="jr-lg ${k}">${I(ic)}${l}</span>`).join('')}</div>
     </div>
     <div id="jrHost" class="jr-host"></div>
-    <div class="jr-ctrl"><button class="btn btn-p" onclick="jrPlay()">${I('i-live')}${tt('شغّل الرحلة', 'Play the journey')}</button><button class="btn btn-g" onclick="jrTo(${last.g})">${I('i-target')}${tt('جولتي الحالية', 'Current GW')}</button></div>`;
+    <div class="jr-ctrl"><button class="btn btn-p" onclick="jrPlay()">${I('i-live')}${tt('شغّل الرحلة', 'Play the journey')}</button><button class="btn btn-g" onclick="jrTo(${last.g})">${I('i-target')}${tt('جولتي الحالية', 'Current GW')}</button></div>
+    ${jrStats(D)}`;
 }
 
 export function afterJourney() {

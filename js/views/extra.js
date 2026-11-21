@@ -102,6 +102,16 @@ function simulate(withMoves = true) {
   });
   return out;
 }
+/* سيناريوهات المحاكاة: تحفظ الخطة الحالية بأرقامها، وتقارنها بغيرها، وترجعها أو تحذفها. ما تنفذ أي انتقال رسمي */
+const sk = () => `fp_mscen_${ST.profile?.teamId}`;
+const scenList = () => (LS.get(sk()) || []).filter((x) => x.from === ST.G.next);
+function scenHTML(tot, gain, n, hitsAll) {
+  const L = scenList(), same = (x) => JSON.stringify(x.moves) === JSON.stringify(MP.moves), best = L.length ? Math.max(...L.map((x) => x.tot)) : null;
+  return `<div class="card sc"><div class="sc-h"><b>${tt('مقارنة السيناريوهات', 'Compare scenarios')}</b>${n && !L.some(same) ? `<button class="btn btn-p btn-sm" onclick="mpScenSave()">${I('i-plus', 'i', 'width:14px;height:14px')}${tt('احفظ هالسيناريو', 'Save this')}</button>` : ''}</div>
+    ${L.length ? `<div class="sc-l">${L.map((x, i) => `<div class="sc-r ${same(x) ? 'on' : ''}"><div class="sc-i"><b>${esc(x.name)}${x.tot === best && L.length > 1 ? `<em>${tt('الأعلى', 'Top')}</em>` : ''}</b><small>${tt(`${x.n} انتقال`, `${x.n} moves`)}${x.hits ? ` · <bdi>−${x.hits}</bdi>` : ''} · ${tt('الربح', 'gain')} <bdi>${x.gain >= 0 ? '+' : ''}${x.gain}</bdi></small></div><b class="num sc-t">${x.tot}</b><button class="sc-a" onclick="mpScenLoad(${i})" aria-label="${tt('افتح', 'Load')}">${I('i-history', 'i')}</button><button class="sc-a" onclick="mpScenDel(${i})" aria-label="${tt('احذف', 'Delete')}">${I('i-trash', 'i')}</button></div>`).join('')}</div>
+      <p class="sc-n">${tt(`الحالي: ${tot} نقطة متوقعة`, `Current: ${tot} xP`)}</p>` : `<p class="sc-n">${n ? tt('احفظ خطتك الحالية، جرّب غيرها، وقارن بينهم هنا.', 'Save this plan, try another and compare here.') : tt('سوّ انتقال بالخطة حتى تكدر تحفظه كسيناريو.', 'Add a move to save it as a scenario.')}</p>`}</div>`;
+}
+
 export function vPlanner() {
   mpLoad();
   const S = simulate(true), B = simulate(false);
@@ -120,6 +130,7 @@ export function vPlanner() {
      ${moves || `<p class="mp-empty">${tt('ماكو انتقالات بهاي الجولة — تتدوّر انتقالاتك المجانية للجولة الجاية (الحد 5).', 'No moves — your free transfer rolls over (max 5).')}</p>`}
      <div class="mp-xi"><small>${tt('أفضل تشكيلة متوقعة', 'Best XI')} · ${tt('المتوقع', 'xP')} <b class="num">${cur.pts}</b>${cur.hit ? ` · ${tt('بعد الخصم', 'net')} <b class="num">${cur.net}</b>` : ''}</small><div>${xiList}</div></div></div>
    <div class="flex" style="gap:8px;margin-top:10px"><button class="btn btn-g" style="flex:1" onclick="mpAuto()">${I('i-sparkle', 'i', 'width:15px;height:15px')}${tt('اقترح خطة', 'Suggest a plan')}</button>${nMoves ? `<button class="btn btn-g" onclick="mpClear()">${tt('مسح', 'Clear')}</button>` : ''}</div>
+   ${scenHTML(tot, gain, nMoves, hitsAll)}
    <p class="mut" style="font-size:11.5px;line-height:1.7;margin:12px 4px">${tt('الأسعار الحالية، والانتقالات المجانية تقديرية من سجلك. الخطة تنحفظ بحسابك وتبدي من جديد بعد كل ديدلاين. هذا مخطط للتجربة وما يغيّر فريقك بالفانتازي.', 'Uses current prices; free transfers are estimated. Saved to your account, resets each deadline. Planning only — it does not change your FPL team.')}</p>`;
 }
 function stateBefore(g) { const S = simulate(true); const i = S.findIndex((x) => x.g === g); const base = window.__basePlan(); return i > 0 ? { squad: S[i - 1].squad, bank: S[i - 1].bank } : { squad: base.squad, bank: base.bank }; }
@@ -152,6 +163,12 @@ Object.assign(window, {
   mpDel: (g, i) => { const S = simulate(true).find((x) => x.g === g); const m = S?.mv[i]; if (m) MP.moves[g] = (MP.moves[g] || []).filter((x) => !(x.out === m.out && x.in === m.in)); mpSave(); window.render(); },
   mpClear: () => { MP.moves = {}; mpSave(); window.render(); },
   /* اقتراح: بكل جولة أفضل انتقال واحد مجاني حسب متوقع الجولات الباقية (إذا يزيد نقطة ونص أو أكثر) */
+  mpScenSave: () => { const S = simulate(true), B = simulate(false); if (!S) return; const L = LS.get(sk()) || [], cur = L.filter((x) => x.from === ST.G.next);
+    const tot = r1(S.reduce((a, x) => a + x.net, 0)), base = r1(B.reduce((a, x) => a + x.net, 0));
+    cur.push({ name: tt(`سيناريو ${cur.length + 1}`, `Scenario ${cur.length + 1}`), from: ST.G.next, moves: JSON.parse(JSON.stringify(MP.moves)), tot, gain: r1(tot - base), n: S.reduce((a, x) => a + x.used, 0), hits: S.reduce((a, x) => a + x.hit, 0), t: Date.now() });
+    LS.set(sk(), cur.slice(-5)); toast(tt('انحفظ السيناريو', 'Scenario saved')); window.render(); },
+  mpScenLoad: (i) => { const x = scenList()[i]; if (!x) return; MP.moves = JSON.parse(JSON.stringify(x.moves)); mpSave(); window.render(); toast(tt(`رجّعت ${x.name}`, `Loaded ${x.name}`)); },
+  mpScenDel: (i) => { const L = scenList(); L.splice(i, 1); LS.set(sk(), L); window.render(); },
   mpAuto: () => {
     MP.moves = {};
     gwsOf().forEach((g, k, arr) => {

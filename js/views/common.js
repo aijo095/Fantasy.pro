@@ -33,6 +33,7 @@ export function openPlayer(id) {
     ${stat(p.yc, t('yc'))}${stat(p.rc, t('rc'))}${stat(p.ict.toFixed(1), 'ICT')}${stat(r1(p.total / p.price), tt('نقطة/مليون', 'Pts/£m'))}</div>
    <div class="sec" style="margin:10px 2px 6px"><h2 style="font-size:15px">${I('i-chart')}${tt('نقاطه بكل جولة', 'Points per GW')}</h2><span class="mut" style="font-size:11.5px" id="psLast5"></span></div>
    <div id="psHist"><div class="aiload"><i></i><i></i><i></i><span>${t('loading')}</span></div></div>
+   <div id="psIntel"></div>
    <div class="sec" style="margin:12px 2px 6px"><h2 style="font-size:15px">${I('i-cal')}${tt('المباريات القادمة', 'Upcoming fixtures')}</h2></div>
    <div class="nx5">${nexts.map((g) => { const f = fixturesFor(p.team, g); return f.length ? f.map((x) => `<button><small>GW${g}</small>${crest(tShort(x.opp), 30)}<b>${tShort(x.opp)}</b><span class="rate f${x.fdr}">${x.home ? t('home_s') : t('away_s')}</span></button>`).join('') : `<button><small>GW${g}</small><b>—</b></button>`; }).join('')}</div>
    <p class="mut" style="font-size:11px;margin-top:6px">${tt('الفرص الكبيرة والتسديدات ما ينشرها الفانتازي الرسمي، فنعرض مؤشر التهديد (Threat) بدالها:', 'Big chances and shots are not published by FPL; Threat index shown instead:')} <b>${p.threat.toFixed(0)}</b></p>
@@ -45,6 +46,7 @@ export function openPlayer(id) {
     const vals = h.map((r) => r.total_points), mx = Math.max(...vals, 1), last5 = vals.slice(-5);
     document.getElementById('psLast5').textContent = tt(`آخر 5: ${last5.reduce((a, b) => a + b, 0)} نقطة`, `Last 5: ${last5.reduce((a, b) => a + b, 0)} pts`);
     el.innerHTML = `<div class="pbars">${h.map((r) => `<button class="${mine ? 'own' : ''}" onclick="gwDetail(${id},${r.round})"><b>${r.total_points}</b><i style="height:${Math.max(4, r.total_points / mx * 100)}%;background:${r.total_points >= 8 ? '#10B981' : r.total_points >= 4 ? '#34D399' : r.total_points >= 1 ? '#FB7185' : '#EF4444'}"></i><span>${r.round}</span></button>`).join('')}</div>`;
+    try { playerIntel(p, h, mine); } catch (e) { /* البطاقة الذكية إضافة، ما توقف الأساسي */ }
   }).catch((e) => { const el = document.getElementById('psHist'); if (el) el.innerHTML = `<p class="mut">${esc(e.message)}</p>`; });
 }
 export function gwDetail(id, gw) {
@@ -174,3 +176,41 @@ window.playerGW = async (id, gw, mult = 1) => {
    <button class="btn btn-g btn-b" style="margin-top:14px" onclick="closeSheet();setTimeout(()=>openPlayer(${id}),200)">${I('i-user', 'i', 'width:16px;height:16px')}${tt('صفحة اللاعب الكاملة', 'Full player page')}</button>`;
   import('../motion.js').then((m) => { const b = document.querySelector('#sheetRoot .sh-body'); if (b) { m.countAll(b, true); m.decorate(b, true); } }).catch(() => {});
 };
+
+/* =========================================================
+   بطاقة اللاعب الذكية: السعر عبر الجولات، مقارنة بمتوسط مركزه،
+   مستوى المخاطرة وأسبابه، وقراراتك ويا اللاعب — كلها من بيانات FPL الحقيقية
+========================================================= */
+function playerIntel(p, h, mine) {
+  const host = document.getElementById('psIntel'); if (!host) return;
+  const G = ST.G;
+  // السعر: من قيمة اللاعب بكل جولة بسجله الرسمي
+  const vals = h.map((r) => (r.value || 0) / 10).filter(Boolean), v0 = vals[0], v1 = p.price, dv = v0 ? r1(v1 - v0) : 0;
+  const spk = (() => { if (vals.length < 2) return ''; const mn = Math.min(...vals, v1), mx = Math.max(...vals, v1), W = 120, H = 30, xs = (i) => (i / (vals.length - 1)) * W, ys = (v) => H - 3 - ((v - mn) / (mx - mn || 1)) * (H - 6);
+    return `<svg viewBox="0 0 ${W} ${H}" class="pi-spk"><polyline fill="none" stroke="${dv >= 0 ? 'var(--acc)' : 'var(--bad)'}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${vals.map((v, i) => `${xs(i).toFixed(1)},${ys(v).toFixed(1)}`).join(' ')}"/></svg>`; })();
+  // مقارنة بمتوسط المركز (لاعبين لعبوا 270 دقيقة أو أكثر)
+  const pool = G.players.filter((x) => x.pos === p.pos && x.min >= 270), avgPpg = pool.length ? r1(pool.reduce((a, x) => a + x.ppg, 0) / pool.length) : null;
+  const better = pool.length ? Math.round((pool.filter((x) => x.ppg < p.ppg).length / pool.length) * 100) : null;
+  // المخاطرة: أسباب حقيقية فقط
+  const why = [], av = avail(p), share = G.finished ? (p.min / (90 * G.finished)) : 1, fd = avgFdr(p.team, G.next, 3);
+  if (av < 1) why.push(tt(`جاهزيته ${Math.round(av * 100)}% حسب الحالة الرسمية`, `${Math.round(av * 100)}% availability (official)`));
+  if (share < 0.7 && G.finished >= 3) why.push(tt(`يلعب ${Math.round(share * 100)}% من الدقائق الممكنة`, `Plays ${Math.round(share * 100)}% of minutes`));
+  if (fd >= 3.6) why.push(tt('المباريات الثلاث الجاية صعبة', 'Tough next 3 fixtures'));
+  if (p.cc < 0 || dv <= -0.2) why.push(tt('سعره دا ينزل', 'Price falling'));
+  const lvl = why.length >= 2 || av < 0.5 ? ['high', tt('عالية', 'High')] : why.length === 1 ? ['mid', tt('متوسطة', 'Medium')] : ['low', tt('منخفضة', 'Low')];
+  host.innerHTML = `<div class="pi">
+    <div class="pi-row"><div class="pi-k"><small>${tt('السعر من أول الموسم', 'Price since GW1')}</small><b class="num"><bdi>${v1.toFixed(1)}م</bdi> <em class="${dv > 0 ? 'up' : dv < 0 ? 'down' : ''}"><bdi>${dv > 0 ? '+' : ''}${dv.toFixed(1)}</bdi></em></b></div>${spk}</div>
+    ${avgPpg != null ? `<div class="pi-row"><div class="pi-k"><small>${tt('مقابل متوسط مركزه', 'Vs position average')}</small><b class="num"><bdi>${p.ppg}</bdi> <span class="mut">${tt('نقطة/مباراة مقابل', 'pts/match vs')} <bdi>${avgPpg}</bdi></span></b></div><div class="pi-bar"><i style="width:${better}%"></i><span class="num">${tt(`أفضل من ${better}%`, `Beats ${better}%`)}</span></div></div>` : ''}
+    <div class="pi-row col"><div class="pi-k"><small>${tt('المخاطرة', 'Risk')}</small><b class="pi-lv ${lvl[0]}">${lvl[1]}</b></div>${why.length ? `<ul class="pi-why">${why.map((w) => `<li>${w}</li>`).join('')}</ul>` : `<p class="pi-ok">${tt('ماكو مؤشر خطر واضح بالبيانات الحالية', 'No clear risk signals in current data')}</p>`}</div>
+    <div class="pi-row col" id="psDec"></div></div>`;
+  import('../coach.js').then((CO) => {
+    const el = document.getElementById('psDec'); if (!el || !CO.playerDecisions) return; const d = CO.playerDecisions(p.id);
+    if (!d.has) { el.remove(); return; }
+    const parts = [];
+    if (d.bought.length) parts.push(tt(`اشتريته بالجولة ${d.bought.join('، ')}`, `Bought GW ${d.bought.join(', ')}`));
+    if (d.sold.length) parts.push(tt(`بعته بالجولة ${d.sold.join('، ')}`, `Sold GW ${d.sold.join(', ')}`));
+    if (d.owned) parts.push(tt(`عندك ${d.owned} جولة، أساسي ${d.xiN} وجابلك ${d.ptsOwned} نقطة`, `Owned ${d.owned} GWs, started ${d.xiN}, ${d.ptsOwned} pts`));
+    if (d.capN) parts.push(tt(`كبتنته ${d.capN} مرة وجاب ${d.capPts} نقطة`, `Captained ${d.capN}× for ${d.capPts} pts`));
+    el.innerHTML = parts.length ? `<div class="pi-k"><small>${tt('قراراتك ويا هذا اللاعب', 'Your decisions')}</small></div><ul class="pi-why dec">${parts.map((w) => `<li>${w}</li>`).join('')}</ul>` : `<div class="pi-k"><small>${tt('قراراتك ويا هذا اللاعب', 'Your decisions')}</small></div><p class="pi-ok">${tt('ما سبق اشتريته أو لعبته', 'Never owned')}</p>`;
+  }).catch(() => {});
+}

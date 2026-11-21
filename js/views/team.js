@@ -218,9 +218,35 @@ function coachCard(P) {
     ${C.ideas.length ? `<div class="cz-sec"><h4>${I('i-sparkle', 'i')}${tt('نصائح', 'Tips')}</h4><div class="cz-ideas">${C.ideas.map((x) => `<div class="cz-idea${x.act ? ' tap' : ''}"${x.act ? ` onclick="${x.act}"` : ''}><span class="ms ${MS[x.ic] || 'ms-opp'}" role="img" aria-label="${MSL()[MS[x.ic] || 'ms-opp']}"></span><p>${arTip(x.t)}</p></div>`).join('')}</div></div>` : ''}
   </div>`;
 }
+/** بصمة المدرب: وردة الصفات + نقاط القوة والضعف + مقارنة فترات الموسم. ما تطلع إلا بـ4 جولات أو أكثر */
+function dnaCard() {
+  const M = CO.coachReady(); if (!M) return '';
+  const N = M.gws?.length || 0, T = M.T || {};
+  const K = [['captain', tt('الكابتن', 'Captain')], ['transfers', tt('الانتقالات', 'Transfers')], ['discipline', tt('قلة الخصومات', 'Few hits')], ['patience', tt('الصبر', 'Patience')], ['risk', tt('الفروقات', 'Differentials')], ['bench', tt('الدكة', 'Bench')]].filter(([k]) => T[k] != null);
+  if (N < 4 || K.length < 3) return `<div class="card dna"><div class="dna-h"><b>${tt('بصمة المدرب', 'Manager DNA')}</b></div><p class="mut" style="font-size:12.5px;margin:8px 0 0">${tt(`تحتاج 4 جولات أو أكثر حتى نقرا أسلوبك بدقة (عندك ${N})`, `Needs 4+ GWs (you have ${N})`)}</p></div>`;
+  const S = 260, c = S / 2, R0 = 22, R = 96, n = K.length, seg = (2 * Math.PI) / n, pad = 0.07, P = (a, r) => [c + r * Math.cos(a), c + r * Math.sin(a)];
+  const wedge = (a0, a1, r0, r1) => { const [x0, y0] = P(a0, r1), [x1, y1] = P(a1, r1), [x2, y2] = P(a1, r0), [x3, y3] = P(a0, r0); return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r1} ${r1} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}A${r0} ${r0} 0 0 0 ${x3.toFixed(1)} ${y3.toFixed(1)}Z`; };
+  const col = (v) => (v >= 70 ? '#7FE6A6' : v >= 45 ? '#FFD66E' : '#FF8E8E');
+  let body = '', lbl = '';
+  K.forEach(([k, l], i) => { const a0 = -Math.PI / 2 + i * seg + pad, a1 = a0 + seg - 2 * pad, v = T[k], am = (a0 + a1) / 2, [lx, ly] = P(am, R + 24);
+    body += `<path d="${wedge(a0, a1, R0, R)}" class="rs-bg"/><path d="${wedge(a0, a1, R0, R0 + ((R - R0) * Math.max(4, v)) / 100)}" fill="${col(v)}" class="rs-w" style="--d:${i * 60}ms;transform-origin:${c}px ${c}px"/>`;
+    lbl += `<text x="${lx.toFixed(1)}" y="${(ly - 2).toFixed(1)}" text-anchor="middle" class="rs-l">${l}</text><text x="${lx.toFixed(1)}" y="${(ly + 12).toFixed(1)}" text-anchor="middle" class="rs-v" fill="${col(v)}">${v}</text>`; });
+  const sorted = [...K].sort((a, b) => T[b[0]] - T[a[0]]), str = sorted.filter(([k]) => T[k] >= 65).slice(0, 2), weak = sorted.reverse().filter(([k]) => T[k] <= 45).slice(0, 2);
+  // فترات الموسم: معدل فرقك عن معدل الجولة بكل نص من جولاتك
+  const H = (ST.E?.hist?.current || []).filter((h) => M.gws.includes(h.event)), ev = (g) => ST.G.events.find((e) => e.id === g)?.avg;
+  const diff = (L) => { const v = L.filter((h) => ev(h.event) != null); return v.length ? r1(v.reduce((a, h) => a + (h.points - (h.event_transfers_cost || 0) - ev(h.event)), 0) / v.length) : null; };
+  const half = Math.floor(H.length / 2), early = diff(H.slice(0, half)), late = diff(H.slice(half));
+  const pill = (v) => (v == null ? '—' : `<b class="num ${v >= 0 ? 'up' : 'down'}" dir="ltr">${v >= 0 ? '+' : ''}${v}</b>`);
+  return `<div class="card dna"><div class="dna-h"><b>${tt('بصمة المدرب', 'Manager DNA')}</b><small>${tt(`مبنية على ${N} جولة`, `Based on ${N} GWs`)}</small></div>
+    <svg viewBox="-40 -16 ${S + 80} ${S + 32}" class="rs dna-rs">${[25, 50, 75, 100].map((v) => `<circle cx="${c}" cy="${c}" r="${(R0 + ((R - R0) * v) / 100).toFixed(1)}" class="rs-ring${v === 100 ? ' o' : ''}"/>`).join('')}${body}<circle cx="${c}" cy="${c}" r="${R0 - 5}" class="rs-core"/>${lbl}</svg>
+    <div class="dna-sw">${str.length ? `<div><small>${tt('نقاط قوتك', 'Strengths')}</small><b>${str.map((x) => x[1]).join('، ')}</b></div>` : ''}${weak.length ? `<div class="w"><small>${tt('تحتاج تحسين', 'To improve')}</small><b>${weak.map((x) => x[1]).join('، ')}</b></div>` : ''}</div>
+    <div class="dna-p"><div><small>${tt('أول نص من جولاتك', 'First half')}</small>${pill(early)}</div><div><small>${tt('آخر نص', 'Recent half')}</small>${pill(late)}</div></div>
+    <p class="rdy-f">${tt('الأرقام = معدل فرقك عن معدل الجولة. التقييم يعتمد على سجلك كامل، مو على جولة وحدة.', 'Avg gap to GW average. Based on your full history, not a single GW.')}</p></div>`;
+}
+
 function insight(P) {
   const G = ST.G, gw = G.next, a = analyze(P, esc), sq = P.squad.map(PM);
-  const coachHTML = COACH() ? coachCard(P) : '';
+  const coachHTML = COACH() ? coachCard(P) + dnaCard() : '';
   const posXp = ['GK', 'DEF', 'MID', 'FWD'].map((pos) => { const L = sq.filter((p) => p.pos === pos); return [pos, r1(L.reduce((s, p) => s + xpN(p, gw, 5), 0) / (L.length || 1))]; });
   const mx = Math.max(...posXp.map((x) => x[1]), 1);
   const clubs = {}; sq.forEach((p) => (clubs[p.team] = (clubs[p.team] || 0) + 1));
@@ -462,6 +488,27 @@ function liveView() {
    ${running ? `<div class="flex wrap" style="gap:10px;font-size:11.5px;color:var(--mut);margin:10px 2px"><span class="pst live" style="position:static"><i></i>${tt('يلعب', 'Playing')}</span><span class="pst done" style="position:static">${tt('انتهت', 'FT')}</span><span class="pst soon" style="position:static">${tt('لسه', 'Upcoming')}</span><span><sup style="color:var(--info)">+2</sup> ${tt('بونص الفانتازي', 'FPL bonus')}</span><span>⇅ ${tt('تبديل تلقائي', 'auto-sub')}</span></div>` : ''}
    <p class="mut" style="font-size:11.5px;text-align:center;margin-top:8px">${running ? tt('النقاط تتحدث كل 30 ثانية أثناء المباريات.', 'Refreshes every 30s during matches.') : tt('اضغط أي لاعب حتى تشوف شنو سوّى بهالجولة.', 'Tap a player to see his match.')}</p>`;
 }
+/** مركز تحكم الجولة: جاهزية التشكيلة (مشاكل حقيقية فقط) + مقارنتها بالتشكيلة المقترحة. ما يغيّر شي إلا إذا ضغطت */
+function readiness(P) {
+  const G = ST.G, g = G.next, iss = [];
+  P.xi.forEach((id) => { const p = PM(id); if (!p) return; const a = avail(p, g), fx = fixturesFor(p.team, g);
+    if (!fx.length) iss.push({ id, t: tt(`${p.name}: ما عنده مباراة بالجولة ${g}`, `${p.name}: no fixture in GW${g}`), sev: 3 });
+    else if (a < 0.75) iss.push({ id, t: tt(`${p.name}: جاهزيته ${Math.round(a * 100)}%${p.news ? ' — ' + p.news : ''}`, `${p.name}: ${Math.round(a * 100)}% available`), sev: a < 0.5 ? 3 : 2 }); });
+  const cp = PM(P.cap); if (cp && avail(cp, g) < 1 && !iss.some((x) => x.id === P.cap)) iss.push({ id: P.cap, t: tt(`الكابتن ${cp.name}: جاهزيته ${Math.round(avail(cp, g) * 100)}%`, `Captain ${cp.name}: ${Math.round(avail(cp, g) * 100)}%`), sev: 2 });
+  const b1 = P.bench.slice(1).map(PM).find(Boolean); if (b1 && avail(b1, g) < 0.5) iss.push({ id: b1.id, t: tt(`أول بديل ${b1.name} ما راح يلعب على الأغلب`, `First sub ${b1.name} unlikely to play`), sev: 1 });
+  iss.sort((a, b) => b.sev - a.sev);
+  const B = bestXI(P.squad, g), cur = projected(P, g), best = projected({ ...P, xi: B.xi, bench: B.bench, cap: B.cap, vc: B.vc, transfers: P.transfers }, g), gain = r1(best - cur);
+  const ins = B.xi.filter((id) => !P.xi.includes(id)).map(PM), outs = P.xi.filter((id) => !B.xi.includes(id)).map(PM), capCh = B.cap !== P.cap ? PM(B.cap) : null;
+  const ok = !iss.length;
+  return `<div class="card rdy ${ok ? 'ok' : 'warn'}">
+    <div class="rdy-h"><span class="rdy-ic">${I(ok ? 'i-check' : 'i-alert', 'i')}</span><div><b>${ok ? tt('التشكيلة جاهزة', 'Lineup ready') : tt(`التشكيلة تحتاج مراجعة · ${iss.length}`, `Needs review · ${iss.length}`)}</b><small>${tt(`للجولة ${g}، حسب الحالة الرسمية والمباريات`, `For GW${g}, from official status and fixtures`)}</small></div></div>
+    ${iss.length ? `<ul class="rdy-l">${iss.slice(0, 5).map((x) => `<li class="s${x.sev}" onclick="openPlayer(${x.id})">${esc(x.t)}</li>`).join('')}</ul>` : ''}
+    <div class="rdy-c"><div><small>${tt('تشكيلتك', 'Yours')}</small><b class="num">${cur}</b></div><div><small>${tt('المقترحة', 'Suggested')}</small><b class="num">${best}</b></div><div><small>${tt('الفرق', 'Diff')}</small><b class="num ${gain > 0 ? 'up' : ''}">${gain > 0 ? '+' : ''}${gain}</b></div></div>
+    ${gain >= 0.3 ? `<div class="rdy-d">${ins.map((p, k) => `<span class="cz-ml" dir="ltr"><s>${esc(outs[k]?.name || '')}</s><i>→</i><b>${esc(p.name)}</b></span>`).join('')}${capCh ? `<span class="rdy-cap">${tt(`الكابتن: ${capCh.name}`, `Captain: ${capCh.name}`)}</span>` : ''}</div><button class="btn btn-g btn-sm rdy-btn" onclick="bestLineup()">${I('i-sparkle', 'i', 'width:14px;height:14px')}${tt('طبّق المقترحة على خطتي', 'Apply to my plan')}</button>` : `<p class="rdy-n">${tt('تشكيلتك هي الأفضل حسب التوقعات', 'Your XI is already the best projected')}</p>`}
+    <p class="rdy-f">${tt('النقاط المتوقعة تقديرات، مو حقائق. التطبيق ما يغيّر تشكيلتك الرسمية بموقع الفانتازي.', 'Projections are estimates. The official FPL team is never changed.')}</p>
+  </div>`;
+}
+
 export function vTeam() {
   const P = ST.plan; if (!P) return `<div class="empty">${I('i-pitch', 'i', 'width:44px;height:44px')}<b>${tt('فريقك ما لعب أي جولة بعد', 'Your team has not played yet')}</b></div>`;
   if (tab == null) tab = (gwRunning() && hasCurPicks()) || GLOW_DEMO() ? 'live' : 'pitch';
@@ -471,7 +518,7 @@ export function vTeam() {
   const actions = `<div class="tactions"><button class="btn btn-p" onclick="bestLineup()">${I('i-sparkle')}${tt('أفضل تشكيلة', 'Best XI')}</button><button class="btn btn-g" onclick="go('market')">${I('i-swap')}${preDeadline ? tt('سجّل انتقال', 'Record transfer') : t('transfers')}</button><button class="icon-btn" onclick="syncTeam(this)" aria-label="refresh" title="${tt('تحديث من الفانتازي', 'Refresh from FPL')}">${I('i-refresh')}</button><button class="icon-btn" onclick="resetToOfficial()" aria-label="reset" title="${tt('رجّع الرسمي', 'Reset')}">${I('i-reset')}</button></div>`;
   return `<div class="tabs2" style="margin-top:2px">${ST.G.cur >= 1 ? `<button class="${tab === 'live' ? 'on' : ''}" onclick="teamTab('live')">${gwRunning() ? '<span class="dotlive"></span>' : I('i-history', 'i', 'width:16px;height:16px;vertical-align:-3px')} ${tt('نقاطي بالجولات', 'My gameweeks')}</button>` : ''}<button class="${tab === 'pitch' ? 'on' : ''}" onclick="teamTab('pitch')">${I('i-pitch', 'i', 'width:16px;height:16px;vertical-align:-3px')} ${tt(`خطة الجولة ${ST.G.next}`, `GW${ST.G.next} plan`)}</button><button class="${tab === 'insight' ? 'on' : ''}" onclick="teamTab('insight')">${I('i-gauge', 'i', 'width:16px;height:16px;vertical-align:-3px')} ${tt('تحليل الفريق', 'Insights')}</button></div>
    ${tab === 'live' ? '' : hero(P) + info}
-   ${tab === 'live' ? liveView() : tab === 'pitch' ? toolbar(P) + pitch(P) + actions : insight(P)}
+   ${tab === 'live' ? liveView() : tab === 'pitch' ? toolbar(P) + pitch(P) + readiness(P) + actions : insight(P)}
    ${WALK() && tab !== 'insight' ? `<button class="walk-again" onclick="walkAgain()">${I('i-pitch', 'i', 'width:15px;height:15px')}${tt('شوف دخول اللاعبين مرة ثانية', 'Replay the walkout')}</button>` : ''}
    ${P.transfers.length ? `<div class="sec"><h2>${I('i-swap')}${tt('انتقالات مسجّلة', 'Recorded transfers')}</h2></div><div class="list">${P.transfers.map((x, i) => `<div class="row"><div class="mini">${pShirt(PM(x.in))}</div><div class="info"><b class="mv" dir="ltr"><span class="down">${esc(PM(x.out).name)}</span><i class="mv-a">→</i><span class="up">${esc(PM(x.in).name)}</span></b><span>${x.cost ? '−4' : tt('مجاني', 'free')} · ${tt('فرق المتوقع', 'xP diff')} ${r1(xpN(PM(x.in), ST.G.next, 3) - xpN(PM(x.out), ST.G.next, 3))}/3</span></div><button class="icon-btn" onclick="undoT(${i})" aria-label="undo">${I('i-x')}</button></div>`).join('')}</div>` : ''}
    ${tab === 'live' ? '' : `<p class="mut" style="font-size:11.5px;text-align:center;margin-top:12px">${tt('حرف <b>H</b> يعني يلعب بملعبه، وحرف <b>A</b> يعني يلعب بملعب الخصم. اضغط لاعب لتفاصيله، أو اختار "بدّل" من صفحته حتى تبدّله. التغييرات تنحفظ كخطة، والتنفيذ بالتطبيق الرسمي.', 'H = home, A = away. Tap a player for details or swap. Changes save as a plan.')}</p>`}`;

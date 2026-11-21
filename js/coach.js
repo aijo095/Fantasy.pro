@@ -489,3 +489,12 @@ export function coachHistory() {
   const gws = Object.keys(c.pts || {}).map(Number).sort((a, b) => b - a);
   return { owned, hasPts: gws.length > 0, recent: (id, n = 4) => gws.slice(0, n).map((g) => c.pts[g]?.[id]?.[0] || 0) };
 }
+
+/** قراراتك ويا لاعب معيّن من سجلك الحقيقي: شراء، بيع، كبتنة ونقاطه وهو عندك */
+export function playerDecisions(id) {
+  const c = MEM ? loadCacheMem() : loadCache(), pk = c.picks || {}, pts = c.pts || {};
+  const TR = ST.E?.transfers || [], bought = TR.filter((t) => t.element_in === id).map((t) => t.event), sold = TR.filter((t) => t.element_out === id).map((t) => t.event);
+  let owned = 0, xiN = 0, ptsOwned = 0, capN = 0, capPts = 0;
+  Object.keys(pk).forEach((g) => { const x = (pk[g].p || []).find((y) => y[0] === id); if (!x) return; owned++; const v = pts[g]?.[id]?.[0] ?? 0, mult = x[1] || 0; if (mult > 0) { xiN++; ptsOwned += v * mult; } if (x[3] === 1) { capN++; capPts += v * Math.max(2, mult); } });
+  return { bought, sold, owned, xiN, ptsOwned, capN, capPts, has: Object.keys(pk).length > 0 };
+}
