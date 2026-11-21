@@ -254,16 +254,25 @@ function evRow(x, log, i, extra = '') {
     <div class="sy-evf">${x.f ? `${scoreTxt(x.f)}${x.f.fin ? ` · ${tt('خلصت', 'FT')}` : x.f.started ? ` · <i class="sy-live"></i>${tt('د', 'm')}${N(x.f.min || 0)}` : ''}` : ''}${extra}</div></li>`;
 }
 
-/* الخصم: أقرب واحد فوقك (أو تحتك إذا انت الأول) بأصغر دوري خاص */
+/* الخصوم: بس مواجهات دوريات H2H (خصمك بهالجولة بكل دوري مواجهات) */
+async function h2hMatch(L, g) {
+  const me = ST.E.entry.id; let page = 1, more = true;
+  while (more && page <= 5) { const r = await FPL.loadH2HMatches(L.id, g, page); const m = (r?.results || []).find((x) => x.entry_1_entry === me || x.entry_2_entry === me); if (m) { const a = m.entry_1_entry === me; return { league: L.name, lid: L.id, entry: a ? m.entry_2_entry : m.entry_1_entry, name: (a ? m.entry_2_player_name : m.entry_1_player_name) || '', team: (a ? m.entry_2_name : m.entry_1_name) || '', my: a ? m.entry_1_points : m.entry_2_points, his: a ? m.entry_2_points : m.entry_1_points, bye: !(a ? m.entry_2_entry : m.entry_1_entry) }; } more = !!r?.has_next; page++; }
+  return null;
+}
 async function ensureRival() {
-  const G = ST.G, me = ST.E?.entry?.id; if (!me || !STORY?.live) return;
-  const lg = (ST.E.entry.leagues?.classic || []).filter((l) => l.league_type === 'x' && l.rank_count > 1).sort((a, b) => a.rank_count - b.rank_count)[0]; if (!lg) return;
-  const k = `${lg.id}_${G.cur}`; if (RIV_K === k) return; RIV_K = k;
+  const G = ST.G, H = (ST.E?.entry?.leagues?.h2h || []).slice(0, 3); if (!H.length || !STORY) return;
+  const live = STORY.live, k = `${live ? 'L' : 'B'}_${G.cur}_${G.next}_${H.map((l) => l.id).join(',')}`; if (RIV_K === k) return; RIV_K = k;
   try {
-    const st = await FPL.loadLeague(lg.id), R = st?.standings?.results || [], i = R.findIndex((r) => r.entry === me); if (i < 0) return;
-    const r = R[i > 0 ? i - 1 : i + 1]; if (!r) return;
-    const picks = await FPL.fetchPicks(r.entry, G.cur);
-    RIV = { entry: r.entry, name: r.player_name, team: r.entry_name, league: lg.name, above: i > 0, picks };
+    if (live) {
+      const M = (await Promise.all(H.map((L) => h2hMatch(L, G.cur).catch(() => null)))).filter((m) => m && !m.bye);
+      for (const m of M) { try { m.picks = await FPL.fetchPicks(m.entry, G.cur); } catch {} }
+      RIV = { live: true, M: M.filter((m) => m.picks) };
+    } else {
+      const fin = STORY.fin[STORY.fin.length - 1]?.g;
+      const [last, next] = await Promise.all([fin ? Promise.all(H.map((L) => h2hMatch(L, fin).catch(() => null))) : [], G.next ? Promise.all(H.map((L) => h2hMatch(L, G.next).catch(() => null))) : []]);
+      RIV = { live: false, gw: fin, last: (last || []).filter((m) => m && !m.bye), next: (next || []).filter((m) => m && !m.bye) };
+    }
     paint();
   } catch { RIV_K = null; }
 }
@@ -271,11 +280,11 @@ function sLvTotal(D) {
   if (!D.live || LIVE == null) return null;
   const c = ST.E.picks ? liveCalc(ST.E.picks, ST.G.cur) : null, cap = c?.rows.find((r) => r.m >= 2);
   const played = c ? c.rows.filter((r) => r.m > 0 && r.min > 0).length : 0, on = c ? c.rows.filter((r) => r.m > 0).length : 11;
-  const rc = RIV?.picks ? liveCalc(RIV.picks, ST.G.cur) : null, gap = rc ? LIVE - rc.total : null;
+  const R0 = RIV?.live ? RIV.M[0] : null, rc = R0 ? liveCalc(R0.picks, ST.G.cur) : null, gap = rc ? LIVE - rc.total : null;
   return { k: 'lt', col: 'var(--c-coral)', ic: 'pulse', h: tt(`وين وصلت بالجولة ${D.gw}`, `Where GW ${D.gw} stands`), sub: tt('تتحدث وية المباريات', 'Updating with the matches'), to: "go('live')", toL: tt('تابع المباشر', 'Follow live'),
     body: `<div class="sy-grid">${cap ? `<div style="--d:80ms"><small>${tt('كابتنك', 'Captain')}</small><b>${N(cap.pts * cap.m)}</b><em>${esc(PM(cap.id)?.name || '')}</em></div>` : ''}
       <div style="--d:150ms"><small>${tt('لاعبين لعبوا', 'Played')}</small><b>${N(`${played}/${on}`)}</b><em>${tt('من تشكيلتك', 'of your XI')}</em><i class="sy-mb"><i style="--w:${Math.round((played / Math.max(1, on)) * 100)}%"></i></i></div>
-      ${gap != null ? `<div style="--d:220ms" class="wide"><small>${tt('فرقك عن', 'Gap to')} ${esc(RIV.name)}</small><b class="${gap >= 0 ? 'up' : 'dn'}">${N(sgn(gap))}</b><em>${gap >= 0 ? tt('متقدم عليه', 'ahead') : tt('متأخر عنه', 'behind')} · ${esc(RIV.league)}</em></div>` : ''}</div>` };
+      ${gap != null ? `<div style="--d:220ms" class="wide"><small>${tt('مواجهتك ويا', 'H2H vs')} ${esc(R0.name)}</small><b class="${gap >= 0 ? 'up' : 'dn'}">${N(sgn(gap))}</b><em>${gap > 0 ? tt('فايز لحد هسة', 'winning') : gap < 0 ? tt('خسران لحد هسة', 'losing') : tt('متعادلين', 'level')} · ${esc(R0.league)}</em></div>` : ''}</div>` };
 }
 function sLvMine(D) {
   if (!D.live || !ST.E.picks || !ST.live) return null;
@@ -285,15 +294,26 @@ function sLvMine(D) {
   return { k: 'lm', col: 'var(--c-mint)', ic: 'ball', h: tt('أحداث لاعبينك', 'Your players’ events'), sub: X.length ? tt(`${X.length} من لاعبينك سوّوا الفرق لحد هسة`, `${X.length} players making a difference`) : '', to: "go('live')", toL: tt('كل التفاصيل', 'All details'),
     body: X.length ? `<ul class="sy-ev">${X.slice(0, 4).map((x, i) => evRow(x, log, i)).join('')}</ul>` : `<p class="sy-empty">${ic('clock')}${tt('بعد ماكو أهداف أو صناعات للاعبينك بهالجولة — أول ما يصير شي يطلع هنا', 'No goals or assists yet — they’ll show here')}</p>` };
 }
-function sLvRival(D) {
-  if (!D.live || !RIV?.picks || !ST.live) return null;
-  const rc = liveCalc(RIV.picks, ST.G.cur), mine = new Set((ST.E.picks?.picks || []).map((x) => x.element)); if (!rc) return null;
+function rivalCard(m, i) {
+  const rc = liveCalc(m.picks, ST.G.cur), mine = new Set((ST.E.picks?.picks || []).map((x) => x.element)); if (!rc) return null;
   const log = trackEvents(rc.rows.map((r) => r.id));
   const X = rc.rows.filter((r) => r.m > 0 && !mine.has(r.id)).map((r) => pLive(r.id, r.m)).filter((x) => x.evs.length || x.raw >= 4).sort((a, b) => b.pts - a.pts);
   const shared = rc.rows.filter((r) => r.m > 0 && mine.has(r.id)).length, gap = LIVE != null ? LIVE - rc.total : null, dif = X.reduce((s, x) => s + x.pts, 0);
-  return { k: 'lr', col: 'var(--c-lav)', ic: 'vs', h: tt(`خصمك: ${RIV.name}`, `Rival: ${RIV.name}`), sub: tt(`${RIV.above ? 'اللي فوقك' : 'اللي وراك'} بدوري ${RIV.league}`, `${RIV.above ? 'above you' : 'behind you'} in ${RIV.league}`), to: "go('rivals')", toL: tt('متتبّع المنافسين', 'Rivals tracker'),
-    body: `<div class="sy-vs"><div><small>${tt('انت', 'You')}</small><b>${N(LIVE ?? '—')}</b></div><span class="${gap >= 0 ? 'up' : 'dn'}">${gap != null ? N(sgn(gap)) : ''}</span><div><small>${esc(RIV.name)}</small><b>${N(rc.total)}</b></div></div>
-      ${X.length ? `<p class="sy-note">${tt(`لاعبين عنده وانت ما عندك زادوا عليك ${dif} نقطة`, `His differentials added ${dif} pts`)}</p><ul class="sy-ev">${X.slice(0, 3).map((x, i) => evRow(x, log, i)).join('')}</ul>` : `<p class="sy-empty">${ic('shield')}${tt(`لاعبينه المختلفين بعد ما جابوا شي — وعندكم ${shared} لاعب مشترك`, `His differentials quiet so far — ${shared} shared`)}</p>`}` };
+  return { k: `lr${i}`, col: 'var(--c-lav)', ic: 'vs', h: tt(`مواجهتك ويا ${m.name}`, `H2H vs ${m.name}`), sub: `${esc(m.team)} · ${tt('دوري', 'league')} ${esc(m.league)}`, to: "go('rivals')", toL: tt('متتبّع المنافسين', 'Rivals tracker'),
+    body: `<div class="sy-vs"><div><small>${tt('انت', 'You')}</small><b>${N(LIVE ?? '—')}</b></div><span class="${gap >= 0 ? 'up' : 'dn'}">${gap != null ? N(sgn(gap)) : ''}</span><div><small>${esc(m.name)}</small><b>${N(rc.total)}</b></div></div>
+      ${X.length ? `<p class="sy-note">${tt(`لاعبينه اللي ما عندك زادوا عليك ${dif} نقطة`, `His differentials added ${dif} pts`)}</p><ul class="sy-ev">${X.slice(0, 3).map((x, j) => evRow(x, log, j)).join('')}</ul>` : `<p class="sy-empty">${ic('shield')}${tt(`لاعبينه المختلفين بعد ما جابوا شي — وعندكم ${shared} لاعب مشترك`, `His differentials quiet so far — ${shared} shared`)}</p>`}` };
+}
+function sLvRival(D) {
+  if (!D.live || !RIV?.live || !ST.live) return null;
+  return RIV.M.map(rivalCard).filter(Boolean);
+}
+function sH2H(D) {
+  // بين الجولات: نتيجة مواجهات الجولة اللي خلصت + خصمك الجاي بكل دوري مواجهات
+  if (D.live || !RIV || RIV.live || (!RIV.last.length && !RIV.next.length)) return null;
+  const res = (m) => (m.my > m.his ? ['up', tt('فزت', 'Won')] : m.my < m.his ? ['dn', tt('خسرت', 'Lost')] : ['', tt('تعادل', 'Draw')]);
+  return { k: 'hh', col: 'var(--c-lav)', ic: 'vs', h: tt('مواجهاتك المباشرة', 'Your H2H matches'), sub: '', to: "go('leagues')", toL: tt('دوريات المواجهات', 'H2H leagues'),
+    body: `${RIV.last.length ? `<p class="sy-note">${tt(`نتايج الجولة ${RIV.gw}`, `GW ${RIV.gw} results`)}</p><ul class="sy-hh">${RIV.last.map((m, i) => { const [c, t] = res(m); return `<li style="--d:${60 + i * 70}ms"><div><b>${esc(m.name)}</b><small>${esc(m.league)}</small></div><span class="sc">${N(m.my)}<small>${tt('انت', 'You')}</small></span><span class="sc">${N(m.his)}<small>${tt('هو', 'Him')}</small></span><em class="${c}">${t}</em></li>`; }).join('')}</ul>` : ''}
+      ${RIV.next.length ? `<p class="sy-note">${tt(`خصومك بالجولة ${ST.G.next}`, `GW ${ST.G.next} opponents`)}</p><ul class="sy-hh nx">${RIV.next.map((m, i) => `<li style="--d:${200 + i * 70}ms"><div><b>${esc(m.name)}</b><small>${esc(m.team)} · ${esc(m.league)}</small></div></li>`).join('')}</ul>` : ''}` };
 }
 function sLvXI(D) {
   if (!D.live || !ST.E.picks || !ST.live) return null;
@@ -363,13 +383,13 @@ async function loadCapWhy() {
 /* ---------- الشجرة: شنو يطلع بكل مرحلة وبأي ترتيب ---------- */
 const TREE = {
   live: { lead: [sLvTotal, sLvMine, sLvRival, sLvXI], core: 1 },
-  between: { lead: [sRecap, sNext, sPrices, sContrib], core: 3 },
+  between: { lead: [sRecap, sH2H, sNext, sPrices, sContrib], core: 3 },
 };
 const CORE = [sRank, sLeagues, sGws, sMoves, sExtras];
 function plan() {
   const D = STORY; if (!D) return [];
   const T = TREE[D.live ? 'live' : 'between'];
-  const lead = T.lead.map((f) => f(D)).filter(Boolean);
+  const lead = T.lead.flatMap((f) => f(D) || []).filter(Boolean);
   let wk = null; for (let i = 0; i < WEEKLY.length && !wk; i++) { wk = WEEKLY[(D.gw + i) % WEEKLY.length](D); if (wk) wk.week = true; }
   const off = D.gw % CORE.length, core = [...CORE.slice(off), ...CORE.slice(0, off)].map((f) => f(D)).filter(Boolean).slice(0, T.core);
   const out = [...lead]; if (wk) out.splice(Math.min(2, out.length), 0, wk);
@@ -394,7 +414,7 @@ export function storyHTML(opt = {}) {
   if (STORY_K !== k) { STORY_K = k; STORY = build(STORY?.cs || null); }
   else STORY.live = build(STORY.cs).live;
   if (!STORY.cs?.has && Date.now() - CS_T > 4000) { CS_T = Date.now(); coachStory().then((cs) => { if (!cs?.has || STORY_K !== k) return; STORY = build(cs); paint(); }); }
-  if (STORY.live) ensureRival();
+  ensureRival();
   const S = plan(); if (!S.length) return '';
   if (SI >= S.length) SI = 0;
   return `<section class="sy${HOLD ? ' hold' : ''}" id="syBox" style="--c:${S[SI].col}" aria-roledescription="carousel" aria-label="${tt('موسمك', 'Your season')}">${BG}
