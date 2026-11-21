@@ -161,6 +161,8 @@ function realCtx() {
     fx: (p) => (ST.G.fx[ST.G.cur] || []).find((f) => f.h === p.team || f.a === p.team),
     minute: (f) => (f ? f.min || 0 : 0), live: (f) => !!(f && f.started && !f.fin), done: (f) => !!(f && f.fin),
     bps: (p) => bpsRank(p.id),
+    // أعلى دقائق بين أساسيي نفس الفريق — من نفس بيانات الفانتازي، فتأخير تحديث الدقائق ينلغي بالمقارنة
+    teamMin: (p) => { const L = ST.live || {}; let m = 0; for (const q of ST.G.players) { if (q.team !== p.team) continue; const s = L[q.id]; if (s && s.starts > 0 && s.minutes > m) m = s.minutes; } return m; },
   };
 }
 /** يحول إحصاءات اللاعب لقائمة أحداث، كل حدث بنقاطه */
@@ -169,8 +171,11 @@ function evList(p, s, C) {
   const mins = s.minutes || 0; if (!mins && !s.total_points) return E;
   // دخول وخروج بالدقيقة
   const started = s.starts != null ? s.starts > 0 : null;
-  if (started === false && mins > 0) add('in', tt(`دخل بالدقيقة ${Math.max(1, M - mins)}`, `On at ${Math.max(1, M - mins)}′`), null);
-  if (started && (C.done(f) ? mins < 88 : M - mins >= 3) && !s.red_cards) add('out', tt(`طلع بالدقيقة ${mins}`, `Off at ${mins}′`), null);
+  // الخروج والدخول نقارنه بدقائق زملائه بالفانتازي (مو بساعة المباراة من ESPN): الفانتازي يحدّث الدقائق متأخر،
+  // فكانت المقارنة بالساعة تطلّع اللاعب "طلع" وهو بعده يلعب
+  const TM = C.teamMin ? C.teamMin(p) : M, ref = TM || M;
+  if (started === false && mins > 0) { const at = Math.max(1, ref - mins); add('in', tt(`دخل بالدقيقة ${at}`, `On at ${at}′`), null); }
+  if (started && (C.done(f) ? mins < Math.min(88, ref - 2) : ref - mins >= 3) && !s.red_cards) add('out', tt(`طلع بالدقيقة ${mins}`, `Off at ${mins}′`), null);
   if (mins > 0) E.push({ k: 'min', hide: true, pts: mins >= 60 ? 2 : 1 }); // نقاط المشاركة تنحسب بالمجموع بس ما تنعرض
   for (let i = 0; i < (s.goals_scored || 0); i++) add('goal', tt('هدف', 'Goal'), GOALP[pos]);
   for (let i = 0; i < (s.assists || 0); i++) add('assist', tt('صناعة', 'Assist'), 3);
