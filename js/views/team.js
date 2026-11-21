@@ -493,7 +493,9 @@ function liveView() {
   let k = 0;
   // نجم الجولة: أعلى لاعب جاب نقاط بالتشكيلة
   const best = on.reduce((a, r) => { const v = r.pts * Math.max(1, r.m); return v > (a ? a.v : 0) ? { id: r.id, v } : a; }, null);
-  mvpId = best && best.v >= 3 ? best.id : null;
+  // يطلع بس بعد ما تخلص كل مباريات الجولة (أثناء المباشر ما نحدده لأن النقاط بعدها تتغير)
+  const gwFx = ST.G.fx[gw] || [], gwDone = ST.G.events.find((e) => e.id === gw)?.fin || (gwFx.length > 0 && gwFx.every((f) => f.fin));
+  mvpId = gwDone && best && best.v >= 3 ? best.id : null;
   return `${gwStrip(gw)}<section class="team-hero live-hero ${running ? '' : 'done'}" style="margin-top:10px">
     <div class="flex between" style="align-items:flex-start"><div><div class="mut" style="font-size:12.5px">${t('gw')} ${gw} ${running ? `<span class="livebadge">${tt('مباشر', 'Live')}</span>` : `· ${tt('منتهية', 'Finished')}`}</div>
       <div class="flex" style="gap:10px;align-items:baseline;flex-wrap:wrap"><span class="big-num" style="font-size:52px;color:var(--acc);line-height:1.05">${total}</span><span class="mut" style="font-size:13px">${tt('نقطة', 'pts')}${c.hit ? ` (−${c.hit})` : ''}</span>${ev?.avg ? `<span class="lh-avg ${total >= ev.avg ? 'up' : 'down'}">${total >= ev.avg ? '▲ +' : '▼ '}${total - ev.avg} <small>${tt('عن المعدل', 'vs avg')} ${ev.avg}</small></span>` : ''}</div></div>
