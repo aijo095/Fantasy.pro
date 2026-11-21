@@ -1,18 +1,27 @@
 /* =========================================================
-   «موسمك» — مربع متفاعل بالرئيسية تتبدّل معلوماته حسب خطة:
-   1) فقرة المرحلة: مباشر أثناء الجولة، وملخص آخر جولة بعدها.
-   2) فقرة الأسبوع: تتغيّر كل جولة (كابتن، أنجح انتقال، هدفك الجاي، فورمتك، أوراقك، الدكة).
-   3) الأساسيات: ترتيبك، الدوريات، نقاط الجولات، خطواتك الصحيحة، لمحات — ويتبدّل ترتيبها كل جولة.
-   كل شريحة تنضغط وتوديك لمكان المعلومة. كل الأرقام حقيقية من بيانات المدرب — ولا رقم مفترض.
+   «موسمك» — مربع متفاعل بالرئيسية بإيقاع الستوري، تتبدّل بطاقاته حسب «شجرة» مراحل الجولة:
+   ┌ مباشر (بعد الإغلاق ولحد ما تخلص الجولة)
+   │   نقاطك المباشرة وفرقك عن خصمك ← أحداث لاعبينك (أهداف/صناعات/بونص… بدقيقتها ونقاطها)
+   │   ← أحداث خصمك (شكد زاد عليك ومنو) ← تشكيلتك بالملعب (لعب/يلعب/ينتظر + التبديلات)
+   ├ بين الجولات (بعد ما تخلص ولحد الإغلاق الجاي)
+   │   ملخص الجولة ← نصائح الجولة الجاية ← أسعار لاعبينك ← مساهماتهم بالموسم
+   └ ثابت بكل المراحل: «فقرة هالجولة» (تدور كل جولة) + أساسيات يتبدّل ترتيبها كل جولة
+   الدقيقة: الفانتازي ما ينشر دقيقة الهدف — نسجّل دقيقة المباراة لحظة ما نلقط الحدث بالتحديث،
+   وإذا انلقط متأخر نكتب «خلال المباراة» بدل ما نفترض رقم.
+   كل الأرقام حقيقية من بيانات المدرب ولا رقم مفترض.
 ========================================================= */
-import { ST, PM, tName } from '../store.js';
+import { ST, PM, tName, tShort } from '../store.js';
 import { tt } from '../i18n.js';
 import { esc, fmt } from '../ui.js';
 import { playerSummary } from './common.js';
+import * as FPL from '../fpl.js';
 import { chipStatus } from '../fpl.js';
+import { liveCalc } from '../live-engine.js';
+import { pricePredict } from '../predict.js';
+import { fixturesFor, xp } from '../engine.js';
 
-const AUTO = 9000;
-let SI = 0, SEL = null, TOUCHED = false, CS_T = 0, CAPX = null, CAPX_K = null, STORY = null, STORY_K = null, LIVE = null, TMR = null, VIS = true;
+const DUR = 7000, POLL = 120e3;
+let SI = 0, SEL = null, HOLD = false, CS_T = 0, CAPX = null, CAPX_K = null, STORY = null, STORY_K = null, LIVE = null, TIPS = [], VIS = true, PT = 0, RIV = null, RIV_K = null;
 const BOUND = new WeakSet();
 const RM = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const N = (v) => `<bdi dir="ltr" class="num">${v}</bdi>`;
@@ -38,6 +47,13 @@ const IC = {
   pulse: '<path d="M3 12h4l2-6 4 12 2-6h6"/>',
   wave: '<path d="M3 15c3 0 3-6 6-6s3 6 6 6 3-6 6-6"/>',
   bolt: '<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>',
+  card: '<rect x="7" y="4" width="10" height="16" rx="2"/>',
+  coin: '<circle cx="12" cy="12" r="8"/><path d="M12 8v8M9.5 10.5c0-1 1-1.5 2.5-1.5s2.5.6 2.5 1.6c0 2.4-5 1.4-5 3.8 0 1 1 1.6 2.5 1.6s2.5-.5 2.5-1.5"/>',
+  tip: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/>',
+  shirt: '<path d="M8 4l4 2 4-2 4 3-2 4-2-1v10H8V10l-2 1-2-4z"/>',
+  vs: '<circle cx="7" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><path d="M2 20c0-3 2-5 5-5s5 2 5 5M12 20c0-3 2-5 5-5s5 2 5 5"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  glove: '<path d="M7 21v-6L5 10V6a1.5 1.5 0 0 1 3 0v4V4a1.5 1.5 0 0 1 3 0v6V4a1.5 1.5 0 0 1 3 0v6V6a1.5 1.5 0 0 1 3 0v8l-2 3v4z"/>',
   recap: '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 10h8M8 14h5"/>',
 };
 const ic = (k, cls = '') => `<svg class="sy-ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
@@ -48,14 +64,14 @@ function ring(pct, col, inner, size = 74, sw = 7) {
 }
 const topPct = (rank, count) => (rank && count ? Math.max(0.1, (rank / count) * 100) : null);
 const pctTxt = (p) => (p == null ? '—' : p < 10 ? p.toFixed(1).replace(/\.0$/, '') : Math.round(p));
-const chipAr = (n) => ({ wildcard: 'البطاقة الحرة', freehit: 'الضربة الحرة', bboost: 'تعزيز الدكة', '3xc': 'الكابتن الثلاثي', manager: 'المدير المساعد' }[n] || n);
+const chipAr = (n) => ({ wildcard: 'وايلد كارد', freehit: 'فري هت', bboost: 'بنش بوست', '3xc': 'تربل كابتن', manager: 'المدير المساعد' }[n] || n);
 const pName = (id) => esc(PM(id)?.name || '—');
 
 /* ---------- تجميع البيانات ---------- */
 async function coachStory() { try { const m = await import('../coach.js'); return m.seasonStory(); } catch { return null; } }
 function build(cs) {
   const G = ST.G, E = ST.E, en = E.entry, evOf = (g) => G.events.find((e) => e.id === g);
-  const rows = (E.hist?.current || []).filter((h) => evOf(h.event)).map((h) => ({ g: h.event, p: h.points, a: evOf(h.event)?.avg || 0, r: h.overall_rank, t: h.event_transfers || 0, c: h.event_transfers_cost || 0, b: h.points_on_bench || 0, v: h.value }));
+  const rows = (E.hist?.current || []).filter((h) => evOf(h.event)).map((h) => ({ g: h.event, p: h.points, a: evOf(h.event)?.avg || 0, r: h.overall_rank, t: h.event_transfers || 0, c: h.event_transfers_cost || 0, b: h.points_on_bench || 0, v: h.value, gr: h.rank }));
   const fin = rows.filter((x) => evOf(x.g)?.fin);
   const SYS = { Overall: tt('العام', 'Overall'), 'Second Chance': tt('الفرصة الثانية', 'Second Chance') };
   const lg = (en.leagues?.classic || []).filter((l) => l.entry_rank && l.rank_count > 1).map((l) => ({ n: SYS[l.name] || l.name, r: l.entry_rank, c: l.rank_count, lr: l.entry_last_rank, x: l.league_type === 'x', pct: 1 - (l.entry_rank - 1) / l.rank_count }));
@@ -74,28 +90,23 @@ function build(cs) {
     total: en.summary_overall_points, rank: en.summary_overall_rank, count: G.totalPlayers || 0, gw: G.cur || 1 };
 }
 
-/* ---------- الشرائح: كل وحدة { k, col, ic, tab, h, sub, body, to, toL } ---------- */
-function sLive(D) {
-  if (!D.live || LIVE == null) return null;
-  const prev = D.fin[D.fin.length - 1], d = prev ? LIVE - prev.p : null;
-  return { k: 'lv', col: 'var(--c-coral)', ic: 'pulse', tab: tt('مباشر', 'Live'), h: tt(`الجولة ${D.gw} مباشر`, `GW ${D.gw} live`), sub: tt('النقاط تتحدث وية المباريات', 'Updating with the matches'),
-    to: "go('live')", toL: tt('تابع المباشر', 'Follow live'),
-    body: `<div class="sy-big"><b class="num sy-cnt" data-v="${LIVE}">${LIVE}</b><span>${tt('نقطة لحد هسة', 'pts so far')}</span></div>${d != null ? `<p class="sy-note">${tt('مقارنة بالجولة الماضية', 'vs last GW')} <span class="${d >= 0 ? 'up' : 'dn'}">${N(sgn(d))}</span></p>` : ''}` };
-}
-function sRecap(D) {
-  const x = D.fin[D.fin.length - 1]; if (!x) return null;
-  const pv = D.fin[D.fin.length - 2], mv = pv?.r && x.r ? pv.r - x.r : 0, g = D.cs?.byGw?.[x.g];
-  const items = [];
-  items.push(`<div><small>${tt('عن المعدل', 'vs avg')}</small><b class="${x.p >= x.a ? 'up' : 'dn'}">${N(sgn(x.p - x.a))}</b><em>${tt('المعدل', 'avg')} ${N(x.a)}</em></div>`);
-  if (mv) items.push(`<div><small>${tt('ترتيبك', 'Rank')}</small><b class="${mv > 0 ? 'up' : 'dn'}">${mv > 0 ? '▲' : '▼'} ${N(fmt(Math.abs(mv)))}</b><em>${tt('مركز', 'places')}</em></div>`);
-  if (g?.cap) items.push(`<div><small>${tt('الكابتن', 'Captain')}</small><b>${N(g.capPts * g.mult)}</b><em>${pName(g.cap)}</em></div>`);
-  if (g?.top && g.top !== g.cap) items.push(`<div><small>${tt('نجم تشكيلتك', 'Your top scorer')}</small><b>${N(g.topPts)}</b><em>${pName(g.top)}</em></div>`);
-  items.push(`<div><small>${tt('الانتقالات', 'Transfers')}</small><b>${N(x.t)}</b><em>${x.c ? `${tt('خصم', 'hit')} ${N(-x.c)}` : tt('بدون خصم', 'no hit')}</em></div>`);
-  return { k: 'rc', col: 'var(--c-mint)', ic: 'recap', tab: tt('الملخص', 'Recap'), h: tt(`ملخص الجولة ${x.g}`, `GW ${x.g} recap`), sub: '',
-    to: `seasonGo(${x.g})`, toL: tt('تفاصيل الجولة', 'GW details'),
-    body: `<div class="sy-big"><b class="num sy-cnt" data-v="${x.p}">${x.p}</b><span>${tt('نقطة', 'pts')}</span></div><div class="sy-grid">${items.slice(0, 4).map((h, i) => h.replace('<div>', `<div style="--d:${80 + i * 70}ms">`)).join('')}</div>` };
-}
 
+/* ---------- بطاقات ---------- */
+function sRecap(D) {
+  // نقاط الجولة والفرق عن المعدل والترتيب العام موجودة بالمربع الفوك — هنا بس اللي ما ينعرض هناك
+  const x = D.fin[D.fin.length - 1]; if (!x) return null;
+  const g = D.cs?.byGw?.[x.g], tr = (ST.E?.transfers || []).filter((t) => t.event === x.g), P = (id) => ST.live && ST.liveRawGW === x.g ? ST.live[id]?.total_points : null;
+  const items = [];
+  if (g?.cap && g.topPts) items.push(`<div><small>${tt('الكابتن', 'Captain')}</small><b>${N(g.capPts * g.mult)}</b><em>${pName(g.cap)}</em></div>`);
+  if (g?.top && g.topPts && g.top !== g.cap) items.push(`<div><small>${tt('نجم تشكيلتك', 'Your top scorer')}</small><b>${N(g.topPts)}</b><em>${pName(g.top)}</em></div>`);
+  if (x.gr) items.push(`<div><small>${tt('ترتيبك بالجولة نفسها', 'GW rank')}</small><b>${N(fmt(x.gr))}</b><em>${D.count ? tt(`أعلى ${pctTxt(topPct(x.gr, D.count))}٪`, `top ${pctTxt(topPct(x.gr, D.count))}%`) : ''}</em></div>`);
+  items.push(`<div><small>${tt('نقاط بالدكة', 'Bench pts')}</small><b>${N(x.b)}</b><em>${x.b >= 8 ? tt('ضاعت كثير', 'a lot lost') : tt('ما ضاع هواية', 'little lost')}</em></div>`);
+  let trH = '';
+  if (tr.length) { const rows = tr.map((t) => { const pi = P(t.element_in), po = P(t.element_out); return `<li><b class="in">${pName(t.element_in)}</b>${pi != null ? `<span>${N(pi)}</span>` : ''}<i>${ic('swap')}</i><b class="out">${pName(t.element_out)}</b>${po != null ? `<span>${N(po)}</span>` : ''}</li>`; }).join(''); trH = `<p class="sy-note">${tt('انتقالاتك هالجولة', 'Your transfers this GW')}${x.c ? ` · ${tt('خصم', 'hit')} ${N(-x.c)}` : ''}</p><ul class="sy-trl">${rows}</ul>`; }
+  else if (!x.t) trH = `<p class="sy-note">${tt('ما سويت انتقالات هالجولة', 'No transfers this GW')}</p>`;
+  return { k: 'rc', col: 'var(--c-mint)', ic: 'recap', h: tt(`شنو صار بالجولة ${x.g}`, `GW ${x.g} breakdown`), sub: '', to: `seasonGo(${x.g})`, toL: tt('تفاصيل الجولة', 'GW details'),
+    body: `<div class="sy-grid">${items.slice(0, 4).map((h, i) => h.replace('<div>', `<div style="--d:${60 + i * 70}ms">`)).join('')}</div>${trH}` };
+}
 /* فقرات الأسبوع — وحدة تتصدّر كل جولة حسب الخطة */
 function wCaptain(D) {
   const b = D.cs?.best; if (!b || !PM(b.id)) return null;
@@ -154,30 +165,34 @@ const WEEKLY = [wCaptain, wTransfer, wGoal, wForm, wChips, wBench];
 
 /* الأساسيات */
 function sRank(D) {
-  if (!D.total) return null;
-  const tp = topPct(D.rank, D.count), F = D.fin.filter((x) => x.r);
-  let spark = '';
-  if (F.length >= 2) {
-    const W = 330, H = 50, rs = F.map((x) => Math.log10(x.r)), mn = Math.min(...rs), sp = Math.max(...rs) - mn || 1;
-    const pts = F.map((x, i) => [(i / (F.length - 1)) * W, 6 + ((Math.log10(x.r) - mn) / sp) * (H - 12)]), lp = pts[pts.length - 1];
-    spark = `<svg class="sy-spark" viewBox="-6 0 ${W + 12} ${H}" dir="ltr" aria-hidden="true"><path class="sy-line" d="${pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join('')}" pathLength="1"/><circle cx="${lp[0]}" cy="${lp[1]}" r="4.5" class="sy-dot"/></svg><div class="sy-spl" dir="ltr"><span dir="rtl">${tt('ج', 'GW')}${N(F[0].g)}</span><span>${tt('ترتيبك عبر الموسم', 'Rank through the season')}</span><span dir="rtl">${tt('ج', 'GW')}${N(F[F.length - 1].g)}</span></div>`;
-  }
-  return { k: 'rk', col: 'var(--c-lav)', ic: 'rank', tab: tt('ترتيبك', 'Rank'), h: tt('ترتيبك ونقاطك', 'Rank & points'), sub: '', to: "go('season')", toL: tt('موسمك', 'Season'),
-    body: `<div class="sy-big"><b class="num sy-cnt" data-v="${D.total}">${fmt(D.total)}</b><span>${tt('نقطة بالموسم', 'season points')}</span></div>
-      <div class="sy-rk2">${ring(tp != null ? 1 - tp / 100 : 0, 'var(--c-lav)', `<small>${tt('أعلى', 'Top')}</small><b class="num">${pctTxt(tp)}٪</b>`, 74, 7)}<div><small>${tt('الترتيب العام', 'Overall rank')}</small><b class="num">${D.rank ? fmt(D.rank) : '—'}</b>${D.count ? `<small>${tt('من', 'of')} ${N(fmt(D.count))} ${tt('مدرب', 'managers')}</small>` : ''}</div></div>${spark}` };
+  // المجموع والترتيب العام بالمربع الفوك — هنا مسارك: النسبة، أحسن ترتيب، وخط الموسم
+  const F = D.fin.filter((x) => x.r); if (F.length < 2) return null;
+  const tp = topPct(D.rank, D.count), best = F.reduce((m, x) => (!m || x.r < m.r ? x : m), null), first = F[0];
+  const W = 330, H = 56, rs = F.map((x) => Math.log10(x.r)), mn = Math.min(...rs), sp = Math.max(...rs) - mn || 1;
+  const pts = F.map((x, i) => [(i / (F.length - 1)) * W, 6 + ((Math.log10(x.r) - mn) / sp) * (H - 12)]), lp = pts[pts.length - 1];
+  const bi = F.indexOf(best), bp = pts[bi];
+  return { k: 'rk', col: 'var(--c-lav)', ic: 'rank', h: tt('مسار ترتيبك', 'Your rank path'), sub: tt('الأعلى بالخط = ترتيب أحسن', 'Higher = better'), to: "go('season')", toL: tt('موسمك', 'Season'),
+    body: `<div class="sy-rk2">${ring(tp != null ? 1 - tp / 100 : 0, 'var(--c-lav)', `<small>${tt('أعلى', 'Top')}</small><b class="num">${pctTxt(tp)}٪</b>`, 74, 7)}
+      <div class="sy-grid two" style="flex:1"><div style="--d:80ms"><small>${tt('أحسن ترتيب', 'Best rank')}</small><b>${N(fmt(best.r))}</b><em>${tt(`الجولة ${best.g}`, `GW ${best.g}`)}</em></div><div style="--d:150ms"><small>${tt('من أول الموسم', 'Since GW1')}</small><b class="${first.r >= D.rank ? 'up' : 'dn'}">${first.r >= D.rank ? '▲' : '▼'} ${N(fmt(Math.abs(first.r - (D.rank || first.r))))}</b><em>${tt('مركز', 'places')}</em></div></div></div>
+      <svg class="sy-spark" viewBox="-6 0 ${W + 12} ${H}" dir="ltr" aria-hidden="true"><path class="sy-line" d="${pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join('')}" pathLength="1"/><circle cx="${bp[0]}" cy="${bp[1]}" r="4" class="sy-dot best"/><circle cx="${lp[0]}" cy="${lp[1]}" r="4.5" class="sy-dot"/></svg><div class="sy-spl" dir="ltr"><span dir="rtl">${tt('ج', 'GW')}${N(F[0].g)}</span><span dir="rtl">${tt('ج', 'GW')}${N(F[F.length - 1].g)}</span></div>` };
 }
 function sLeagues(D) {
-  const L = [...D.priv.slice(0, 3), ...D.pub.slice(0, Math.max(0, 4 - Math.min(3, D.priv.length)))].slice(0, 4); if (!L.length) return null;
-  return { k: 'lg', col: 'var(--c-sky)', ic: 'cup', tab: tt('الدوريات', 'Leagues'), h: tt('ترتيبك بالدوريات', 'League ranks'), sub: '', to: "go('leagues')", toL: tt('كل الدوريات', 'All leagues'),
+  // أول 3 دوريات خاصة تنعرض تحت بالرئيسية، والعام بالمربع الفوك — هنا الباقي بس
+  const L = [...D.priv.slice(3), ...D.pub.filter((l) => l.n !== tt('العام', 'Overall'))].slice(0, 4); if (!L.length) return null;
+  return { k: 'lg', col: 'var(--c-sky)', ic: 'cup', tab: tt('الدوريات', 'Leagues'), h: tt('ترتيبك بباقي الدوريات', 'Your other leagues'), sub: '', to: "go('leagues')", toL: tt('كل الدوريات', 'All leagues'),
     body: `<div class="sy-lg">${L.map((l, i) => { const mv = l.lr && l.lr !== l.r ? l.lr - l.r : 0, big = l.r >= 10000; return `<div class="sy-lgi" style="--d:${i * 70}ms">${ring(l.pct, l.pct >= .75 ? 'var(--c-mint)' : l.pct >= .4 ? 'var(--c-sky)' : 'var(--c-peach)', big ? `<small>${tt('أعلى', 'Top')}</small><b class="num">${pctTxt(topPct(l.r, l.c))}٪</b>` : `<b class="num">${fmt(l.r)}</b>`, 58, 5)}<span class="sy-lgn">${esc(l.n)}</span><small>${big ? `${N(fmt(l.r))} ${tt('من', 'of')} ` : `${tt('من', 'of')} `}${N(fmt(l.c))}${mv && !big ? ` <em class="${mv > 0 ? 'up' : 'dn'}">${mv > 0 ? '▲' : '▼'}${N(Math.abs(mv))}</em>` : ''}</small></div>`; }).join('')}</div>` };
 }
 function sGws(D) {
-  const R = D.rows; if (!R.length) return null;
-  const mx = Math.max(1, ...R.map((x) => Math.max(x.p, x.a))), sel = R.find((x) => x.g === SEL) || R[R.length - 1];
-  return { k: 'gw', col: 'var(--c-mint)', ic: 'bars', tab: tt('الجولات', 'GWs'), h: tt('نقاطك بكل جولة', 'Points every GW'), sub: tt(`${D.above} من ${D.fin.length} فوق المعدل — اختار جولة`, `${D.above}/${D.fin.length} above avg — pick one`),
-    to: `seasonGo(${sel.g})`, toL: tt(`افتح الجولة ${sel.g}`, `Open GW ${sel.g}`),
-    body: `<div class="sy-gw" dir="ltr">${R.map((x, i) => `<button class="${x.p >= x.a ? 'up' : ''}${x.g === sel.g ? ' on' : ''}" style="--h:${((x.p / mx) * 100).toFixed(1)}%;--a:${((x.a / mx) * 100).toFixed(1)}%;--d:${i * 16}ms" data-pick="${x.g}" aria-label="${tt('الجولة', 'GW')} ${x.g}: ${x.p}"><i></i><s></s></button>`).join('')}</div>
-      <div class="sy-gd"><b>${tt('الجولة', 'GW')} ${N(sel.g)}</b><span><b class="num">${sel.p}</b> ${tt('نقطة', 'pts')}</span><span class="${sel.p >= sel.a ? 'up' : 'dn'}">${N(sgn(sel.p - sel.a))} ${tt('عن المعدل', 'vs avg')}</span>${sel.r ? `<span>${tt('ترتيب', 'rank')} ${N(fmt(sel.r))}</span>` : ''}<span>${sel.t ? `${ar(sel.t, 'انتقال', 'انتقالين', 'انتقالات', 'انتقال')}${sel.c ? ` (${tt('خصم', 'hit')} ${N(-sel.c)})` : ''}` : tt('بدون انتقالات', 'no transfers')}</span></div>` };
+  // أعمدة آخر الجولات موجودة تحت بالرئيسية — هنا الفرق التراكمي عن المعدل (شكد سبقت المدرب العادي)
+  const R = D.fin; if (R.length < 3) return null;
+  let acc = 0; const cum = R.map((x) => (acc += x.p - x.a)), mx = Math.max(1, ...cum.map(Math.abs));
+  const W = 330, H = 90, z = H / 2, pts = cum.map((v, i) => [(i / (cum.length - 1)) * W, z - (v / mx) * (z - 6)]);
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(''), area = `${line}L${W},${z}L0,${z}Z`;
+  const last = cum[cum.length - 1], peak = cum.reduce((m, v, i) => (v > cum[m] ? i : m), 0);
+  return { k: 'gw', col: 'var(--c-mint)', ic: 'bars', h: tt('سبقك عن المعدل', 'Your edge over average'), sub: tt('مجموع فرق نقاطك عن معدل كل جولة', 'Running total vs GW averages'), to: "go('season')", toL: tt('موسمك', 'Season'),
+    body: `<div class="sy-big sm"><b class="num ${last >= 0 ? 'up' : 'dn'}">${N(sgn(last))}</b><span>${last >= 0 ? tt('نقطة فوق المدرب العادي', 'pts above the average manager') : tt('نقطة تحت المدرب العادي', 'pts below the average manager')}</span></div>
+      <svg class="sy-cum" viewBox="0 0 ${W} ${H}" dir="ltr" aria-hidden="true"><path d="M0,${z}H${W}" class="sy-zero"/><path d="${area}" class="sy-area"/><path d="${line}" class="sy-line" pathLength="1"/><circle cx="${pts[peak][0]}" cy="${pts[peak][1]}" r="4" class="sy-dot best"/></svg>
+      <p class="sy-note">${tt(`أعلى سبق كان بالجولة ${R[peak].g} (${sgn(cum[peak])})`, `Peak at GW ${R[peak].g} (${sgn(cum[peak])})`)}</p>` };
 }
 function sMoves(D) {
   const cs = D.cs, M = [];
@@ -202,14 +217,128 @@ function sExtras(D) {
     body: `<div class="sy-xt">${X.map((x, i) => `<div style="--d:${i * 55}ms;--c:${x[1]}">${ic(x[0])}<small>${x[2]}</small><b>${x[3]}</b><em>${x[4]}</em></div>`).join('')}</div>` };
 }
 
-/* ---------- الخطة: شنو يتصدر وبأي ترتيب، حسب الجولة والمرحلة ---------- */
-function plan() {
-  const D = STORY; if (!D) return [];
-  const lead = D.live ? sLive(D) || sRecap(D) : sRecap(D);
-  let wk = null; for (let i = 0; i < WEEKLY.length && !wk; i++) { wk = WEEKLY[(D.gw + i) % WEEKLY.length](D); if (wk) wk.week = true; }
-  const core = [sRank, sLeagues, sGws, sMoves, sExtras], off = D.gw % core.length;
-  const rot = [...core.slice(off), ...core.slice(0, off)].map((f) => f(D)).filter(Boolean);
-  return [lead, wk, ...rot].filter(Boolean);
+/* ---------- المباشر: سجل الأحداث بدقيقتها (من فرق التحديثات) ---------- */
+const EVK = ['goals_scored', 'assists', 'clean_sheets', 'saves', 'penalties_saved', 'penalties_missed', 'own_goals', 'yellow_cards', 'red_cards', 'bonus'];
+const EVN = {
+  goals_scored: ['ball', (n) => ar(n, 'هدف', 'هدفين', 'أهداف', 'هدف')], assists: ['boot', (n) => ar(n, 'صناعة', 'صناعتين', 'صناعات', 'صناعة')],
+  clean_sheets: ['shield', () => tt('شباك نظيفة', 'clean sheet')], saves: ['glove', (n) => `${N(n)} ${tt('تصديات', 'saves')}`],
+  penalties_saved: ['glove', () => tt('صد ضربة جزاء', 'pen saved')], penalties_missed: ['ball', () => tt('ضيّع جزاء', 'pen missed')],
+  own_goals: ['ball', () => tt('هدف بمرماه', 'own goal')], yellow_cards: ['card', () => tt('إنذار', 'yellow')], red_cards: ['card', () => tt('طرد', 'red')], bonus: ['star', (n) => `${N(n)} ${tt('بونص', 'bonus')}`],
+};
+const fxOf = (team, gw = ST.G.cur) => (ST.G.fx[gw] || []).find((f) => f.h === team || f.a === team);
+const scoreTxt = (f) => (f ? `${esc(tShort(f.h))} ${N(`${f.hs ?? 0}-${f.as ?? 0}`)} ${esc(tShort(f.a))}` : '');
+const evKey = () => `fp_evlog_${ST.E?.entry?.id}_${ST.G.cur}`;
+function evLog() { try { return JSON.parse(localStorage.getItem(evKey()) || 'null') || { snap: {}, ev: [] }; } catch { return { snap: {}, ev: [] }; } }
+/** يقارن الإحصاءات الحالية بآخر لقطة: أي زيادة = حدث جديد بدقيقة المباراة الحالية */
+function trackEvents(ids) {
+  const L = ST.live; if (!L || ST.liveRawGW !== ST.G.cur) return evLog();
+  const log = evLog(), first = !Object.keys(log.snap).length;
+  ids.forEach((id) => {
+    const s = L[id]; if (!s) return; const prev = log.snap[id], f = fxOf(PM(id)?.team);
+    EVK.forEach((k, i) => { if (k === 'bonus' || k === 'clean_sheets' || k === 'saves') return; const now = s[k] || 0, was = prev ? prev[i] : 0; if (now > was) for (let n = was; n < now; n++) log.ev.push({ id, k, min: first || !prev ? null : f?.min ?? null, at: Date.now() }); });
+    log.snap[id] = EVK.map((k) => s[k] || 0);
+  });
+  try { localStorage.setItem(evKey(), JSON.stringify(log)); } catch {}
+  return log;
+}
+/** لاعب بالمباشر: أحداثه + نقاطه + مباراته */
+function pLive(id, mult = 1) {
+  const s = ST.live?.[id] || {}, p = PM(id), f = fxOf(p?.team);
+  const evs = EVK.filter((k) => (s[k] || 0) > 0 && !(k === 'saves' && s[k] < 3) && !(k === 'clean_sheets' && (p?.pos === 'FWD' || (s.minutes || 0) < 60)));
+  return { id, p, s, f, mult, pts: (s.total_points || 0) * Math.max(1, mult), raw: s.total_points || 0, min: s.minutes || 0, evs };
+}
+const evChips = (x, log) => x.evs.map((k) => { const [ico, lab] = EVN[k]; const mins = k === 'goals_scored' || k === 'assists' ? (log?.ev || []).filter((e) => e.id === x.id && e.k === k).map((e) => e.min) : []; const mt = mins.length ? mins.map((m) => (m != null ? `${tt('د', 'm')}${N(m)}` : '')).filter(Boolean).join(' ، ') : ''; return `<span class="ev-${k}">${ic(ico)}${lab(x.s[k])}${mt ? `<i>${mt}</i>` : ''}</span>`; }).join('');
+function evRow(x, log, i, extra = '') {
+  return `<li style="--d:${80 + i * 70}ms"><div class="sy-evh"><b>${esc(x.p?.name || '—')}${x.mult >= 2 ? `<em class="sy-cap">×${N(x.mult)}</em>` : ''}</b><span class="sy-evp">${N(x.pts)}<small>${tt('نقطة', 'pts')}</small></span></div>
+    <div class="sy-evc">${evChips(x, log) || `<span class="mut">${N(x.min)} ${tt('دقيقة', 'min')}</span>`}</div>
+    <div class="sy-evf">${x.f ? `${scoreTxt(x.f)}${x.f.fin ? ` · ${tt('خلصت', 'FT')}` : x.f.started ? ` · <i class="sy-live"></i>${tt('د', 'm')}${N(x.f.min || 0)}` : ''}` : ''}${extra}</div></li>`;
+}
+
+/* الخصم: أقرب واحد فوقك (أو تحتك إذا انت الأول) بأصغر دوري خاص */
+async function ensureRival() {
+  const G = ST.G, me = ST.E?.entry?.id; if (!me || !STORY?.live) return;
+  const lg = (ST.E.entry.leagues?.classic || []).filter((l) => l.league_type === 'x' && l.rank_count > 1).sort((a, b) => a.rank_count - b.rank_count)[0]; if (!lg) return;
+  const k = `${lg.id}_${G.cur}`; if (RIV_K === k) return; RIV_K = k;
+  try {
+    const st = await FPL.loadLeague(lg.id), R = st?.standings?.results || [], i = R.findIndex((r) => r.entry === me); if (i < 0) return;
+    const r = R[i > 0 ? i - 1 : i + 1]; if (!r) return;
+    const picks = await FPL.fetchPicks(r.entry, G.cur);
+    RIV = { entry: r.entry, name: r.player_name, team: r.entry_name, league: lg.name, above: i > 0, picks };
+    paint();
+  } catch { RIV_K = null; }
+}
+function sLvTotal(D) {
+  if (!D.live || LIVE == null) return null;
+  const c = ST.E.picks ? liveCalc(ST.E.picks, ST.G.cur) : null, cap = c?.rows.find((r) => r.m >= 2);
+  const played = c ? c.rows.filter((r) => r.m > 0 && r.min > 0).length : 0, on = c ? c.rows.filter((r) => r.m > 0).length : 11;
+  const rc = RIV?.picks ? liveCalc(RIV.picks, ST.G.cur) : null, gap = rc ? LIVE - rc.total : null;
+  return { k: 'lt', col: 'var(--c-coral)', ic: 'pulse', h: tt(`وين وصلت بالجولة ${D.gw}`, `Where GW ${D.gw} stands`), sub: tt('تتحدث وية المباريات', 'Updating with the matches'), to: "go('live')", toL: tt('تابع المباشر', 'Follow live'),
+    body: `<div class="sy-grid">${cap ? `<div style="--d:80ms"><small>${tt('كابتنك', 'Captain')}</small><b>${N(cap.pts * cap.m)}</b><em>${esc(PM(cap.id)?.name || '')}</em></div>` : ''}
+      <div style="--d:150ms"><small>${tt('لاعبين لعبوا', 'Played')}</small><b>${N(`${played}/${on}`)}</b><em>${tt('من تشكيلتك', 'of your XI')}</em><i class="sy-mb"><i style="--w:${Math.round((played / Math.max(1, on)) * 100)}%"></i></i></div>
+      ${gap != null ? `<div style="--d:220ms" class="wide"><small>${tt('فرقك عن', 'Gap to')} ${esc(RIV.name)}</small><b class="${gap >= 0 ? 'up' : 'dn'}">${N(sgn(gap))}</b><em>${gap >= 0 ? tt('متقدم عليه', 'ahead') : tt('متأخر عنه', 'behind')} · ${esc(RIV.league)}</em></div>` : ''}</div>` };
+}
+function sLvMine(D) {
+  if (!D.live || !ST.E.picks || !ST.live) return null;
+  const c = liveCalc(ST.E.picks, ST.G.cur); if (!c) return null;
+  const log = trackEvents(c.rows.map((r) => r.id));
+  const X = c.rows.filter((r) => r.m > 0).map((r) => pLive(r.id, r.m)).filter((x) => x.evs.length || x.raw >= 5).sort((a, b) => b.pts - a.pts);
+  return { k: 'lm', col: 'var(--c-mint)', ic: 'ball', h: tt('أحداث لاعبينك', 'Your players’ events'), sub: X.length ? tt(`${X.length} من لاعبينك سوّوا الفرق لحد هسة`, `${X.length} players making a difference`) : '', to: "go('live')", toL: tt('كل التفاصيل', 'All details'),
+    body: X.length ? `<ul class="sy-ev">${X.slice(0, 4).map((x, i) => evRow(x, log, i)).join('')}</ul>` : `<p class="sy-empty">${ic('clock')}${tt('بعد ماكو أهداف أو صناعات للاعبينك بهالجولة — أول ما يصير شي يطلع هنا', 'No goals or assists yet — they’ll show here')}</p>` };
+}
+function sLvRival(D) {
+  if (!D.live || !RIV?.picks || !ST.live) return null;
+  const rc = liveCalc(RIV.picks, ST.G.cur), mine = new Set((ST.E.picks?.picks || []).map((x) => x.element)); if (!rc) return null;
+  const log = trackEvents(rc.rows.map((r) => r.id));
+  const X = rc.rows.filter((r) => r.m > 0 && !mine.has(r.id)).map((r) => pLive(r.id, r.m)).filter((x) => x.evs.length || x.raw >= 4).sort((a, b) => b.pts - a.pts);
+  const shared = rc.rows.filter((r) => r.m > 0 && mine.has(r.id)).length, gap = LIVE != null ? LIVE - rc.total : null, dif = X.reduce((s, x) => s + x.pts, 0);
+  return { k: 'lr', col: 'var(--c-lav)', ic: 'vs', h: tt(`خصمك: ${RIV.name}`, `Rival: ${RIV.name}`), sub: tt(`${RIV.above ? 'اللي فوقك' : 'اللي وراك'} بدوري ${RIV.league}`, `${RIV.above ? 'above you' : 'behind you'} in ${RIV.league}`), to: "go('rivals')", toL: tt('متتبّع المنافسين', 'Rivals tracker'),
+    body: `<div class="sy-vs"><div><small>${tt('انت', 'You')}</small><b>${N(LIVE ?? '—')}</b></div><span class="${gap >= 0 ? 'up' : 'dn'}">${gap != null ? N(sgn(gap)) : ''}</span><div><small>${esc(RIV.name)}</small><b>${N(rc.total)}</b></div></div>
+      ${X.length ? `<p class="sy-note">${tt(`لاعبين عنده وانت ما عندك زادوا عليك ${dif} نقطة`, `His differentials added ${dif} pts`)}</p><ul class="sy-ev">${X.slice(0, 3).map((x, i) => evRow(x, log, i)).join('')}</ul>` : `<p class="sy-empty">${ic('shield')}${tt(`لاعبينه المختلفين بعد ما جابوا شي — وعندكم ${shared} لاعب مشترك`, `His differentials quiet so far — ${shared} shared`)}</p>`}` };
+}
+function sLvXI(D) {
+  if (!D.live || !ST.E.picks || !ST.live) return null;
+  const c = liveCalc(ST.E.picks, ST.G.cur); if (!c) return null;
+  const st = (r) => { const f = fxOf(PM(r.id)?.team); return r.min > 0 ? (f?.fin ? 'done' : 'on') : f?.started && !f.fin ? 'bench' : f?.fin ? 'out' : 'wait'; };
+  const R = c.rows.filter((r) => r.m > 0 || r.subIn).sort((a, b) => b.pts * b.m - a.pts * a.m);
+  const lab = { done: tt('خلص', 'done'), on: tt('يلعب', 'playing'), wait: tt('ينتظر', 'to play'), bench: tt('ما نزل', 'unused'), out: tt('ما لعب', 'DNP') };
+  const nx = (r) => { const f = fxOf(PM(r.id)?.team); return f?.ko ? new Date(f.ko).toLocaleTimeString('ar-IQ', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : ''; };
+  return { k: 'lx', col: 'var(--c-sky)', ic: 'shirt', h: tt('تشكيلتك بالملعب', 'Your XI on the pitch'), sub: c.subs?.length ? tt(`${c.subs.length} تبديل تلقائي`, `${c.subs.length} auto-subs`) : '', to: "go('team')", toL: tt('فريقي', 'My team'),
+    body: `<div class="sy-xi">${R.map((r, i) => { const s = st(r); return `<div class="${s}" style="--d:${i * 35}ms"><b>${esc(PM(r.id)?.name || '')}${r.m >= 2 ? `<em class="sy-cap">×${r.m}</em>` : ''}${r.subIn ? `<em class="sy-sub">${tt('بديل', 'sub')}</em>` : ''}</b><span>${s === 'wait' ? `<small>${nx(r)}</small>` : `${N(r.pts * Math.max(1, r.m))}<small>${lab[s]}</small>`}</span></div>`; }).join('')}</div>` };
+}
+
+/* ---------- بين الجولات ---------- */
+function sNext() {
+  // «خطوتك الجاية» تنعرض تحت بالرئيسية — هنا مباريات تشكيلتك بالجولة الجاية وصعوبتها
+  const g = ST.G.next, xi = ST.plan?.xi; if (!g || !xi?.length) return null;
+  const R = xi.map(PM).filter(Boolean).map((p) => ({ p, f: fixturesFor(p.team, g) })).filter((x) => x.f.length || true);
+  const dbl = R.filter((x) => x.f.length > 1), blank = R.filter((x) => !x.f.length), avgF = R.filter((x) => x.f.length).map((x) => x.f[0].fdr);
+  const easy = R.filter((x) => x.f.length && x.f[0].fdr <= 2).sort((a, b) => xp(b.p, g) - xp(a.p, g));
+  const hard = R.filter((x) => x.f.length && x.f[0].fdr >= 4);
+  const chip = (x) => `<span class="sy-f f${x.f[0]?.fdr || 0}">${esc(x.p.name)}<small>${x.f.map((f) => `${esc(tShort(f.opp))}${f.home ? '' : tt('(برا)', '(A)')}`).join(' + ')}</small></span>`;
+  return { k: 'nx', col: 'var(--c-gold)', ic: 'clock', h: tt(`مباريات تشكيلتك بالجولة ${g}`, `Your XI fixtures GW ${g}`), sub: avgF.length ? tt(`معدل الصعوبة ${(avgF.reduce((a, b) => a + b, 0) / avgF.length).toFixed(1)} من 5`, `Avg difficulty ${(avgF.reduce((a, b) => a + b, 0) / avgF.length).toFixed(1)}/5`) : '', to: "go('team')", toL: tt('فريقي', 'My team'),
+    body: `${easy.length ? `<p class="sy-note">${tt('مباريات سهلة', 'Easy fixtures')} · ${N(easy.length)}</p><div class="sy-fx">${easy.slice(0, 4).map(chip).join('')}</div>` : ''}
+      ${hard.length ? `<p class="sy-note">${tt('مباريات صعبة', 'Tough fixtures')} · ${N(hard.length)}</p><div class="sy-fx">${hard.slice(0, 3).map(chip).join('')}</div>` : ''}
+      ${dbl.length ? `<p class="sy-note up">${tt(`${dbl.length} لاعب عنده مباراتين`, `${dbl.length} with a double`)}: ${dbl.map((x) => esc(x.p.name)).join('، ')}</p>` : ''}
+      ${blank.length ? `<p class="sy-note dn">${tt(`${blank.length} لاعب ما عنده مباراة`, `${blank.length} blank`)}: ${blank.map((x) => esc(x.p.name)).join('، ')}</p>` : ''}` };
+}
+function sPrices() {
+  const sq = (ST.plan?.squad || (ST.E.picks?.picks || []).map((x) => x.element)).map(PM).filter(Boolean); if (!sq.length) return null;
+  const ch = sq.filter((p) => p.cc).sort((a, b) => b.cc - a.cc);
+  const pr = sq.map((p) => [p, pricePredict(p)]).filter(([, r]) => r && Math.abs(r.prog || 0) >= 50).sort((a, b) => Math.abs(b[1].prog) - Math.abs(a[1].prog));
+  const val = sq.reduce((s, p) => s + p.price, 0), dS = sq.reduce((s, p) => s + p.ccs, 0);
+  if (!ch.length && !pr.length) return null;
+  return { k: 'pr', col: 'var(--c-teal)', ic: 'coin', h: tt('أسعار لاعبينك', 'Your players’ prices'), sub: tt(`قيمة تشكيلتك ${val.toFixed(1)} مليون (${sgn(+dS.toFixed(1))} من بداية الموسم)`, `Squad ${val.toFixed(1)}m (${sgn(+dS.toFixed(1))} since start)`), to: "go('prices')", toL: tt('توقعات الأسعار', 'Price predictions'),
+    body: `<ul class="sy-px">${ch.slice(0, 3).map((p, i) => `<li style="--d:${80 + i * 60}ms"><b>${esc(p.name)}</b><span class="${p.cc > 0 ? 'up' : 'dn'}">${p.cc > 0 ? '▲' : '▼'} ${N(Math.abs(p.cc).toFixed(1))}</span><small>${tt('هالجولة', 'this GW')} · ${N(p.price.toFixed(1))}</small></li>`).join('')}
+      ${pr.filter(([p]) => !ch.slice(0, 3).includes(p)).slice(0, 3 - Math.min(2, ch.length) + 1).map(([p, r], i) => `<li style="--d:${260 + i * 60}ms"><b>${esc(p.name)}</b><span class="${r.prog > 0 ? 'up' : 'dn'}">${r.prog > 0 ? tt('ممكن يصعد', 'may rise') : tt('ممكن ينزل', 'may drop')}</span><small>${tt('وصل', 'at')} ${N(`${Math.abs(Math.round(r.prog))}%`)}</small><i class="sy-mb"><i style="--w:${Math.min(100, Math.abs(Math.round(r.prog)))}%;--c:${r.prog > 0 ? 'var(--c-mint)' : 'var(--c-coral)'}"></i></i></li>`).join('')}</ul>` };
+}
+function sContrib() {
+  const sq = (ST.plan?.squad || (ST.E.picks?.picks || []).map((x) => x.element)).map(PM).filter(Boolean); if (!sq.length) return null;
+  const A = sq.filter((p) => p.pos !== 'GK').map((p) => ({ p, gi: (p.gls || 0) + (p.ast || 0), x: p.xgi || 0 })).sort((a, b) => b.gi - a.gi || b.x - a.x).slice(0, 4);
+  const dcTop = sq.filter((p) => p.pos === 'DEF' || p.pos === 'MID').sort((a, b) => (b.dc || 0) - (a.dc || 0))[0];
+  const mx = Math.max(1, ...A.map((a) => Math.max(a.gi, a.x)));
+  return { k: 'ct', col: 'var(--c-sky)', ic: 'star', h: tt('مساهمات لاعبينك', 'Your players’ output'), sub: tt('أهداف + صناعات بالموسم، والخط = المتوقع', 'Goals + assists, line = expected'), to: "go('players')", toL: tt('إحصاءات اللاعبين', 'Player stats'),
+    body: `<ul class="sy-ctb">${A.map((a, i) => `<li style="--d:${80 + i * 70}ms"><b>${esc(a.p.name)}</b><span class="sy-ctbar"><i style="--w:${(a.gi / mx) * 100}%"></i><s style="--x:${(a.x / mx) * 100}%"></s></span><span class="sy-ctn">${N(a.gi)}<small>${N(a.p.gls || 0)}+${N(a.p.ast || 0)}</small></span></li>`).join('')}</ul>
+      ${dcTop?.dc ? `<p class="sy-note">${ic('shield')} ${tt(`أكثر مساهمات دفاعية: ${esc(dcTop.name)} (${dcTop.dc})`, `Top defensive contributions: ${esc(dcTop.name)} (${dcTop.dc})`)}</p>` : ''}` };
 }
 
 /* ---------- شرح كابتن (طلب واحد لملخص اللاعب، ينخزن) ---------- */
@@ -231,25 +360,50 @@ async function loadCapWhy() {
   const el = document.getElementById('syCapWhy'); if (el) { el.innerHTML = CAPX; const box = document.getElementById('syBox'); if (box) fit(box); }
 }
 
+/* ---------- الشجرة: شنو يطلع بكل مرحلة وبأي ترتيب ---------- */
+const TREE = {
+  live: { lead: [sLvTotal, sLvMine, sLvRival, sLvXI], core: 1 },
+  between: { lead: [sRecap, sNext, sPrices, sContrib], core: 3 },
+};
+const CORE = [sRank, sLeagues, sGws, sMoves, sExtras];
+function plan() {
+  const D = STORY; if (!D) return [];
+  const T = TREE[D.live ? 'live' : 'between'];
+  const lead = T.lead.map((f) => f(D)).filter(Boolean);
+  let wk = null; for (let i = 0; i < WEEKLY.length && !wk; i++) { wk = WEEKLY[(D.gw + i) % WEEKLY.length](D); if (wk) wk.week = true; }
+  const off = D.gw % CORE.length, core = [...CORE.slice(off), ...CORE.slice(0, off)].map((f) => f(D)).filter(Boolean).slice(0, T.core);
+  const out = [...lead]; if (wk) out.splice(Math.min(2, out.length), 0, wk);
+  return [...out, ...core];
+}
+
 /* ---------- الواجهة ---------- */
+const BG = `<div class="sy-bg" aria-hidden="true"><svg viewBox="0 0 400 400"><defs><linearGradient id="syG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".9"/><stop offset=".6" stop-color="currentColor" stop-opacity=".08"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>
+  <g class="r1"><circle cx="200" cy="200" r="70" fill="none" stroke="url(#syG)" stroke-width="1.2"/></g>
+  <g class="r2"><circle cx="200" cy="200" r="120" fill="none" stroke="url(#syG)" stroke-width="1" stroke-dasharray="2 7"/></g>
+  <g class="r3"><circle cx="200" cy="200" r="175" fill="none" stroke="url(#syG)" stroke-width="1"/></g>
+  <path d="M200 0V400" stroke="url(#syG)" stroke-width=".8" class="ln"/></svg><i class="sy-glow"></i><i class="sy-sheen"></i></div>`;
 const slideHTML = (s, on) => `<div class="sy-sl${on ? ' on' : ''}" data-k="${s.k}" data-to="${esc(s.to)}" style="--c:${s.col}" ${on ? '' : 'aria-hidden="true"'}>
   <div class="sy-t">${ic(s.ic, 'draw sy-tic')}<div><h3>${s.h}</h3>${s.sub ? `<p>${s.sub}</p>` : ''}</div>${s.week ? `<span class="sy-wk">${tt('فقرة هالجولة', 'This GW')}</span>` : ''}</div>
   <div class="sy-bd">${s.body}</div>
-  <div class="sy-go"><span>${s.toL}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M14 6l-6 6 6 6"/></svg></div></div>`;
+  <button class="sy-go" type="button"><span>${s.toL}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M14 6l-6 6 6 6"/></svg></button></div>`;
 
 export function storyHTML(opt = {}) {
   if (!ST.E?.entry || !ST.G) return '';
-  LIVE = opt.livePts ?? null;
+  LIVE = opt.livePts ?? null; if (opt.tips) TIPS = opt.tips;
   const k = `${ST.E.entry.id}_${ST.G.finished}_${ST.G.cur}_${ST.E.entry.summary_overall_points}`;
   if (STORY_K !== k) { STORY_K = k; STORY = build(STORY?.cs || null); }
-  if (!STORY.cs?.has && Date.now() - CS_T > 4000) { CS_T = Date.now(); coachStory().then((cs) => { if (!cs?.has || STORY_K !== k) return; STORY = build(cs); const el = document.getElementById('syBox'); if (el) { el.outerHTML = storyHTML({ livePts: LIVE }); bind(); } }); }
+  else STORY.live = build(STORY.cs).live;
+  if (!STORY.cs?.has && Date.now() - CS_T > 4000) { CS_T = Date.now(); coachStory().then((cs) => { if (!cs?.has || STORY_K !== k) return; STORY = build(cs); paint(); }); }
+  if (STORY.live) ensureRival();
   const S = plan(); if (!S.length) return '';
   if (SI >= S.length) SI = 0;
-  return `<section class="sy" id="syBox" style="--c:${S[SI].col}" aria-roledescription="carousel" aria-label="${tt('موسمك', 'Your season')}">
-    <nav class="sy-tabs" role="tablist">${S.map((s, i) => `<button role="tab" aria-selected="${i === SI}" class="${i === SI ? 'on' : ''}" style="--c:${s.col}" data-i="${i}">${ic(s.ic)}<span>${s.tab}</span></button>`).join('')}</nav>
+  return `<section class="sy${HOLD ? ' hold' : ''}" id="syBox" style="--c:${S[SI].col}" aria-roledescription="carousel" aria-label="${tt('موسمك', 'Your season')}">${BG}
+    <div class="sy-prog">${S.map((s, i) => `<span class="${i < SI ? 'done' : i === SI ? 'cur' : ''}"><i style="animation-duration:${DUR}ms"></i></span>`).join('')}</div>
+    <div class="sy-hd"><span class="sy-tag">${STORY.live ? tt('مباشر الآن', 'Live now') : tt(`موسمك · الجولة ${ST.G.cur}`, `Your season · GW ${ST.G.cur}`)}</span><button class="sy-pp" type="button" aria-label="${tt('إيقاف/تشغيل', 'Pause/play')}"><span></span><span></span></button></div>
     <div class="sy-stage">${S.map((s, i) => slideHTML(s, i === SI)).join('')}</div>
   </section>`;
 }
+function paint() { const el = document.getElementById('syBox'); if (!el) return; const h = storyHTML({ livePts: LIVE }); if (!h) return; el.outerHTML = h; bind(); }
 
 function fit(box, anim = true) {
   const st = box.querySelector('.sy-stage'), on = box.querySelector('.sy-sl.on'); if (!st || !on) return;
@@ -257,68 +411,73 @@ function fit(box, anim = true) {
   st.style.height = `${on.offsetHeight}px`;
   if (!anim) { void st.offsetHeight; st.style.transition = ''; }
 }
-function setSlide(i, user, dir) {
+function setSlide(i, user) {
   const S = plan(); if (!S.length) return;
   const box = document.getElementById('syBox'); if (!box) return;
-  const prev = SI; SI = (i + S.length) % S.length; if (prev === SI) return;
-  if (user) { TOUCHED = true; if (S[SI].k !== 'gw') SEL = null; }
-  const d = dir ?? (SI > prev ? 1 : -1);
+  const prev = SI; SI = (i + S.length) % S.length;
+  if (user && S[SI].k !== 'gw') SEL = null;
+  const d = SI > prev || (prev === S.length - 1 && SI === 0) ? 1 : -1;
   box.style.setProperty('--c', S[SI].col);
   box.querySelectorAll('.sy-sl').forEach((el, j) => {
     el.classList.remove('in-f', 'in-b', 'out-f', 'out-b');
     if (j === SI) { el.classList.add('on', d > 0 ? 'in-f' : 'in-b'); el.removeAttribute('aria-hidden'); }
     else { el.classList.remove('on'); el.setAttribute('aria-hidden', 'true'); if (j === prev) el.classList.add(d > 0 ? 'out-f' : 'out-b'); }
   });
-  const tabs = box.querySelectorAll('.sy-tabs button');
-  tabs.forEach((el, j) => { el.classList.toggle('on', j === SI); el.setAttribute('aria-selected', j === SI); });
-  const nav = box.querySelector('.sy-tabs'), t = tabs[SI];
-  if (nav && t) nav.scrollTo({ left: t.offsetLeft - (nav.clientWidth - t.offsetWidth) / 2, behavior: RM() ? 'auto' : 'smooth' });
+  box.querySelectorAll('.sy-prog span').forEach((el, j) => { el.className = j < SI ? 'done' : ''; if (j === SI) { void el.offsetWidth; el.className = 'cur'; } });
+  box.classList.remove('pulse'); void box.offsetWidth; box.classList.add('pulse');
   fit(box);
   countUp(box.querySelector('.sy-sl.on'));
   if (S[SI].k === 'cp') loadCapWhy();
-  arm();
 }
 function countUp(sl) {
   if (!sl || RM()) return;
   sl.querySelectorAll('.sy-cnt').forEach((el) => { const v = +el.dataset.v; if (!v) return; const t0 = performance.now(), d = 850; const f = (t) => { const k = Math.min(1, (t - t0) / d), e = 1 - Math.pow(1 - k, 3); el.textContent = fmt(Math.round(v * e)); if (k < 1) requestAnimationFrame(f); }; requestAnimationFrame(f); });
 }
-/* تبديل هادئ تلقائي — يوقف نهائياً أول ما المستخدم يتفاعل، ويوقف إذا المربع مو ظاهر */
-function arm() {
-  clearTimeout(TMR); if (TOUCHED || RM()) return;
-  TMR = setTimeout(() => { if (!document.getElementById('syBox')) return; if (VIS && !document.hidden) setSlide(SI + 1, false, 1); else arm(); }, AUTO);
-}
-function bind() {
-  const box = document.getElementById('syBox'); if (!box || BOUND.has(box)) return; BOUND.add(box);
-  requestAnimationFrame(() => fit(box, false));
-  box.querySelector('.sy-tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-i]'); if (b) setSlide(+b.dataset.i, true); });
-  let x0 = null, y0 = 0, swiped = false;
-  const st = box.querySelector('.sy-stage');
-  st.addEventListener('pointerdown', (e) => { x0 = e.clientX; y0 = e.clientY; swiped = false; });
-  st.addEventListener('pointerup', (e) => {
-    if (x0 == null) return; const dx = e.clientX - x0, dy = e.clientY - y0; x0 = null;
-    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.3) { swiped = true; setSlide(SI + (dx > 0 ? 1 : -1), true, dx > 0 ? 1 : -1); } // RTL: السحب لليمين = التالي
-  });
-  st.addEventListener('pointercancel', () => { x0 = null; });
-  st.addEventListener('click', (e) => {
-    if (swiped) { swiped = false; return; }
-    const pk = e.target.closest('[data-pick]');
-    if (pk) { pickGw(+pk.dataset.pick); return; }
-    const sl = e.target.closest('.sy-sl.on'); if (!sl?.dataset.to) return;
-    TOUCHED = true; clearTimeout(TMR);
-    run(sl.dataset.to);
-  });
-  countUp(box.querySelector('.sy-sl.on'));
-  if (plan()[SI]?.k === 'cp') loadCapWhy();
-  if ('IntersectionObserver' in window) new IntersectionObserver(([en]) => { VIS = en.isIntersecting; }, { threshold: .4 }).observe(box);
-  arm();
-}
 function run(to) {
   const m = /^(\w+)\((.*)\)$/.exec(to || ''); if (!m || typeof window[m[1]] !== 'function') return;
   const a = m[2].trim(); window[m[1]](a === '' ? undefined : /^-?\d+$/.test(a) ? +a : a.replace(/^'|'$/g, ''));
 }
+/* تحديث المباشر بهدوء: كل دقيقتين، بس إذا الرئيسية مفتوحة والمربع ظاهر والجولة شغالة */
+async function poll() {
+  if (!STORY?.live || ST.view !== 'home' || !VIS || document.hidden) return;
+  const g = ST.G.cur;
+  try {
+    const [l, fx] = await Promise.all([FPL.loadLive(g, true), FPL.loadFixturesGW(g, true)]);
+    ST.live = Object.fromEntries(l.elements.map((x) => [x.id, x.stats])); ST.liveRaw = l.elements; ST.liveRawGW = g;
+    if (Array.isArray(fx) && fx.length) ST.G.fx[g] = fx.map((x) => ({ id: x.id, ev: x.event, h: x.team_h, a: x.team_a, hd: x.team_h_difficulty, ad: x.team_a_difficulty, ko: x.kickoff_time, fin: !!(x.finished || (x.finished_provisional && (x.minutes || 0) >= 90)), started: x.started, hs: x.team_h_score, as: x.team_a_score, min: x.minutes, stats: x.stats || [] }));
+    if (ST.view === 'home') window.render?.();
+  } catch {}
+}
+function bind() {
+  const box = document.getElementById('syBox'); if (!box || BOUND.has(box)) return; BOUND.add(box);
+  requestAnimationFrame(() => fit(box, false));
+  box.addEventListener('animationend', (e) => { if (e.target.parentElement?.classList.contains('cur') && e.target.closest('.sy-prog')) setSlide(SI + 1); });
+  box.querySelector('.sy-pp').addEventListener('click', (e) => { e.stopPropagation(); HOLD = !HOLD; box.classList.toggle('hold', HOLD); });
+  // ضوء يتبع الإصبع/الماوس
+  box.addEventListener('pointermove', (e) => { const r = box.getBoundingClientRect(); box.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`); box.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`); }, { passive: true });
+  let x0 = null, y0 = 0, t0 = 0, moved = false, lp = null;
+  const st = box.querySelector('.sy-stage');
+  st.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; x0 = e.clientX; y0 = e.clientY; t0 = Date.now(); moved = false; lp = setTimeout(() => box.classList.add('hold'), 230); });
+  st.addEventListener('pointermove', (e) => { if (x0 != null && (Math.abs(e.clientX - x0) > 10 || Math.abs(e.clientY - y0) > 10)) moved = true; });
+  st.addEventListener('pointerup', (e) => {
+    if (x0 == null) return; clearTimeout(lp); if (!HOLD) box.classList.remove('hold');
+    const dx = e.clientX - x0, dy = e.clientY - y0, dt = Date.now() - t0; x0 = null;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.2) { setSlide(SI + (dx > 0 ? 1 : -1), true); return; } // RTL: السحب لليمين = التالي
+    if (!moved && dt < 230) { const r = box.getBoundingClientRect(); setSlide(SI + (e.clientX - r.left < r.width / 2 ? 1 : -1), true); }
+  });
+  st.addEventListener('pointercancel', () => { x0 = null; clearTimeout(lp); if (!HOLD) box.classList.remove('hold'); });
+  st.addEventListener('click', (e) => {
+    const pk = e.target.closest('[data-pick]'); if (pk) { e.stopPropagation(); pickGw(+pk.dataset.pick); return; }
+    const go = e.target.closest('.sy-go'); if (go) { e.stopPropagation(); run(go.closest('.sy-sl')?.dataset.to); }
+  });
+  countUp(box.querySelector('.sy-sl.on'));
+  if (plan()[SI]?.k === 'cp') loadCapWhy();
+  if ('IntersectionObserver' in window) new IntersectionObserver(([en]) => { VIS = en.isIntersecting; box.classList.toggle('off', !VIS); }, { threshold: .35 }).observe(box);
+  clearInterval(PT); if (STORY?.live) PT = setInterval(poll, POLL);
+}
 function pickGw(g) {
-  SEL = g; TOUCHED = true; clearTimeout(TMR);
-  const box = document.getElementById('syBox'), sl = box?.querySelector('.sy-sl[data-k=gw]'), s = sGws(STORY); if (!sl || !s) return;
+  SEL = g; HOLD = true; const box = document.getElementById('syBox'); box?.classList.add('hold');
+  const sl = box?.querySelector('.sy-sl[data-k=gw]'), s = sGws(STORY); if (!sl || !s) return;
   sl.querySelectorAll('.sy-gw button').forEach((b) => b.classList.toggle('on', +b.dataset.pick === g));
   const t = document.createElement('div'); t.innerHTML = slideHTML(s, true);
   sl.querySelector('.sy-gd').replaceWith(t.querySelector('.sy-gd')); sl.querySelector('.sy-go').replaceWith(t.querySelector('.sy-go')); sl.dataset.to = s.to;
