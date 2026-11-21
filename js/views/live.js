@@ -435,29 +435,52 @@ function lu2Lines(sd, team, top) {
   lines.forEach((ln, i) => { const y = i === 0 ? 93.5 : 81 - (i - 1) * (24 / Math.max(1, n - 2)); ln.forEach((e, j) => { let x = ((j + 1) / (ln.length + 1)) * 100; if (top) x = 100 - x; out.push({ e, p: M[e.id], x, y: top ? 100 - y : y }); }); });
   return { out, M };
 }
+/* ورقة التشكيلة الرسمية: فريق واحد بالملعب (تبديل بين الفريقين) حتى الحجم يبقى متناسق ومقروء */
+const LUS = {};
+function lu2Half(sd, team) {
+  // نفس توزيع الخطوط، بس على نص ملعب: الحارس تحت والهجوم فوق
+  const { out, M } = lu2Lines(sd, team, false), n = new Set(out.map((z) => z.y)).size;
+  const ys = [...new Set(out.map((z) => z.y))].sort((a, b) => b - a), map = {};
+  ys.forEach((y, i) => (map[y] = i === 0 ? 89 : 72 - (i - 1) * (60 / Math.max(1, ys.length - 2))));
+  const cnt = {}; out.forEach((z) => (cnt[z.y] = (cnt[z.y] || 0) + 1));
+  return { out: out.map((z) => ({ ...z, w: Math.min(25, 96 / cnt[z.y]), y: map[z.y] })), M, n };
+}
+function lu2Sheet(f, ev, d) {
+  const mine = ST.plan ? new Set([...ST.plan.xi, ...ST.plan.bench]) : new Set(), cap = ST.plan?.cap;
+  const H = d.sides.h, A = d.sides.a;
+  const myP = ST.G.players.filter((p) => mine.has(p.id) && (p.team === f.h || p.team === f.a));
+  if (!LUS[f.id]) LUS[f.id] = myP.some((p) => p.team === f.a) && !myP.some((p) => p.team === f.h) ? 'a' : 'h';
+  const k = LUS[f.id], sd = k === 'h' ? H : A, team = k === 'h' ? f.h : f.a;
+  const hl = H ? lu2Lines(H, f.h, false) : { out: [], M: {} }, al = A ? lu2Lines(A, f.a, false) : { out: [], M: {} };
+  const inXI = new Set([...hl.out, ...al.out].map((z) => z.p?.id).filter(Boolean));
+  const benchIds = new Set([[H, hl.M], [A, al.M]].flatMap(([S, M]) => (S?.players || []).filter((e) => !e.starter).map((e) => M[e.id]?.id).filter(Boolean)));
+  const half = sd ? lu2Half(sd, team) : { out: [], M: {} };
+  const go = (p) => (p ? `onclick="closeSheet();setTimeout(()=>openPlayer(${p.id}),200)"` : '');
+  const dot = (z) => { const p = z.p, my = p && mine.has(p.id), nm = esc(p?.name || z.e.last || z.e.short || z.e.name);
+    return `<button class="lu3-pl${my ? ' my' : ''}" style="left:${z.x}%;top:${z.y}%;width:${z.w}%" ${go(p)}><span class="lu3-sh">${p ? pShirt(p) : pShirt({ team, pos: z.e.pos === 'G' ? 'GK' : 'MID' })}${p && p.id === cap ? '<i class="lu3-cap">C</i>' : ''}${z.e.yc ? '<i class="mc-yc"></i>' : ''}</span><span class="lu3-nm">${z.e.jersey ? `<i>${esc(z.e.jersey)}</i>` : ''}${nm}</span></button>`; };
+  const subs = (sd?.players || []).filter((e) => !e.starter).map((e) => { const p = half.M[e.id], my = p && mine.has(p.id); return `<button class="lu3-sb${my ? ' my' : ''}" ${go(p)}><i>${esc(e.jersey || '')}</i><span>${esc(p?.name || e.last || e.name)}</span>${p ? `<small>${({ GK: tt('حارس', 'GK'), DEF: tt('مدافع', 'DEF'), MID: tt('وسط', 'MID'), FWD: tt('مهاجم', 'FWD') })[p.pos] || ''}</small>` : ''}${e.subIn ? `<em>↑${e.subAt ? ' ' + e.subAt.min + '′' : ''}</em>` : ''}</button>`; }).join('');
+  const st = (p) => (inXI.has(p.id) ? 'xi' : benchIds.has(p.id) ? 'bench' : 'out');
+  const LBL = { xi: tt('أساسي', 'Starting'), bench: tt('على الدكة', 'Bench'), out: tt('مو بالقائمة', 'Not in squad') };
+  const my = myP.length ? `<div class="lu3-mine">${myP.map((p) => { const s2 = st(p); return `<button class="${s2}" ${go(p)}><span class="lu3-msh">${pShirt(p)}</span><b>${esc(p.name)}${p.id === cap ? ' <i class="lu3-capi">C</i>' : ''}</b><em>${LBL[s2]}</em></button>`; }).join('')}</div>` : '';
+  const tm = (kk, t, S) => `<button class="lu3-tm${k === kk ? ' on' : ''}" onclick="lu3Side(${f.id},${ev},'${kk}')">${crest(tShort(t), 26)}<span><b>${esc(tName(t))}</b><small dir="ltr">${esc(S?.formation || '—')}</small></span></button>`;
+  return `<div class="lu3-hd"><div><small>${tt('التشكيلة الرسمية', 'Official line-ups')} · ${fmtTime(f.ko)}</small><h3>${esc(tName(f.h))} <i>${tt('ضد', 'vs')}</i> ${esc(tName(f.a))}</h3></div><button class="icon-btn" onclick="closeSheet()" aria-label="close">${I('i-x')}</button></div>
+    ${my ? `<h5 class="lu3-h5">${tt('لاعبينك بهالمباراة', 'Your players in this match')}</h5>${my}` : ''}
+    <div class="lu3-tabs">${tm('h', f.h, H)}${tm('a', f.a, A)}</div>
+    <div class="lu3-pitch" data-side="${k}">
+      <svg viewBox="0 0 68 70" preserveAspectRatio="none" aria-hidden="true"><defs><pattern id="lu3g" width="68" height="14" patternUnits="userSpaceOnUse"><rect width="68" height="7" fill="#1C7339"/><rect y="7" width="68" height="7" fill="#207E3E"/></pattern><linearGradient id="lu3v" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".25"/><stop offset=".3" stop-color="#000" stop-opacity="0"/></linearGradient></defs>
+      <rect width="68" height="70" fill="url(#lu3g)"/><rect width="68" height="70" fill="url(#lu3v)"/>
+      <g fill="none" stroke="rgba(255,255,255,.55)" stroke-width=".35"><rect x="1.5" y="1.5" width="65" height="67"/><path d="M24.85 1.5a9.15 9.15 0 0 0 18.3 0"/><rect x="13.85" y="52" width="40.3" height="16.5"/><rect x="24.85" y="63" width="18.3" height="5.5"/><path d="M26.7 52a9.15 9.15 0 0 1 14.6 0"/></g></svg>
+      ${half.out.map(dot).join('')}
+    </div>
+    <h5 class="lu3-h5">${tt('البدلاء', 'Substitutes')} · ${esc(tName(team))}</h5>
+    <div class="lu3-subs">${subs || `<p class="mut" style="font-size:12px">—</p>`}</div>
+    ${d.demo ? `<p class="lu2-demo">${tt('مثال تجريبي مبني من لاعبين الفانتازي — مو التشكيلة الرسمية', 'Demo built from FPL players — not the official line-up')}</p>` : ''}
+    <p class="lu2-note">${tt('المصدر: ESPN. التشكيلة تنعلن عادة قبل المباراة بحوالي ساعة. لاعبينك ملوّنين بالأخضر.', 'Source: ESPN. Usually announced ~1h before kick-off. Your players are highlighted.')}</p>`;
+}
+window.lu3Side = (fid, ev, k) => { LUS[fid] = k; const f = (ST.G.fx[ev] || []).find((x) => x.id === fid), d = LU[fid]?.d, el = document.getElementById('lu3'); if (f && d && el) el.innerHTML = lu2Sheet(f, ev, d); };
 window.openLineup = (fid, ev) => {
   const f = (ST.G.fx[ev] || []).find((x) => x.id === fid), d = LU[fid]?.d; if (!f || !d) return;
-  const mine = ST.plan ? new Set([...ST.plan.xi, ...ST.plan.bench]) : new Set(), cap = ST.plan?.cap;
-  const H = d.sides.h, A = d.sides.a, hl = H ? lu2Lines(H, f.h, false) : { out: [], M: {} }, al = A ? lu2Lines(A, f.a, true) : { out: [], M: {} };
-  const dot = (z, team) => { const p = z.p, my = p && mine.has(p.id), nm = esc(p?.name || z.e.last || z.e.short || z.e.name);
-    return `<button class="lu2-pl${my ? ' my' : ''}" style="left:${z.x}%;top:${z.y}%" ${p ? `onclick="closeSheet();setTimeout(()=>openPlayer(${p.id}),200)"` : ''}><span class="lu2-sh">${p ? pShirt(p) : pShirt({ team, pos: z.e.pos === 'G' ? 'GK' : 'MID' })}${z.e.jersey ? `<i class="lu2-no">${esc(z.e.jersey)}</i>` : ''}${p && p.id === cap ? '<i class="lu2-cap">C</i>' : ''}${z.e.yc ? '<i class="mc-yc"></i>' : ''}</span><span class="lu2-nm">${nm}</span></button>`; };
-  const subs = (sd, M, team) => (sd?.players || []).filter((e) => !e.starter).map((e) => { const p = M[e.id], my = p && mine.has(p.id); return `<button class="lu2-sb${my ? ' my' : ''}${e.subIn ? ' in' : ''}" ${p ? `onclick="closeSheet();setTimeout(()=>openPlayer(${p.id}),200)"` : ''}><i>${esc(e.jersey || '')}</i><span>${esc(p?.name || e.last || e.name)}</span>${e.subIn ? `<em>↑${e.subAt ? ' ' + e.subAt + '′' : ''}</em>` : ''}</button>`; }).join('') || `<p class="mut" style="font-size:12px">—</p>`;
-  // لاعبينك بهالمباراة: أساسي / بديل / مو بالقائمة
-  const myP = ST.G.players.filter((p) => mine.has(p.id) && (p.team === f.h || p.team === f.a));
-  const inXI = new Set([...hl.out, ...al.out].map((z) => z.p?.id).filter(Boolean));
-  const benchIds = new Set([...Object.entries(hl.M), ...Object.entries(al.M)].filter(([eid]) => [...(H?.players || []), ...(A?.players || [])].some((e) => e.id === eid && !e.starter)).map(([, p]) => p.id));
-  const myHTML = myP.length ? `<div class="lu2-mine">${myP.map((p) => { const k = inXI.has(p.id) ? 'xi' : benchIds.has(p.id) ? 'bench' : 'out'; return `<span class="${k}">${k === 'xi' ? '✓' : k === 'bench' ? '⇄' : '✕'} <b>${esc(p.name)}</b> ${k === 'xi' ? tt('أساسي', 'starting') : k === 'bench' ? tt('على الدكة', 'on the bench') : tt('مو بالقائمة', 'not in squad')}</span>`; }).join('')}</div>` : '';
-  openSheet(`${sheetHead(`<div class="lu2-hc" dir="ltr">${crest(tShort(f.h), 30)}${crest(tShort(f.a), 30)}</div>`, `${tName(f.h)} ${tt('ضد', 'vs')} ${tName(f.a)}`, tt('التشكيلة الرسمية', 'Official line-ups'))}
-    ${myHTML}
-    <div class="lu2-fm" dir="ltr"><span>${crest(tShort(f.a), 18)}<b>${tShort(f.a)}</b> ${esc(A?.formation || '')}</span></div>
-    <div class="lu2-pitch">
-      <svg viewBox="0 0 68 105" preserveAspectRatio="none" aria-hidden="true"><defs><pattern id="lu2g" width="68" height="15" patternUnits="userSpaceOnUse"><rect width="68" height="7.5" fill="#1E7A3C"/><rect y="7.5" width="68" height="7.5" fill="#22843F"/></pattern></defs><rect width="68" height="105" fill="url(#lu2g)"/>
-      <g fill="none" stroke="rgba(255,255,255,.7)" stroke-width=".35"><rect x="1.5" y="1.5" width="65" height="102"/><line x1="1.5" y1="52.5" x2="66.5" y2="52.5"/><circle cx="34" cy="52.5" r="9.15"/><rect x="13.85" y="1.5" width="40.3" height="16.5"/><rect x="24.85" y="1.5" width="18.3" height="5.5"/><rect x="13.85" y="87" width="40.3" height="16.5"/><rect x="24.85" y="98" width="18.3" height="5.5"/><path d="M26.7 18 A9.15 9.15 0 0 0 41.3 18"/><path d="M26.7 87 A9.15 9.15 0 0 1 41.3 87"/></g><circle cx="34" cy="52.5" r=".5" fill="rgba(255,255,255,.8)"/></svg>
-      ${al.out.map((z) => dot(z, f.a)).join('')}${hl.out.map((z) => dot(z, f.h)).join('')}
-    </div>
-    <div class="lu2-fm" dir="ltr"><span>${crest(tShort(f.h), 18)}<b>${tShort(f.h)}</b> ${esc(H?.formation || '')}</span></div>
-    <div class="lu2-subs"><div><h5>${tt('بدلاء', 'Subs')} ${tShort(f.h)}</h5>${subs(H, hl.M, f.h)}</div><div><h5>${tt('بدلاء', 'Subs')} ${tShort(f.a)}</h5>${subs(A, al.M, f.a)}</div></div>
-    ${d.demo ? `<p class="lu2-demo">${tt('مثال تجريبي مبني من لاعبين الفانتازي — مو التشكيلة الرسمية', 'Demo built from FPL players — not the official line-up')}</p>` : ''}<p class="lu2-note">${tt('المصدر: ESPN. التشكيلة الرسمية تنعلن عادة قبل المباراة بحوالي ساعة، وتوصل هنا قبل ما يحدثها الفانتازي. اللاعب اللي إطاره أخضر من لاعبينك.', 'Source: ESPN. Line-ups are usually announced ~1h before kick-off and arrive here before FPL updates. Green ring = your player.')}</p>`);
+  openSheet(`<div id="lu3" class="lu3">${lu2Sheet(f, ev, d)}</div>`);
 };
 
 export function afterLive() {
