@@ -276,6 +276,7 @@ window.addEventListener('fp-notif', updateBadge);
 /* تنقّل بسجل حقيقي: زر رجوع بكل صفحة + سحب الرجوع بالآيفون وزر الرجوع بالأندرويد */
 const NAV_STACK = [];
 export function go(v, opts = {}) {
+  if (v === 'live' && ST.view !== 'live') window.__lvReset?.();
   if (v === 'coach') v = 'search';
   if (!VIEWS[v]) v = 'home';
   if (v === 'admin' && !ST.admin) v = 'home';

@@ -9,7 +9,8 @@ import { liveTeamPoints } from './home.js';
 import { liveCalc, rankImpact, whatIf, WHATIF } from '../live-engine.js';
 import { liveRankEstimate } from '../predict.js';
 
-let gwSel = null, poll = null, lastFetch = 0;
+let gwSel = null, gwUser = false, poll = null, lastFetch = 0;
+window.__lvReset = () => { gwUser = false; };
 const isLiveGW = (g) => (ST.G.fx[g] || []).some((f) => f.started && !f.fin);
 let liveBusy = false, liveSig = '', liveErrAt = 0;
 async function refreshLive(force = false) {
@@ -67,7 +68,9 @@ export function startLivePolling() {
 }
 
 export function vLive() {
-  const G = ST.G; if (gwSel == null) gwSel = isLiveGW(G.cur) || !G.next ? G.cur : G.next;
+  // الجولة الافتراضية: الجولة الحالية لحد ما تخلص كل مبارياتها، وبعدها الجولة الجاية (إلا إذا المستخدم اختار جولة بنفسه)
+  const G = ST.G, curFx = G.fx[G.cur] || [], curOpen = !curFx.length || curFx.some((f) => !f.fin);
+  if (!gwUser || gwSel == null) gwSel = curOpen || !G.next ? G.cur : G.next;
   const fx = (G.fx[gwSel] || []).slice().sort((a, b) => (a.ko || '').localeCompare(b.ko || ''));
   const live = gwSel === G.cur && isLiveGW(G.cur);
   const squad = ST.plan ? new Set([...ST.plan.xi, ...ST.plan.bench]) : new Set();
@@ -376,7 +379,7 @@ async function openMatchC(fid, ev) {
     try { const l = await FPL.loadLive(ev); mcLive[ev] = Object.fromEntries(l.elements.map((x) => [x.id, x.stats])); const el = document.getElementById('mcBody'); if (el && el.dataset.fid == f.id) morphHTML(el, mcBody(f, ev)); } catch {}
   }
 }
-Object.assign(window, { mcSideSet: (sd, fid, ev) => { mcSide = sd; const f = (ST.G.fx[ev] || []).find((x) => x.id === fid), el = document.getElementById('mcBody'); if (f && el) morphHTML(el, mcBody(f, ev)); }, lvGW: (g) => { gwSel = g; window.render(); setTimeout(() => document.querySelector('#lvseg .on')?.scrollIntoView({ inline: 'center', block: 'nearest' }), 30); }, lvRefresh: () => refreshLive(true), openMatchC });
+Object.assign(window, { mcSideSet: (sd, fid, ev) => { mcSide = sd; const f = (ST.G.fx[ev] || []).find((x) => x.id === fid), el = document.getElementById('mcBody'); if (f && el) morphHTML(el, mcBody(f, ev)); }, lvGW: (g) => { gwSel = g; gwUser = true; window.render(); setTimeout(() => document.querySelector('#lvseg .on')?.scrollIntoView({ inline: 'center', block: 'nearest' }), 30); }, lvRefresh: () => refreshLive(true), openMatchC });
 /* ---------- التشكيلات الرسمية (معاينة ?lu2=1) — من ESPN، تنعلن عادة قبل المباراة بساعة وقبل ما يحدثها الفانتازي ---------- */
 const LU2 = () => true;
 const luWin = (f) => { if (!f.ko) return false; const dt = new Date(f.ko) - Date.now(); return dt < 100 * 60e3 && (dt > -4 * 3600e3 || (f.started && !f.fin)); };
