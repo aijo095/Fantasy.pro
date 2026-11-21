@@ -107,7 +107,7 @@ let SID = 0;
 const BODY = 'M30 8 L14 14 L3 34 L16 41 L22 32 L22 92 Q22 95 25 95 L75 95 Q78 95 78 92 L78 32 L84 41 L97 34 L86 14 L70 8 Q66 16 50 17 Q34 16 30 8 Z';
 const BODY_GK = 'M30 8 L14 14 L4 54 L15 57 L22 34 L22 92 Q22 95 25 95 L75 95 Q78 95 78 92 L78 34 L85 57 L96 54 L86 14 L70 8 Q66 16 50 17 Q34 16 30 8 Z';
 const lum = (h) => { const n = parseInt(h.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
-export function shirt(short, pos, cls = '') {
+export function shirt(short, pos, cls = '', num = '') {
   const K = KITS[short] || { b: (KIT[short] || ['#64748b'])[0], t: (KIT[short] || [0, '#fff'])[1] }, gk = pos === 'GK', id = 'k' + (++SID);
   const b = gk ? (K.gk || ['#22C55E', '#111827'])[0] : K.b, t = gk ? (K.gk || ['#22C55E', '#111827'])[1] : K.t || '#fff', sl = gk ? b : K.s || b;
   const body = gk ? BODY_GK : BODY;
@@ -127,7 +127,7 @@ export function shirt(short, pos, cls = '') {
    <path d="M38 10.5 Q50 23 62 10.5 Q56 16.5 50 16.8 Q44 16.5 38 10.5 Z" fill="#000" fill-opacity=".35"/>
    <path d="M37 10 Q50 24 63 10" stroke="${t}" stroke-width="3.4" fill="none" stroke-linecap="round"/>${cuffs}
    <path d="${body}" fill="none" stroke="${light ? 'rgba(15,23,42,.45)' : 'rgba(0,0,0,.42)'}" stroke-width="1.3" stroke-linejoin="round"/>
-   <text x="50" y="${gk ? 58 : 60}" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-weight="800" font-size="15" fill="${t}" stroke="${lum(t) > 0.6 ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.8)'}" stroke-width="${K.p === 'stripes' && !gk ? 2.6 : 0.8}" stroke-linejoin="round" paint-order="stroke">${esc(short || '')}</text></svg>`;
+   <text x="50" y="${gk ? 58 : 60}" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-weight="800" font-size="${num ? 40 : 15}" ${num ? `dy="9" letter-spacing="-1"` : ''} fill="${t}" stroke="${lum(t) > 0.6 ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.8)'}" stroke-width="${num ? (K.p === 'stripes' && !gk ? 4 : 2.4) : K.p === 'stripes' && !gk ? 2.6 : 0.8}" stroke-linejoin="round" paint-order="stroke">${esc(num || short || '')}</text></svg>`;
 }
 export function crest(short, size = 40) {
   const k = KIT[short] || ['#334155', '#fff'];

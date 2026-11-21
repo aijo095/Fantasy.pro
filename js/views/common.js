@@ -6,7 +6,7 @@ import { xp, xpN, fixturesFor, avail, avgFdr, canBuy } from '../engine.js';
 import * as FPL from '../fpl.js';
 import * as AU from '../auth.js';
 
-export const pShirt = (p, cls = '') => shirt(tShort(p.team), p.pos, cls);
+export const pShirt = (p, cls = '', num = '') => shirt(tShort(p.team), p.pos, cls, num);
 export const fxLabel = (team, gw = ST.G.next) => { const f = fixturesFor(team, gw); return f.length ? f.map((x) => `${tShort(x.opp)} (${x.home ? t('home_s') : t('away_s')})`).join(' + ') : tt('لا مباراة', 'No match'); };
 export const fdrChips = (team, from, n) => Array.from({ length: n }, (_, i) => from + i).filter((g) => g <= ST.G.lastGW).map((g) => { const f = fixturesFor(team, g); return f.length ? f.map((x) => `<span class="rate f${x.fdr}" title="GW${g}">${tShort(x.opp)}${x.home ? '' : '*'}</span>`).join('') : '<span class="rate" style="background:#1f2944;color:#94A3B8">—</span>'; }).join(' ');
 export const stTag = (p) => { const a = avail(p); if (p.st === 's') return `<span class="tag red" style="font-size:10px">${tt('موقوف', 'Susp.')}</span>`; return a === 1 ? '' : `<span class="tag ${a === 0 ? 'red' : 'amber'}" style="font-size:10px">${a === 0 ? tt('غائب', 'Out') : Math.round(a * 100) + '%'}</span>`; };

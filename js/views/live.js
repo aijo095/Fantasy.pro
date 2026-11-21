@@ -324,9 +324,10 @@ function lineupBoxESPN(f, ev, L, d) {
   const ordered = [...slots].sort((a, b) => DEPTH(a.pos) - DEPTH(b.pos));
   const nums = (sd.formation || '').split('-').map(Number).filter((n) => n > 0);
   let lines = [];
-  if (!changed && nums.length && nums.reduce((a, b) => a + b, 0) === ordered.length - 1) { let i = 1; lines.push(ordered.slice(0, 1)); nums.forEach((n) => { lines.push(ordered.slice(i, i + n)); i += n; }); }
-  else { const g = {}; ordered.forEach((z) => (g[DEPTH(z.pos)] = g[DEPTH(z.pos)] || []).push(z)); lines = Object.keys(g).sort((a, b) => a - b).map((k) => g[k]); }
-  lines = lines.map((l) => [...l].sort((a, b) => SIDE(b.pos) - SIDE(a.pos)));
+  if (!changed && nums.length && nums.reduce((a, b) => a + b, 0) === ordered.length - 1) {
+    // نفس أماكن ESPN؛ هنا الفريق يهاجم لتحت فيسار الفريق يصير يمين الشاشة
+    lines = espnLines(starters, sd.formation).map((row) => row.map((e) => slots.find((z) => z.e === e)).filter(Boolean).reverse());
+  } else { const g = {}; ordered.forEach((z) => (g[DEPTH(z.pos)] = g[DEPTH(z.pos)] || []).push(z)); lines = Object.keys(g).sort((a, b) => a - b).map((k) => g[k]); lines = lines.map((l) => [...l].sort((a, b) => SIDE(b.pos) - SIDE(a.pos))); }
   const curForm = changed ? lines.slice(1).map((l) => l.length).join('-') : sd.formation;
   const offIds = new Set(subs.map((x) => x.out)), onIds = new Set(subs.map((x) => x.in));
   const offs = sd.players.filter((p) => offIds.has(p.id) && byId[p.id]).map((p) => card(p, 'out', subs.find((x) => x.out === p.id)?.at));
@@ -431,28 +432,57 @@ const luPre = (f) => !f.started && !f.fin && (!f.ko || new Date(f.ko) > Date.now
 const LU2OPEN = () => { try { return localStorage.getItem('fp_lu2open') === '1'; } catch { return false; } };
 window.lu2Tog = (el) => { const b = el.closest('.lu2-box'); const o = !b.classList.contains('open'); b.classList.toggle('open', o); try { localStorage.setItem('fp_lu2open', o ? '1' : '0'); } catch {} };
 const LUD = (pos) => { const p = String(pos || '').toUpperCase(); if (p === 'G' || p === 'GK') return 0; if (/^(RB|LB|CB|CD|SW|D)(-|$)/.test(p)) return 1; if (/^(RWB|LWB)/.test(p)) return 1.5; if (/^(DM|CDM)/.test(p)) return 2; if (/^(CM|RM|LM|M)(-|$)/.test(p)) return 3; if (/^(AM|CAM)/.test(p)) return 4; if (/^(RW|LW|RF|LF)/.test(p)) return 4.5; if (/^(CF|F|ST|FW|S)(-|$)/.test(p)) return 5; return 3; };
-function lu2Lines(sd, team, top) {
-  // نوزع الأساسيين على خطوط الخطة الرسمية (مثلاً 4-2-3-1)، وكل خط من اليسار لليمين
-  const M = mapFPL(sd.players, team);
-  const st = sd.players.filter((p) => p.starter).sort((a, b) => LUD(a.pos) - LUD(b.pos) || a.place - b.place);
-  const cnt = [1, ...String(sd.formation || '').split('-').map(Number).filter((n) => n > 0)];
+/* رقم المركز من ESPN (formationPlace) هو رمز مركز ثابت مو ترتيب: 1 حارس، 2 ظهير أيمن، 3 ظهير أيسر، 5/6 قلب دفاع أيمن/أيسر،
+   4/8 ارتكاز أيسر/أيمن، 7/11 جناح أيمن/أيسر، 10 صانع لعب، 9 مهاجم. كل خط مكتوب من يسار الفريق ليمينه (الفريق يهاجم لفوق) */
+const FORM = {
+  '4-2-3-1': [[1], [3, 6, 5, 2], [4, 8], [11, 10, 7], [9]],
+  '4-3-3': [[1], [3, 6, 5, 2], [10, 4, 8], [11, 9, 7]],
+  '4-4-2': [[1], [3, 6, 5, 2], [11, 4, 8, 7], [10, 9]],
+  '4-4-1-1': [[1], [3, 6, 5, 2], [11, 4, 8, 7], [10], [9]],
+  '4-1-4-1': [[1], [3, 6, 5, 2], [4], [11, 10, 8, 7], [9]],
+};
+const PLX = { 3: 0, 11: 0.5, 6: 1, 4: 1.6, 10: 2, 9: 2, 8: 2.4, 5: 3, 7: 3.5, 2: 4 };
+const PLD = { 2: 1, 3: 1, 5: 1, 6: 1, 4: 2, 8: 2.2, 7: 3, 11: 3, 10: 3.5, 9: 4 };
+export function espnLines(st, formation) {
+  const cnt = String(formation || '').split('-').map(Number).filter((n) => n > 0), places = st.map((e) => +e.place || 0);
+  const T = FORM[cnt.join('-')];
+  if (T && st.length === 11 && T.flat().every((pl) => places.includes(pl)) && new Set(places).size === 11) return T.map((row) => row.map((pl) => st.find((e) => +e.place === pl)));
+  // باقي الخطط: نعتمد اسم المركز إذا ESPN كتبه بالتفصيل، وإلا رقم المركز
+  const spec = st.some((e) => /-|^(LB|RB|LM|RM|LW|RW|DM|AM|CF|LWB|RWB)$/i.test(e.pos || ''));
+  // دفاع ثلاثي/خماسي: 4/5/6 قلوب الدفاع (يمين/وسط/يسار) و2/3 الظهيرين الجناحين
+  const b3 = cnt[0] === 3 || cnt[0] === 5, PD = b3 ? { ...PLD, 4: 1, 5: 1, 6: 1, 2: cnt[0] === 5 ? 1 : 2.6, 3: cnt[0] === 5 ? 1 : 2.6, 8: 2.8, 7: 3 } : PLD, PX = b3 ? { ...PLX, 6: 1, 5: 2, 4: 3 } : PLX;
+  const depth = (e) => (spec ? LUD(e.pos) : +e.place === 1 ? 0 : PD[+e.place] ?? 3);
+  const side = (e) => (spec ? SIDE(e.pos || '') : PX[+e.place] ?? 2);
+  const gk = st.filter((e) => depth(e) === 0 || /^GK?$/i.test(e.pos || '')).slice(0, 1), rest = st.filter((e) => !gk.includes(e)).sort((a, b) => depth(a) - depth(b) || (+a.place || 0) - (+b.place || 0));
   let lines = [];
-  if (cnt.reduce((a, b) => a + b, 0) === st.length) { let k = 0; cnt.forEach((n) => { lines.push(st.slice(k, k + n)); k += n; }); }
-  else { const g = {}; st.forEach((e) => (g[LUD(e.pos)] = g[LUD(e.pos)] || []).push(e)); lines = Object.keys(g).map(Number).sort((a, b) => a - b).map((k) => g[k]); }
-  lines = lines.map((ln) => ln.sort((a, b) => SIDE(a.pos || '') - SIDE(b.pos || '') || a.place - b.place));
+  if (cnt.length && cnt.reduce((a, b) => a + b, 0) === rest.length) { let k = 0; lines = cnt.map((n) => rest.slice(k, (k += n))); }
+  else { const g = {}; rest.forEach((e) => (g[depth(e)] = g[depth(e)] || []).push(e)); lines = Object.keys(g).map(Number).sort((a, b) => a - b).map((k) => g[k]); }
+  return [gk, ...lines.map((ln) => ln.sort((a, b) => side(a) - side(b)))].filter((l) => l.length);
+}
+function lu2Lines(sd, team, top) {
+  // نوزع الأساسيين على خطوط الخطة الرسمية (مثلاً 4-2-3-1) بنفس أماكن ESPN
+  const M = mapFPL(sd.players, team);
+  const lines = espnLines(sd.players.filter((p) => p.starter), sd.formation);
   const n = lines.length, out = [];
-  lines.forEach((ln, i) => { const y = i === 0 ? 93.5 : 81 - (i - 1) * (24 / Math.max(1, n - 2)); ln.forEach((e, j) => { let x = ((j + 1) / (ln.length + 1)) * 100; if (top) x = 100 - x; out.push({ e, p: M[e.id], x, y: top ? 100 - y : y }); }); });
+  lines.forEach((ln, i) => {
+    const y = i === 0 ? 93.5 : 81 - (i - 1) * (24 / Math.max(1, n - 2)), m = ln.length, step = m > 1 ? Math.min(26, 76 / (m - 1)) : 0;
+    ln.forEach((e, j) => {
+      let x = 50 + (j - (m - 1) / 2) * step; if (top) x = 100 - x;
+      // مثل ESPN: الظهيرين بخط الدفاع متقدمين شوية عن قلبي الدفاع
+      const lift = i === 1 && m >= 4 && (j === 0 || j === m - 1) ? 3 : 0;
+      out.push({ e, p: M[e.id], x, y: top ? 100 - (y - lift) : y - lift, row: i, lift });
+    });
+  });
   return { out, M };
 }
 /* ورقة التشكيلة الرسمية: فريق واحد بالملعب (تبديل بين الفريقين) حتى الحجم يبقى متناسق ومقروء */
 const LUS = {};
 function lu2Half(sd, team) {
   // نفس توزيع الخطوط، بس على نص ملعب: الحارس تحت والهجوم فوق
-  const { out, M } = lu2Lines(sd, team, false), n = new Set(out.map((z) => z.y)).size;
-  const ys = [...new Set(out.map((z) => z.y))].sort((a, b) => b - a), map = {};
-  ys.forEach((y, i) => (map[y] = i === 0 ? 89 : 72 - (i - 1) * (60 / Math.max(1, ys.length - 2))));
-  const cnt = {}; out.forEach((z) => (cnt[z.y] = (cnt[z.y] || 0) + 1));
-  return { out: out.map((z) => ({ ...z, w: Math.min(25, 96 / cnt[z.y]), t: cnt[z.y] >= 4, y: map[z.y] })), M, n };
+  const { out, M } = lu2Lines(sd, team, false), n = new Set(out.map((z) => z.row)).size;
+  const map = {}; for (let i = 0; i < n; i++) map[i] = i === 0 ? 88 : 70 - (i - 1) * (58 / Math.max(1, n - 2));
+  const cnt = {}; out.forEach((z) => (cnt[z.row] = (cnt[z.row] || 0) + 1));
+  return { out: out.map((z) => ({ ...z, w: Math.min(25, 96 / cnt[z.row]), t: cnt[z.row] >= 5, y: map[z.row] - z.lift * 1.6 })), M, n };
 }
 function lu2Sheet(f, ev, d) {
   const mine = ST.plan ? new Set([...ST.plan.xi, ...ST.plan.bench]) : new Set(), cap = ST.plan?.cap;
@@ -466,7 +496,7 @@ function lu2Sheet(f, ev, d) {
   const half = sd ? lu2Half(sd, team) : { out: [], M: {} };
   const go = (p) => (p ? `onclick="closeSheet();setTimeout(()=>openPlayer(${p.id}),200)"` : '');
   const dot = (z) => { const p = z.p, my = p && mine.has(p.id), nm = esc(p?.name || z.e.last || z.e.short || z.e.name);
-    return `<button class="lu3-pl${my ? ' my' : ''}${z.t ? ' tight' : ''}" style="left:${z.x}%;top:${z.y}%;width:${z.w}%" ${go(p)}><span class="lu3-sh">${z.t && z.e.jersey ? `<i class="lu3-no">${esc(z.e.jersey)}</i>` : ''}${p ? pShirt(p) : pShirt({ team, pos: z.e.pos === 'G' ? 'GK' : 'MID' })}${p && p.id === cap ? '<i class="lu3-cap">C</i>' : ''}${z.e.yc ? '<i class="mc-yc"></i>' : ''}</span><span class="lu3-nm">${!z.t && z.e.jersey ? `<i>${esc(z.e.jersey)}</i>` : ''}${nm}</span></button>`; };
+    return `<button class="lu3-pl${my ? ' my' : ''}${z.t ? ' tight' : ''}" style="left:${z.x}%;top:${z.y}%;width:${z.w}%" ${go(p)}><span class="lu3-sh">${p ? pShirt(p, '', z.e.jersey || '') : pShirt({ team, pos: /^GK?$/i.test(z.e.pos || '') || +z.e.place === 1 ? 'GK' : 'MID' }, '', z.e.jersey || '')}${p && p.id === cap ? '<i class="lu3-cap">C</i>' : ''}${z.e.yc ? '<i class="mc-yc"></i>' : ''}</span><span class="lu3-nm">${nm}</span></button>`; };
   const subs = (sd?.players || []).filter((e) => !e.starter).map((e) => { const p = half.M[e.id], my = p && mine.has(p.id); return `<button class="lu3-sb${my ? ' my' : ''}" ${go(p)}><i>${esc(e.jersey || '')}</i><span>${esc(p?.name || e.last || e.name)}</span>${p ? `<small>${({ GK: tt('حارس', 'GK'), DEF: tt('مدافع', 'DEF'), MID: tt('وسط', 'MID'), FWD: tt('مهاجم', 'FWD') })[p.pos] || ''}</small>` : ''}${e.subIn && e.subAt ? `<em>↑ ${e.subAt.min}′</em>` : ''}</button>`; }).join('');
   const st = (p) => (inXI.has(p.id) ? 'xi' : benchIds.has(p.id) ? 'bench' : 'out');
   const LBL = { xi: tt('أساسي', 'Starting'), bench: tt('على الدكة', 'Bench'), out: tt('مو بالقائمة', 'Not in squad') };
@@ -476,9 +506,9 @@ function lu2Sheet(f, ev, d) {
     ${my ? `<h5 class="lu3-h5">${tt('لاعبينك بهالمباراة', 'Your players in this match')}</h5>${my}` : ''}
     <div class="lu3-tabs">${tm('h', f.h, H)}${tm('a', f.a, A)}</div>
     <div class="lu3-pitch" data-side="${k}">
-      <svg viewBox="0 0 68 70" preserveAspectRatio="none" aria-hidden="true"><defs><pattern id="lu3g" width="68" height="14" patternUnits="userSpaceOnUse"><rect width="68" height="7" fill="#1C7339"/><rect y="7" width="68" height="7" fill="#207E3E"/></pattern><linearGradient id="lu3v" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".25"/><stop offset=".3" stop-color="#000" stop-opacity="0"/></linearGradient></defs>
+      <svg viewBox="0 0 68 70" preserveAspectRatio="none" aria-hidden="true"><defs><pattern id="lu3g" width="68" height="14" patternUnits="userSpaceOnUse"><rect width="68" height="7" fill="#3B8F4C"/><rect y="7" width="68" height="7" fill="#41964F"/></pattern><linearGradient id="lu3v" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".18"/><stop offset=".3" stop-color="#000" stop-opacity="0"/></linearGradient></defs>
       <rect width="68" height="70" fill="url(#lu3g)"/><rect width="68" height="70" fill="url(#lu3v)"/>
-      <g fill="none" stroke="rgba(255,255,255,.55)" stroke-width=".35"><rect x="1.5" y="1.5" width="65" height="67"/><path d="M24.85 1.5a9.15 9.15 0 0 0 18.3 0"/><rect x="13.85" y="52" width="40.3" height="16.5"/><rect x="24.85" y="63" width="18.3" height="5.5"/><path d="M26.7 52a9.15 9.15 0 0 1 14.6 0"/></g></svg>
+      <g fill="none" stroke="rgba(255,255,255,.75)" stroke-width=".4"><rect x="1.5" y="1.5" width="65" height="67"/><path d="M24.85 1.5a9.15 9.15 0 0 0 18.3 0"/><rect x="13.85" y="52" width="40.3" height="16.5"/><rect x="24.85" y="63" width="18.3" height="5.5"/><path d="M26.7 52a9.15 9.15 0 0 1 14.6 0"/></g></svg>
       ${half.out.map(dot).join('')}
     </div>
     <h5 class="lu3-h5">${tt('البدلاء', 'Substitutes')} · ${esc(tName(team))}</h5>

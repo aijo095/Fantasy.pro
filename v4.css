@@ -629,3 +629,10 @@ html.ui2 #toast{bottom:calc(96px + env(safe-area-inset-bottom,0px) * .5)}
 /* أسماء اللاعبين بالشارات ما تنقص من تحت */
 .mc-chip{line-height:1.5;padding:4px 11px}
 .m2n{line-height:1.45;padding:1px 0}
+/* التشكيلة الرسمية بستايل ESPN: الرقم على القميص واسم اللاعب بشريط فاتح تحته */
+.lu3-pl{gap:2px}
+.lu3-sh{width:46px;height:46px}
+.lu3-nm{padding:2px 8px;border-radius:6px;background:rgba(232,245,234,.94);color:#0E2A17;backdrop-filter:none;font-size:11.5px;box-shadow:0 2px 6px -2px rgba(0,0,0,.35)}
+.lu3-pl.my .lu3-nm{background:var(--c-mint,#6EE7B7);color:#052E1F;box-shadow:0 0 0 1.5px #052E1F,0 0 10px rgba(110,231,183,.8)}
+.lu3-pl.tight .lu3-nm{padding:2px 5px;font-size:10.5px}
+@media(max-width:380px){.lu3-sh{width:40px;height:40px}.lu3-nm{font-size:10.5px}}
