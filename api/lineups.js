@@ -72,7 +72,7 @@ export async function getLineup(ko, h, a) {
       return null;
     }).filter(Boolean);
     const d = { event: ev.id, state, sides, subs, pens, at: Date.now() };
-    const ttl = state === 'post' ? 6 * 3600 : state === 'in' ? 45 : 600;
+    const ttl = state === 'post' ? 86400 : state === 'in' ? 60 : 300;
     memo.set(key, { d, exp: Date.now() + ttl * 1000, ttl });
     if (memo.size > 200) memo.delete(memo.keys().next().value);
     return { code: 200, d, ttl };

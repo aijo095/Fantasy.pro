@@ -11,19 +11,19 @@ import { kv, kvEnabled } from './_kv.js';
 const BASE = 'https://fantasy.premierleague.com/api/';
 const UA = 'Mozilla/5.0 (compatible; FantasyPro/2.0)';
 const ROUTES = [
-  { re: /^bootstrap-static\/$/, ttl: 300 },
-  { re: /^fixtures\/$/, ttl: 600 },
-  { re: /^entry\/\d{1,10}\/$/, ttl: 20 },
-  { re: /^entry\/\d{1,10}\/history\/$/, ttl: 60 },
-  { re: /^entry\/\d{1,10}\/transfers\/$/, ttl: 15 },
-  { re: /^entry\/\d{1,10}\/event\/\d{1,2}\/picks\/$/, ttl: 20 },
-  { re: /^entry\/\d{1,10}\/cup\/$/, ttl: 600 },
-  { re: /^leagues-classic\/\d{1,10}\/standings\/$/, ttl: 180 },
-  { re: /^leagues-h2h\/\d{1,10}\/standings\/$/, ttl: 120 },
-  { re: /^leagues-h2h-matches\/league\/\d{1,10}\/$/, ttl: 60 },
-  { re: /^event\/\d{1,2}\/live\/$/, ttl: 3 },
-  { re: /^element-summary\/\d{1,5}\/$/, ttl: 900 },
-  { re: /^team\/set-piece-notes\/$/, ttl: 3600 },
+  { re: /^bootstrap-static\/$/, ttl: 900 },
+  { re: /^fixtures\/$/, ttl: 1800 },
+  { re: /^entry\/\d{1,10}\/$/, ttl: 120 },
+  { re: /^entry\/\d{1,10}\/history\/$/, ttl: 600 },
+  { re: /^entry\/\d{1,10}\/transfers\/$/, ttl: 120 },
+  { re: /^entry\/\d{1,10}\/event\/\d{1,2}\/picks\/$/, ttl: 300 },
+  { re: /^entry\/\d{1,10}\/cup\/$/, ttl: 3600 },
+  { re: /^leagues-classic\/\d{1,10}\/standings\/$/, ttl: 600 },
+  { re: /^leagues-h2h\/\d{1,10}\/standings\/$/, ttl: 600 },
+  { re: /^leagues-h2h-matches\/league\/\d{1,10}\/$/, ttl: 120 },
+  { re: /^event\/\d{1,2}\/live\/$/, ttl: 20 },
+  { re: /^element-summary\/\d{1,5}\/$/, ttl: 3600 },
+  { re: /^team\/set-piece-notes\/$/, ttl: 21600 },
 ];
 const memo = new Map();
 /* نسخة احتياطية بقاعدة البيانات: وقت تحديث الفانتازي (الديدلاين) نرجّع آخر بيانات صحيحة بدل ما يوكف التطبيق */
@@ -41,6 +41,15 @@ async function loadBackup(k) {
 const stats = { hits: 0, misses: 0, errors: [], started: Date.now() };
 const lastFresh = new Map();
 
+
+/* حالة الجولة من نسخة bootstrap المحفوظة بالذاكرة: done (خلصت ونقاطها انعتمدت) / future (قبل الإغلاق) / live */
+function evState(n) {
+  const b = memo.get('bootstrap-static/')?.d; const e = b?.events?.find((x) => x.id === n); if (!e) return null;
+  if (e.finished && e.data_checked) return 'done';
+  if (e.deadline_time && new Date(e.deadline_time) > Date.now()) return 'future';
+  return 'live';
+}
+const untilDeadline = (n) => { const e = memo.get('bootstrap-static/')?.d?.events?.find((x) => x.id === n); return e?.deadline_time ? new Date(e.deadline_time) - Date.now() : 0; };
 function send(res, code, data, ttl = 0) {
   res.statusCode = code;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -95,10 +104,14 @@ export default async function handler(req, res) {
   const ev = parseInt(url.searchParams.get('event') || '0', 10);
   if (path.startsWith('leagues-h2h-matches')) qs = `?page=${Math.min(page, 100)}${ev >= 1 && ev <= 38 ? `&event=${ev}` : ''}`;
   let ttl = route.ttl;
-  if (path === 'fixtures/' && ev >= 1 && ev <= 38) { qs = `?event=${ev}`; ttl = 3; }
+  if (path === 'fixtures/' && ev >= 1 && ev <= 38) { qs = `?event=${ev}`; ttl = 20; }
+  // الجولات اللي خلصت ما تتغير: نحفظها يوم كامل، والجاية ما بيها نتائج لحد الإغلاق
+  { const evN = ev || +((path.match(/^(?:event|entry\/\d+\/event)\/(\d{1,2})\//) || [])[1] || 0); const stt = evN ? evState(evN) : null;
+    if (stt === 'done' && (qs.includes('event=') || /\/(live|picks)\/$/.test(path))) ttl = 86400;
+    else if (stt === 'future' && (path === 'fixtures/' || /\/live\/$/.test(path))) ttl = Math.max(60, Math.min(1800, Math.round(untilDeadline(evN) / 1000))); }
   const key = path + qs;
   let fresh = url.searchParams.get('fresh') === '1';
-  if (fresh) { const lf = lastFresh.get(key) || 0; if (Date.now() - lf < (ttl <= 3 ? 2500 : 8000)) fresh = false; else lastFresh.set(key, Date.now()); } // المباشر: تحديث كل ~3 ثواني
+  if (fresh) { const lf = lastFresh.get(key) || 0; if (Date.now() - lf < (ttl <= 20 ? 10000 : 30000)) fresh = false; else lastFresh.set(key, Date.now()); } // المباشر: تحديث كل ~3 ثواني
   const hit = memo.get(key);
   if (!fresh && hit && Date.now() - hit.t < ttl * 1000) { stats.hits++; return send(res, 200, hit.d, ttl); }
   stats.misses++;

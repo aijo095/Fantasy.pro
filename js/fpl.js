@@ -69,7 +69,7 @@ function pruneLS() { try { Object.keys(localStorage).filter((k) => k.startsWith(
 export const clearStale = () => markStale(false);
 
 export async function loadGame(fresh = false) {
-  const [b, f] = await Promise.all([get('bootstrap-static/', {}, { ttl: 300, fresh }), get('fixtures/', {}, { ttl: 600, fresh })]);
+  const [b, f] = await Promise.all([get('bootstrap-static/', {}, { ttl: 900, fresh }), get('fixtures/', {}, { ttl: 1800, fresh })]);
   const teams = {};
   b.teams.forEach((t) => (teams[t.id] = { id: t.id, name: t.name, short: t.short_name, str: t.strength, sh: t.strength_overall_home, sa: t.strength_overall_away }));
   const players = b.elements.filter((e) => POS[e.element_type]).map((e) => ({
@@ -105,10 +105,10 @@ export async function loadGame(fresh = false) {
 
 export async function loadEntry(id, fresh = false) {
   const [entry, hist, transfers] = await Promise.all([
-    get(`entry/${id}/`, {}, { ttl: 20, fresh }), get(`entry/${id}/history/`, {}, { ttl: 60, fresh }), get(`entry/${id}/transfers/`, {}, { ttl: 15, fresh }).catch(() => []),
+    get(`entry/${id}/`, {}, { ttl: 120, fresh }), get(`entry/${id}/history/`, {}, { ttl: 600, fresh }), get(`entry/${id}/transfers/`, {}, { ttl: 120, fresh }).catch(() => []),
   ]);
   const gw = entry.current_event || null;
-  const picks = gw ? await get(`entry/${id}/event/${gw}/picks/`, {}, { ttl: 30, fresh }).catch(() => null) : null;
+  const picks = gw ? await get(`entry/${id}/event/${gw}/picks/`, {}, { ttl: 300, fresh }).catch(() => null) : null;
   // بعد الفري هيت الفريق يرجع لتشكيلة الجولة اللي قبلها
   let basePicks = picks, fhRevert = false;
   if (picks?.active_chip === 'freehit' && gw > 1) { const prev = await get(`entry/${id}/event/${gw - 1}/picks/`, {}, { ttl: 3600, fresh }).catch(() => null); if (prev) { basePicks = prev; fhRevert = true; } }
@@ -121,12 +121,12 @@ export const fetchHistory = (id) => get(`entry/${id}/history/`, {}, { ttl: 300 }
 export const loadSetPieceNotes = () => get('team/set-piece-notes/', {}, { ttl: 3600 });
 export const fetchTransfers = (id) => get(`entry/${id}/transfers/`, {}, { ttl: 120 });
 export const fetchPicks = (id, gw) => get(`entry/${id}/event/${gw}/picks/`, {}, { ttl: 3600 });
-export const loadH2H = (id, page = 1) => get(`leagues-h2h/${id}/standings/`, { page }, { ttl: 120 });
+export const loadH2H = (id, page = 1) => get(`leagues-h2h/${id}/standings/`, { page }, { ttl: 600 });
 export const loadH2HMatches = (id, event, page = 1, fresh = false) => get(`leagues-h2h-matches/league/${id}/`, { ...(event ? { event } : {}), page }, { ttl: 60, fresh });
-export const loadLeague = (id, page = 1) => get(`leagues-classic/${id}/standings/`, { page }, { ttl: 180 });
+export const loadLeague = (id, page = 1) => get(`leagues-classic/${id}/standings/`, { page }, { ttl: 600 });
 export const loadLive = (gw, fresh = false) => get(`event/${gw}/live/`, {}, { ttl: 3, fresh });
 export const loadFixturesGW = (gw, fresh = false) => get('fixtures/', { event: gw }, { ttl: 3, fresh });
-export const loadPlayerSummary = (id) => get(`element-summary/${id}/`, {}, { ttl: 900 });
+export const loadPlayerSummary = (id) => get(`element-summary/${id}/`, {}, { ttl: 3600 });
 export const serverStatus = () => fetch('/api/fpl?status=1').then((r) => r.json());
 
 /** تقدير الانتقالات المجانية من سجل الجولات (الحد 5) */
