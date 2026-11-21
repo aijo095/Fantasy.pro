@@ -433,14 +433,35 @@ function walkRun() {
 export function afterTeam() { if (walkPlay) { walkPlay = false; walkRun(); } }
 window.walkAgain = () => { walkKey = ''; document.getElementById('view').dataset.view = ''; window.render(); window.scrollTo({ top: Math.max(0, (document.querySelector('#view .pitch')?.getBoundingClientRect().top || 0) + scrollY - 70), behavior: 'smooth' }); };
 
+
+/* حالة اللاعب اللي بدت مباراته وما نزل: من التشكيلة الرسمية (ESPN) — طلب واحد لكل مباراة وينخزن */
+const LUB = {};
+function benchState(p, gw) {
+  const f = (ST.G.fx[gw] || []).find((x) => (x.h === p.team || x.a === p.team) && x.started && !x.fin); if (!f) return null;
+  const c = LUB[f.id];
+  if (!c) {
+    LUB[f.id] = { busy: true };
+    Promise.all([fetch(`/api/lineups?ko=${encodeURIComponent(f.ko)}&h=${ST.G.teams[f.h].short}&a=${ST.G.teams[f.a].short}&v=2`).then((r) => (r.ok ? r.json() : null)).catch(() => null), import('./live.js')]).then(([d, L]) => {
+      const res = {};
+      if (d?.sides) [['h', f.h], ['a', f.a]].forEach(([k, team]) => { const sd = d.sides[k]; if (!sd?.players?.length) return; const M = L.mapFPL(sd.players, team); ST.G.players.filter((x) => x.team === team).forEach((x) => (res[x.id] = 'out')); sd.players.forEach((e) => { const q = M[e.id]; if (q) res[q.id] = e.starter ? 'xi' : 'bench'; }); });
+      LUB[f.id] = { res, at: Date.now() };
+      if (ST.view === 'team') window.render();
+    });
+    return null;
+  }
+  return c.res ? c.res[p.id] || null : null;
+}
+
 let mvpId = null;
 function liveCard(r, i, gw = ST.G.cur) {
   const p = PM(r.id); if (!p) return '';
   let [st, stl] = pState(p, gw); const shown = r.pts * Math.max(1, r.m);
   if (GLOW_DEMO() && !r.subOut && (r.m > 0 || r.subIn)) { st = 'live'; stl = `${48 + ((i * 7) % 40)}′`; }
-  const bg = r.m === 0 && !r.subIn ? '#CBD5E1' : st === 'soon' ? '#E2E8F0' : shown >= 10 ? '#34D399' : shown >= 5 ? '#A7F3D0' : shown >= 2 ? '#F1F5F9' : shown > 0 ? '#FED7AA' : '#FECACA';
+  // بدت مباراته وبعده ما نزل: نكتب حالته بدل الصفر (على الدكة / خارج القائمة / ما نزل بعد)
+  const wait = st === 'live' && !r.min && !r.subOut && !GLOW_DEMO(), ls = wait ? benchState(p, gw) : null;
+  const bg = wait ? '#CBD5E1' : r.m === 0 && !r.subIn ? '#CBD5E1' : st === 'soon' ? '#E2E8F0' : shown >= 10 ? '#34D399' : shown >= 5 ? '#A7F3D0' : shown >= 2 ? '#F1F5F9' : shown > 0 ? '#FED7AA' : '#FECACA';
   const mvp = mvpId === r.id;
-  return `<div class="pl ${r.cap ? 'capt' : ''} ${r.subOut ? 'dim' : ''} ${mvp ? 'mvp' : ''}" data-pid="${p.id}" style="--d:${i * 35}ms" onclick="playerGW(${p.id},${gw},${Math.max(1, r.m)})" role="button">${mvp ? `<span class="mvp-b"><svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="m12 2 2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8Z"/></svg>${tt('نجم الجولة', 'Star')}</span>` : ''}${r.cap ? `<span class="cb">${r.m === 3 ? '3×' : 'C'}</span>` : r.vc ? `<span class="cb v">${r.m > 1 ? 'C' : 'V'}</span>` : ''}${r.subIn ? `<span class="rk" style="background:var(--acc);color:var(--on-acc)">⇅</span>` : r.subOut ? `<span class="rk r2">⇅</span>` : ''}${pzRing(p, r, st, gw, i)}<div class="sh">${pShirt(p)}</div><div class="nm">${esc(p.name)}</div><div class="lb lpts" style="background:${bg}">${st === 'soon' && !shown ? '—' : shown}${r.bonus ? `<sup>+${r.bonus}</sup>` : ''}</div><div class="pst ${st}">${st === 'live' ? '<i></i>' : ''}${stl}</div></div>`;
+  return `<div class="pl ${r.cap ? 'capt' : ''} ${r.subOut ? 'dim' : ''} ${mvp ? 'mvp' : ''}" data-pid="${p.id}" style="--d:${i * 35}ms" onclick="playerGW(${p.id},${gw},${Math.max(1, r.m)})" role="button">${mvp ? `<span class="mvp-b"><svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="m12 2 2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8Z"/></svg>${tt('نجم الجولة', 'Star')}</span>` : ''}${r.cap ? `<span class="cb">${r.m === 3 ? '3×' : 'C'}</span>` : r.vc ? `<span class="cb v">${r.m > 1 ? 'C' : 'V'}</span>` : ''}${r.subIn ? `<span class="rk" style="background:var(--acc);color:var(--on-acc)">⇅</span>` : r.subOut ? `<span class="rk r2">⇅</span>` : ''}${pzRing(p, r, wait ? 'wait' : st, gw, i)}<div class="sh">${pShirt(p)}</div><div class="nm">${esc(p.name)}</div><div class="lb lpts" style="background:${bg}">${(st === 'soon' || wait) && !shown ? '—' : shown}${r.bonus ? `<sup>+${r.bonus}</sup>` : ''}</div>${wait ? `<div class="pst wait">${ls === 'bench' ? tt('على الدكة', 'On the bench') : ls === 'out' ? tt('خارج القائمة', 'Not in squad') : tt('ما نزل بعد', 'Not on yet')}</div>` : `<div class="pst ${st}">${st === 'live' ? '<i></i>' : ''}${stl}</div>`}</div>`;
 }
 async function loadGW(g) {
   if (gwCache[g]) return;
