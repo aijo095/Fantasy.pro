@@ -5,13 +5,69 @@
 import { ST, PM } from './store.js';
 import { validXI } from './engine.js';
 
+/* ---------- أحداث المباراة الأسرع ----------
+   مشكلة التأخير: قائمة المباريات بالفانتازي (fixtures → stats) تتأخر دقايق عن بيانات اللاعبين المباشرة (event/live).
+   فكان التطبيق يعرض نقاط إيزي (من المباشر) بس الهدف والصناعة والبونص قدام (من المباريات).
+   الحل: نبني أحداث كل مباراة من بيانات اللاعبين المباشرة الرسمية نفسها، وناخذ الأحدث من المصدرين:
+   - الأهداف والصناعات والبطاقات والتصديات والدفاع: أرقام ما تنقص، فناخذ المصدر اللي سجّل أكثر
+   - BPS: من المباشر (أحدث)، وبعد ما تخلص المباراة من الفانتازي إذا موجود
+   - البونص: نفس طريقة الفانتازي الرسمي (3/2/1 حسب BPS الحالي مع التعادل) — مثل ما يعرضه تطبيق البريميرليغ */
+const FX_KEYS = ['goals_scored', 'assists', 'own_goals', 'penalties_saved', 'penalties_missed', 'yellow_cards', 'red_cards', 'saves', 'defensive_contribution'];
+export function bonusFromBps(list) {
+  const pl = list.filter((x) => x.value > 0).sort((a, b) => b.value - a.value), out = [];
+  let pts = 3, i = 0;
+  while (i < pl.length && pts > 0) { const v = pl[i].value, grp = pl.filter((x) => x.value === v); grp.forEach((x) => out.push({ element: x.element, value: pts })); i += grp.length; pts -= grp.length; }
+  return out;
+}
+let fxsMemo = { raw: null, gw: 0, m: new Map() };
+export function fxStats(f, gw = f?.ev) {
+  const base = f?.stats || [];
+  const raw = ST.liveRaw && ST.liveRawGW === gw ? ST.liveRaw : null;
+  if (!f?.started || !raw) return base;
+  if (fxsMemo.raw !== raw || fxsMemo.gw !== gw) fxsMemo = { raw, gw, m: new Map() };
+  const mk = f.id + '|' + (f.fin ? 1 : 0) + '|' + base.length + '|' + JSON.stringify(base).length;
+  if (fxsMemo.m.has(mk)) return fxsMemo.m.get(mk);
+  const fxs = ST.G.fx[gw] || [], cnt = (tm) => fxs.filter((x) => x.h === tm || x.a === tm).length;
+  const side = (tm) => (tm === f.h ? 'h' : tm === f.a ? 'a' : null);
+  // قيمة الحدث للاعب بهالمباراة بالذات (الجولة المزدوجة: من تفاصيل المباراة؛ العادية: من المجموع)
+  const valOf = (e, k, single) => {
+    if (single) return +(e.stats?.[k] || 0);
+    const ex = (e.explain || []).find((x) => x.fixture === f.id); if (!ex) return null;
+    const r = (ex.stats || []).find((s) => s.identifier === k); return r ? +r.value : null;
+  };
+  const rows = [];
+  for (const e of raw) {
+    const p = PM(e.id); if (!p) continue; const s = side(p.team); if (!s) continue;
+    const single = cnt(p.team) === 1;
+    if (!single && !(e.explain || []).some((x) => x.fixture === f.id)) continue;
+    if (single && !(e.stats?.minutes > 0) && !FX_KEYS.some((k) => e.stats?.[k])) continue;
+    rows.push({ e, s, single });
+  }
+  if (!rows.length) return base;
+  const fromLive = (k) => { const o = { identifier: k, h: [], a: [] }, ok = rows.some((r) => r.single || valOf(r.e, k, false) != null); if (!ok) return null;
+    rows.forEach((r) => { const v = valOf(r.e, k, r.single); if (v) o[r.s].push({ value: v, element: r.e.id }); });
+    o.h.sort((a, b) => b.value - a.value); o.a.sort((a, b) => b.value - a.value); return o; };
+  const sum = (o) => (o ? [...o.h, ...o.a].reduce((a, x) => a + x.value, 0) : 0);
+  const old = (k) => base.find((x) => x.identifier === k);
+  const out = base.filter((x) => !FX_KEYS.includes(x.identifier) && x.identifier !== 'bps' && x.identifier !== 'bonus');
+  FX_KEYS.forEach((k) => { const L = fromLive(k), B = old(k); const pickL = L && sum(L) >= sum(B); const v = pickL ? L : B; if (v) out.push(v); });
+  const bL = fromLive('bps'), bB = old('bps'), bps = f.fin && bB && (bB.h.length || bB.a.length) ? bB : bL || bB;
+  if (bps) out.push(bps);
+  const bnB = old('bonus'), bnOK = bnB && (bnB.h.length || bnB.a.length);
+  if (f.fin && bnOK) out.push(bnB);
+  else if (bps) { const all = [...bps.h.map((x) => ({ ...x, s: 'h' })), ...bps.a.map((x) => ({ ...x, s: 'a' }))]; const bn = bonusFromBps(all), sOf = (id) => all.find((x) => x.element === id)?.s;
+    out.push({ identifier: 'bonus', h: bn.filter((x) => sOf(x.element) === 'h'), a: bn.filter((x) => sOf(x.element) === 'a') }); }
+  else if (bnB) out.push(bnB);
+  fxsMemo.m.set(mk, out);
+  return out;
+}
+
 /* ---------- البونص المؤقت لكل مباراة ---------- */
-/* حسب طلب المستخدم: ما نتوقّع بونص — النقاط فقط من الفانتازي الرسمي (البونص ينضاف لما الفانتازي يأكده) */
 export function provisionalBonus(gw) {
-  // البونص اللي ينشره الفانتازي نفسه بالمباريات (stats → bonus) — بدون أي توقع من عدنا
+  // بونص كل مباراة من أحدث BPS رسمي (نفس حساب الفانتازي) — يتأكد نهائياً لما تخلص المباراة
   const out = {};
   (ST.G.fx[gw] || []).filter((f) => f.started).forEach((f) => {
-    const b = (f.stats || []).find((s) => s.identifier === 'bonus'); if (!b) return;
+    const b = fxStats(f, gw).find((s) => s.identifier === 'bonus'); if (!b) return;
     [...(b.h || []), ...(b.a || [])].forEach((x) => (out[x.element] = (out[x.element] || 0) + x.value));
   });
   return out;

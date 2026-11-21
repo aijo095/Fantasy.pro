@@ -8,7 +8,7 @@ import { ST, PM, tShort } from '../store.js';
 import { tt, t } from '../i18n.js';
 import { esc, I, fmt, LS, crest } from '../ui.js';
 import * as FPL from '../fpl.js';
-import { liveCalc } from '../live-engine.js';
+import { liveCalc, fxStats } from '../live-engine.js';
 import { liveRankEstimate } from '../predict.js';
 import { pShirt } from './common.js';
 
@@ -116,7 +116,7 @@ const playing = (p) => liveFx().some((f) => f.h === p.team || f.a === p.team);
 const ago = (ts) => { const s = Math.round((Date.now() - ts) / 1000); return s < 60 ? tt('هسة', 'now') : s < 3600 ? tt(`قبل ${Math.round(s / 60)} د`, `${Math.round(s / 60)}m`) : tt(`قبل ${Math.round(s / 3600)} س`, `${Math.round(s / 3600)}h`); };
 function bpsRank(id) {
   const p = PM(id); const f = liveFx().find((x) => x.h === p.team || x.a === p.team); if (!f) return null;
-  const b = (f.stats || []).find((s) => s.identifier === 'bps'); if (!b) return null;
+  const b = fxStats(f, ST.G.cur).find((s) => s.identifier === 'bps'); if (!b) return null;
   const all = [...(b.h || []), ...(b.a || [])].sort((x, y) => y.value - x.value), i = all.findIndex((x) => x.element === id);
   return i >= 0 && i < 3 ? i + 1 : null;
 }

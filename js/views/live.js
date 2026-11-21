@@ -6,7 +6,7 @@ import * as FPL from '../fpl.js';
 import { scanLive } from '../notify.js';
 import { pShirt } from './common.js';
 import { liveTeamPoints } from './home.js';
-import { liveCalc, rankImpact, whatIf, WHATIF } from '../live-engine.js';
+import { liveCalc, rankImpact, whatIf, WHATIF, fxStats } from '../live-engine.js';
 import { liveRankEstimate } from '../predict.js';
 
 let gwSel = null, gwUser = false, poll = null, lastFetch = 0;
@@ -29,6 +29,7 @@ async function refreshLive(force = false) {
     try { if (ST.live && ST.liveRawGW === g && ST.E?.picks) { const ev = []; ST.E.picks.picks.forEach((pk) => { const a = ST.live[pk.element], b = next[pk.element]; if (!a || !b) return; const d = (k) => (b[k] || 0) - (a[k] || 0); if (d('goals_scored') > 0) ev.push({ id: pk.element, k: 'goal' }); if (d('assists') > 0) ev.push({ id: pk.element, k: 'assist' }); if (d('red_cards') > 0) ev.push({ id: pk.element, k: 'red' }); else if (d('yellow_cards') > 0) ev.push({ id: pk.element, k: 'yellow' }); if (d('bonus') > 0) ev.push({ id: pk.element, k: 'bonus', n: d('bonus') }); if (d('penalties_saved') > 0) ev.push({ id: pk.element, k: 'save' }); if (d('own_goals') > 0 || d('penalties_missed') > 0) ev.push({ id: pk.element, k: 'bad' }); { const pp = PM(pk.element); if (pp && (pp.pos === 'GK' || pp.pos === 'DEF') && d('goals_conceded') > 0 && !(a.goals_conceded > 0) && (b.minutes || 0) >= 1) ev.push({ id: pk.element, k: 'leak' }); } const dp = d('total_points'); if (dp) ev.push({ id: pk.element, k: 'pts', n: dp * Math.max(1, pk.multiplier || 1) }); }); if (ev.length) setTimeout(() => window.__fxEvents?.(ev), 400); } } catch {}
     if (ST.liveRawGW === g) window.__pulseDiff?.(ST.live, next);
     ST.live = next; ST.liveRaw = l.elements; ST.liveRawGW = g; ST.G.fx[g] = fxNorm; lastFetch = Date.now(); freshness();
+    mcTick(g); // صفحة المباراة المفتوحة تتحدّث فوراً مع كل تحديث (مو كل 20 ثانية)
     if (Date.now() - (window.__entryAt || 0) > 110e3) { window.__entryAt = Date.now(); FPL.fetchEntry(ST.profile.teamId, true).then((en) => { if (en?.id) ST.E.entry = { ...ST.E.entry, ...en }; }).catch(() => {}); }
     if (!document.querySelector('.ov') && ['live', 'home', 'team', 'season', 'pulse'].includes(ST.view)) window.render();
   } catch (e) { if (force && Date.now() - liveErrAt > 60e3) { liveErrAt = Date.now(); toast(e.message); } } finally { liveBusy = false; }
@@ -131,6 +132,11 @@ window.wiSet = (id) => { wiP = id; window.openWhatIf(); };
    · البونص ونقاط BPS · المساهمات الدفاعية · ترتيب نقاط الفانتازي بالمباراة · لاعبينك
 ========================================================= */
 const mcLive = {}; let mcTimer = 0;
+function mcTick(g) {
+  const el = document.getElementById('mcBody'); if (!el) return;
+  const fid = +el.dataset.fid, f = (ST.G.fx[g] || []).find((x) => x.id === fid); if (!f) return;
+  mcLive[g] = ST.live; morphHTML(el, mcBody(f, g));
+}
 const DCT = (id) => ({ DEF: 10, MID: 12, FWD: 12 })[PM(id)?.pos] || 99;
 const nmOf = (id) => esc(PM(id)?.name || '#' + id);
 /* ---------- مركز المباراة بالتصميم الجديد : كل لاعب بعمود فريقه بكل الخانات ---------- */
@@ -191,7 +197,8 @@ function mc2(f, ev, st, L, live) {
 window.mc2Focus = (b, s) => { mc2F = s; const m = b.closest('.m2'); m.dataset.f = s; m.querySelectorAll('.m2head button').forEach((x) => x.classList.toggle('on', x === b)); };
 
 function mcBody(f, ev) {
-  const st = (k) => f.stats.find((x) => x.identifier === k) || { h: [], a: [] };
+  const FS = fxStats(f, ev); // أحداث المباراة من أحدث بيانات الفانتازي المباشرة
+  const st = (k) => FS.find((x) => x.identifier === k) || { h: [], a: [] };
   const KH = KITS[tShort(f.h)]?.b || '#334155', KA = KITS[tShort(f.a)]?.b || '#334155';
   const L = mcLive[ev], live = f.started && !f.fin;
   const status = !f.started ? `<span class="mc-ko">${f.ko ? new Date(f.ko).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : 'VS'}</span>` : live ? `<span class="mc-live${isHT(f) ? ' ht' : ''}"><i></i>${fxMin(f)}</span>` : `<span class="mc-ft">${tt('انتهت', 'Full time')}</span>`;
@@ -375,7 +382,7 @@ async function openMatchC(fid, ev) {
   if (ev === ST.G.cur && ST.live && ST.liveRawGW === ev) mcLive[ev] = ST.live;
   openSheet(`<div class="mc-head"><span>${t('gw')} ${ev} · ${fmtTime(f.ko)}</span><button class="icon-btn" onclick="closeSheet()" aria-label="close">${I('i-x')}</button></div><div id="mcBody" data-fid="${f.id}">${mcBody(f, ev)}</div>`);
   if (f.started || (f.ko && new Date(f.ko) - Date.now() < 90 * 60e3)) loadLU(f, ev);
-  clearInterval(mcTimer); mcTimer = setInterval(async () => { const el = document.getElementById('mcBody'); if (!el || el.dataset.fid != f.id) return clearInterval(mcTimer); const ff = (ST.G.fx[ev] || []).find((x) => x.id === fid) || f; if (!(ff.started && !ff.fin) || document.hidden) return; try { const l = await FPL.loadLive(ev, true); mcLive[ev] = Object.fromEntries(l.elements.map((x) => [x.id, x.stats])); } catch {} loadLU(ff, ev, true); const e2 = document.getElementById('mcBody'); if (e2 && e2.dataset.fid == f.id) morphHTML(e2, mcBody(ff, ev)); }, 20e3);
+  clearInterval(mcTimer); mcTimer = setInterval(async () => { const el = document.getElementById('mcBody'); if (!el || el.dataset.fid != f.id) return clearInterval(mcTimer); const ff = (ST.G.fx[ev] || []).find((x) => x.id === fid) || f; if (!(ff.started && !ff.fin) || document.hidden) return; if (ev === ST.G.cur && liveMode() && Date.now() - lastFetch < 15e3) return; try { const l = await FPL.loadLive(ev, true); mcLive[ev] = Object.fromEntries(l.elements.map((x) => [x.id, x.stats])); } catch {} loadLU(ff, ev, true); const e2 = document.getElementById('mcBody'); if (e2 && e2.dataset.fid == f.id) morphHTML(e2, mcBody(ff, ev)); }, 20e3);
   if (f.started && (!mcLive[ev] || ev === ST.G.cur)) {
     try { const l = await FPL.loadLive(ev); mcLive[ev] = Object.fromEntries(l.elements.map((x) => [x.id, x.stats])); const el = document.getElementById('mcBody'); if (el && el.dataset.fid == f.id) morphHTML(el, mcBody(f, ev)); } catch {}
   }
