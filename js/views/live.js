@@ -397,16 +397,22 @@ function lu2DemoFill(fx) {
   });
 }
 function lu2Fetch(f, done) {
-  const c = LU[f.id]; if (c?.busy || (c && Date.now() - c.at < 45e3)) return;
+  const c = LU[f.id]; if (c?.busy || (c && Date.now() - c.at < 25e3)) return;
   LU[f.id] = { ...(c || {}), busy: true };
   fetch(`/api/lineups?ko=${encodeURIComponent(f.ko)}&h=${tShort(f.h)}&a=${tShort(f.a)}&v=2`).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((d) => {
     const had = luHas(f); LU[f.id] = { d: d?.sides && Object.keys(d.sides).length ? d : c?.d || null, at: Date.now() };
     if (luHas(f) !== had || !had) done && done();
   });
 }
+// إشعار تشكيلة وصل والتطبيق مفتوح: نجيبها فوراً بدل ما ننتظر الدورة الجاية
+if (typeof window !== 'undefined') window.addEventListener('fp-push', (e) => {
+  if (!/^lu_/.test(e.detail?.tag || '')) return;
+  Object.keys(LU).forEach((k) => { if (LU[k] && !LU[k].d) delete LU[k]; else if (LU[k]) LU[k].at = 0; });
+  if (ST.view === 'live') (ST.G.fx[gwSel] || []).filter((f) => luWin(f) && luPre(f)).forEach((f) => lu2Fetch(f, () => { if (ST.view === 'live') window.render(); }));
+});
 function lu2Poll() {
   const run = () => { if (ST.view !== 'live') return clearInterval(window.__lu2T); if (LU2DEMO()) return; (ST.G.fx[gwSel] || []).filter((f) => luWin(f) && luPre(f)).forEach((f) => lu2Fetch(f, () => { if (ST.view === 'live') window.render(); })); };
-  run(); clearInterval(window.__lu2T); window.__lu2T = setInterval(() => { if (!document.hidden) run(); }, 60e3);
+  run(); clearInterval(window.__lu2T); window.__lu2T = setInterval(() => { if (!document.hidden) run(); }, 30e3);
 }
 function lu2Section(fx, ev) {
   if (LU2DEMO()) lu2DemoFill(fx);

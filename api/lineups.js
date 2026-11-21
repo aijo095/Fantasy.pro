@@ -35,7 +35,7 @@ export async function getLineup(ko, h, a) {
       ev = (sb?.events || []).find((e) => { const c = e.competitions?.[0]?.competitors || []; const hh = c.find((x) => x.homeAway === 'home')?.team?.abbreviation, aa = c.find((x) => x.homeAway === 'away')?.team?.abbreviation; return hh === H && aa === A; });
       if (ev) break;
     }
-    if (!ev) return { code: 404, d: { error: 'not found' }, ttl: 300 };
+    if (!ev) return { code: 404, d: { error: 'not found' }, ttl: 60 };
     const s = await get(`summary?event=${ev.id}`);
     const state = ev.status?.type?.state; // pre | in | post
     const sides = {};
@@ -72,7 +72,9 @@ export async function getLineup(ko, h, a) {
       return null;
     }).filter(Boolean);
     const d = { event: ev.id, state, sides, subs, pens, at: Date.now() };
-    const ttl = state === 'post' ? 86400 : state === 'in' ? 60 : 300;
+    // قبل المباراة: إذا التشكيلة بعدها ما انعلنت نعيد الفحص كل 30 ثانية حتى تبين أول ما تنعلن، وإذا انعلنت تنحفظ 10 دقايق
+    const ready = ['h', 'a'].every((k) => (sides[k]?.players || []).filter((p) => p.starter).length >= 11);
+    const ttl = state === 'post' ? 86400 : state === 'in' ? 60 : ready ? 600 : 30;
     memo.set(key, { d, exp: Date.now() + ttl * 1000, ttl });
     if (memo.size > 200) memo.delete(memo.keys().next().value);
     return { code: 200, d, ttl };
