@@ -534,15 +534,23 @@ html.ui2 #toast{bottom:calc(96px + env(safe-area-inset-bottom,0px) * .5)}
 .sy-px b{font-size:13.5px}.sy-px span{font-size:13px;font-weight:800}
 .sy-px small{grid-column:1/-1;font-size:11px;color:var(--v4-ink3)}
 .sy-px .sy-mb{grid-column:1/-1;margin-top:2px}
-.sy-ctb{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
-.sy-ctb li{display:grid;grid-template-columns:84px 1fr auto;align-items:center;gap:10px}
-.sy-ctb b{font-size:13px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.sy-ctbar{position:relative;height:9px;border-radius:9px;background:rgba(255,255,255,.06)}
-.sy-ctbar i{position:absolute;inset:0 0 0 auto;width:var(--w);border-radius:9px;background:var(--c);transform-origin:right}
+.sy-leg{display:flex;gap:14px;font-size:11.5px;color:var(--v4-ink2);margin:-4px 0 12px}
+.sy-leg span{display:inline-flex;align-items:center;gap:5px}
+.sy-leg i{width:9px;height:9px;border-radius:3px}.sy-leg i.g{background:var(--c-mint)}.sy-leg i.a{background:var(--c-sky)}
+.sy-leg s{width:2px;height:11px;background:var(--v4-ink);border-radius:2px}
+.sy-ctb{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.sy-cth{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.sy-cth b{font-size:13.5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.sy-ctn{display:flex;gap:6px}
+.sy-ctn em{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px}
+.sy-ctn em .sy-ic{width:13px;height:13px}
+.sy-ctn em.g{color:var(--c-mint);background:color-mix(in srgb,var(--c-mint) 12%,transparent)}
+.sy-ctn em.a{color:var(--c-sky);background:color-mix(in srgb,var(--c-sky) 12%,transparent)}
+.sy-ctbar{position:relative;display:flex;gap:2px;height:8px;border-radius:8px;background:rgba(255,255,255,.06)}
+.sy-ctbar i{display:block;height:100%;width:var(--w);border-radius:8px;transform-origin:right}
+.sy-ctbar i.g{background:var(--c-mint)}.sy-ctbar i.a{background:var(--c-sky)}
 .sy-sl.on .sy-ctbar i{animation:syBarX .9s .2s var(--v4-ease) both}
-.sy-ctbar s{position:absolute;top:-3px;bottom:-3px;right:var(--x);width:2px;background:var(--v4-ink);border-radius:2px;opacity:.8}
-.sy-ctn{display:flex;flex-direction:column;align-items:flex-end;font-size:16px;font-weight:900;line-height:1.1}
-.sy-ctn small{font-size:10px;color:var(--v4-ink3);font-weight:600}
+.sy-ctbar s{position:absolute;top:-3px;bottom:-3px;right:var(--x);width:2px;background:var(--v4-ink);border-radius:2px;opacity:.85}
 .sy-note .sy-ic{width:15px;height:15px;vertical-align:-3px;color:var(--c)}
 @media (prefers-reduced-motion:reduce){.sy *,.sy-sl{animation:none!important;transition:none!important;filter:none!important}.sy-prog .cur i{transform:scaleX(.5)}}
 .sy-dot.best{fill:var(--v4-s1);stroke:var(--c-gold);stroke-width:2}
@@ -558,7 +566,8 @@ html.ui2 #toast{bottom:calc(96px + env(safe-area-inset-bottom,0px) * .5)}
 .sy-fx{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .sy-fx .sy-f{display:inline-flex;flex-direction:column;padding:7px 10px;border-radius:12px;font-size:12.5px;font-weight:700;background:rgba(255,255,255,.04);border-inline-start:3px solid var(--v4-ink3)}
 .sy-fx .sy-f small{font-size:10.5px;font-weight:500;color:var(--v4-ink2)}
-.sy-fx .f1,.sy-fx .f2{border-color:var(--c-mint)}.sy-fx .f3{border-color:var(--v4-ink3)}.sy-fx .f4{border-color:var(--c-peach)}.sy-fx .f5{border-color:var(--c-coral)}
+.sy-fx .sy-f{color:var(--v4-ink);background:rgba(255,255,255,.045)}.sy-fx .sy-f small{color:var(--v4-ink2);font-size:11px}
+.sy-fx .sy-d1,.sy-fx .sy-d2{border-color:var(--c-mint)}.sy-fx .sy-d3{border-color:var(--v4-ink3)}.sy-fx .sy-d4{border-color:var(--c-peach)}.sy-fx .sy-d5{border-color:var(--c-coral)}
 .sy-note.up{color:var(--c-mint)!important}.sy-note.dn{color:var(--c-coral)!important}
 .sy-hh{list-style:none;margin:6px 0 4px;padding:0;display:flex;flex-direction:column;gap:6px}
 .sy-hh li{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid var(--v4-line)}

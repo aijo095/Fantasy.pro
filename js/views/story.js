@@ -334,7 +334,7 @@ function sNext() {
   const dbl = R.filter((x) => x.f.length > 1), blank = R.filter((x) => !x.f.length), avgF = R.filter((x) => x.f.length).map((x) => x.f[0].fdr);
   const easy = R.filter((x) => x.f.length && x.f[0].fdr <= 2).sort((a, b) => xp(b.p, g) - xp(a.p, g));
   const hard = R.filter((x) => x.f.length && x.f[0].fdr >= 4);
-  const chip = (x) => `<span class="sy-f f${x.f[0]?.fdr || 0}">${esc(x.p.name)}<small>${x.f.map((f) => `${esc(tShort(f.opp))}${f.home ? '' : tt('(برا)', '(A)')}`).join(' + ')}</small></span>`;
+  const chip = (x) => `<span class="sy-f sy-d${x.f[0]?.fdr || 0}">${esc(x.p.name)}<small>${x.f.map((f) => `${tt('ضد', 'vs')} <bdi dir="ltr">${esc(tShort(f.opp))}</bdi> ${f.home ? tt('بأرضه', '(H)') : tt('برا', '(A)')}`).join(' + ')}</small></span>`;
   return { k: 'nx', col: 'var(--c-gold)', ic: 'clock', h: tt(`مباريات تشكيلتك بالجولة ${g}`, `Your XI fixtures GW ${g}`), sub: avgF.length ? tt(`معدل الصعوبة ${(avgF.reduce((a, b) => a + b, 0) / avgF.length).toFixed(1)} من 5`, `Avg difficulty ${(avgF.reduce((a, b) => a + b, 0) / avgF.length).toFixed(1)}/5`) : '', to: "go('team')", toL: tt('فريقي', 'My team'),
     body: `${easy.length ? `<p class="sy-note">${tt('مباريات سهلة', 'Easy fixtures')} · ${N(easy.length)}</p><div class="sy-fx">${easy.slice(0, 4).map(chip).join('')}</div>` : ''}
       ${hard.length ? `<p class="sy-note">${tt('مباريات صعبة', 'Tough fixtures')} · ${N(hard.length)}</p><div class="sy-fx">${hard.slice(0, 3).map(chip).join('')}</div>` : ''}
@@ -356,8 +356,9 @@ function sContrib() {
   const A = sq.filter((p) => p.pos !== 'GK').map((p) => ({ p, gi: (p.gls || 0) + (p.ast || 0), x: p.xgi || 0 })).sort((a, b) => b.gi - a.gi || b.x - a.x).slice(0, 4);
   const dcTop = sq.filter((p) => p.pos === 'DEF' || p.pos === 'MID').sort((a, b) => (b.dc || 0) - (a.dc || 0))[0];
   const mx = Math.max(1, ...A.map((a) => Math.max(a.gi, a.x)));
-  return { k: 'ct', col: 'var(--c-sky)', ic: 'star', h: tt('مساهمات لاعبينك', 'Your players’ output'), sub: tt('أهداف + صناعات بالموسم، والخط = المتوقع', 'Goals + assists, line = expected'), to: "go('players')", toL: tt('إحصاءات اللاعبين', 'Player stats'),
-    body: `<ul class="sy-ctb">${A.map((a, i) => `<li style="--d:${80 + i * 70}ms"><b>${esc(a.p.name)}</b><span class="sy-ctbar"><i style="--w:${(a.gi / mx) * 100}%"></i><s style="--x:${(a.x / mx) * 100}%"></s></span><span class="sy-ctn">${N(a.gi)}<small>${N(a.p.gls || 0)}+${N(a.p.ast || 0)}</small></span></li>`).join('')}</ul>
+  return { k: 'ct', col: 'var(--c-sky)', ic: 'star', h: tt('مساهمات لاعبينك', 'Your players’ output'), sub: tt('مجموع الموسم لكل لاعب', 'Season totals'), to: "go('players')", toL: tt('إحصاءات اللاعبين', 'Player stats'),
+    body: `<div class="sy-leg"><span><i class="g"></i>${tt('أهداف', 'Goals')}</span><span><i class="a"></i>${tt('صناعات', 'Assists')}</span><span><s></s>${tt('المتوقع', 'Expected')}</span></div>
+      <ul class="sy-ctb">${A.map((a, i) => `<li style="--d:${80 + i * 70}ms"><div class="sy-cth"><b>${esc(a.p.name)}</b><span class="sy-ctn"><em class="g">${ic('ball')}${N(a.p.gls || 0)} ${tt('هدف', 'G')}</em><em class="a">${ic('boot')}${N(a.p.ast || 0)} ${tt('صناعة', 'A')}</em></span></div><span class="sy-ctbar"><i class="g" style="--w:${((a.p.gls || 0) / mx) * 100}%"></i><i class="a" style="--w:${((a.p.ast || 0) / mx) * 100}%"></i><s style="--x:${(a.x / mx) * 100}%"></s></span></li>`).join('')}</ul>
       ${dcTop?.dc ? `<p class="sy-note">${ic('shield')} ${tt(`أكثر مساهمات دفاعية: ${esc(dcTop.name)} (${dcTop.dc})`, `Top defensive contributions: ${esc(dcTop.name)} (${dcTop.dc})`)}</p>` : ''}` };
 }
 
