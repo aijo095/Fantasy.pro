@@ -2,7 +2,7 @@
 import { runChecks } from './check.js';
 import { ST, PM, tShort } from '../store.js';
 import { t, tt } from '../i18n.js';
-import { esc, I, fmt, fmtTime } from '../ui.js';
+import { esc, I, fmt, fmtTime, LS, openSheet, sheetHead } from '../ui.js';
 import { projected, analyze, captainRank, suggestions, xp, avail, dgwBgw, fixturesFor } from '../engine.js';
 import * as FPL from '../fpl.js';
 import { upcoming } from '../fpl.js';
@@ -10,6 +10,7 @@ import { pShirt } from './common.js';
 import { pricePredict, liveRankEstimate } from '../predict.js';
 import { officialRank } from '../store.js';
 import { liveCalc, rankImpact } from '../live-engine.js';
+import { tip } from '../tips.js';
 
 let cdT = null;
 function tick() {
@@ -79,6 +80,29 @@ export function vHome() {
 }
 /* ---------- الرئيسية المرتبة ---------- */
 const HOME2 = () => true; // صارت للكل
+/* تخصيص الرئيسية: ترتيب البطاقات وإخفاؤها، ينحفظ على الجهاز */
+const HKEYS = ['moves', 'ask', 'recent', 'leagues', 'news'];
+const HLBL = () => ({ moves: tt('خطوتك الجاية', 'Next moves'), ask: tt('اسأل المساعد', 'Ask assistant'), recent: tt('آخر الجولات', 'Recent GWs'), leagues: tt('دورياتك', 'Your leagues'), news: tt('أخبار لاعبينك', 'Player news') });
+const homeCfg = () => { const c = LS.get('fp_home_layout', null) || {}; const o = (c.order || []).filter((k) => HKEYS.includes(k)); return { order: [...o, ...HKEYS.filter((k) => !o.includes(k))], hidden: (c.hidden || []).filter((k) => HKEYS.includes(k)) }; };
+const homeOrder = () => homeCfg().order, homeHidden = () => homeCfg().hidden;
+/* الأوامر السريعة: تتغير حسب حالة الجولة (مباشر / قبل الإغلاق) */
+function quickCmd() {
+  const G = ST.G, ce = G.events.find((e) => e.id === G.cur), live = ce && new Date(ce.deadline) < new Date() && !ce.fin && !ce.checked, L = live
+    ? [['i-live', tt('نقاطي المباشرة', 'Live points'), "go('team');teamTab('live')"], ['i-activity', tt('نبض الجولة', 'GW pulse'), "go('pulse')"], ['i-trophy', tt('الدوريات', 'Leagues'), "go('leagues')"], ['i-cal', tt('المباريات', 'Fixtures'), "go('live')"]]
+    : [['i-pitch', tt('تشكيلتي', 'My XI'), "go('team');teamTab('pitch')"], ['i-star', tt('الكابتن', 'Captain'), "go('captains')"], ['i-swap', tt('انتقال', 'Transfer'), "go('market')"], ['i-check', tt('فحص الفريق', 'Team check'), "go('check')"], ['i-layers', tt('المحاكي', 'Simulator'), "go('planner')"]];
+  return `<div class="qc" role="toolbar" aria-label="${tt('أوامر سريعة', 'Quick actions')}">${L.map(([ic, l, a]) => `<button onclick="${a}">${I(ic, 'i')}<span>${l}</span></button>`).join('')}</div>`;
+}
+window.homeCustomize = () => {
+  const c = homeCfg(), L = HLBL();
+  openSheet(`${sheetHead(I('i-settings'), tt('رتّب الرئيسية', 'Customize home'), tt('اختار شنو يطلع وبأي ترتيب', 'Choose what shows and in which order'))}
+    <div class="hc">${c.order.map((k, i) => `<div class="hc-r ${c.hidden.includes(k) ? 'off' : ''}"><button class="hc-t" onclick="homeToggle('${k}')" aria-pressed="${!c.hidden.includes(k)}"><i></i></button><b>${L[k]}</b><button class="hc-m" ${i ? '' : 'disabled'} onclick="homeMove('${k}',-1)" aria-label="${tt('لفوق', 'Up')}">▲</button><button class="hc-m" ${i < c.order.length - 1 ? '' : 'disabled'} onclick="homeMove('${k}',1)" aria-label="${tt('لجوة', 'Down')}">▼</button></div>`).join('')}</div>
+    <button class="btn btn-g btn-b" style="margin-top:12px;width:100%" onclick="homeReset()">${tt('رجّع الترتيب الأصلي', 'Reset')}</button>`);
+};
+const homeSave = (c) => { LS.set('fp_home_layout', c); window.render(); window.homeCustomize(); };
+window.homeToggle = (k) => { const c = homeCfg(); c.hidden = c.hidden.includes(k) ? c.hidden.filter((x) => x !== k) : [...c.hidden, k]; homeSave(c); };
+window.homeMove = (k, d) => { const c = homeCfg(), i = c.order.indexOf(k), j = i + d; if (j < 0 || j >= c.order.length) return; [c.order[i], c.order[j]] = [c.order[j], c.order[i]]; homeSave(c); };
+window.homeReset = () => { LS.set('fp_home_layout', {}); window.render(); window.homeCustomize(); };
+
 function vHome2() {
   const { G, E, plan } = ST, en = E.entry, hist = E.hist.current || [], last = hist[hist.length - 1];
   const ev = G.events.find((e) => e.id === G.cur), livePts = liveTeamPoints();
@@ -92,6 +116,17 @@ function vHome2() {
   try { const C = runChecks(), bad = C.filter((c) => c.lvl === 'bad').length, warn = C.filter((c) => c.lvl === 'warn').length;
     if (bad || warn) ck = `<button class="h2-ck ${bad ? 'bad' : 'warn'}" onclick="go('check')">${I('i-alert', 'i')}<span>${bad ? tt(`${bad} مشاكل بفريقك قبل الإغلاق`, `${bad} issues before deadline`) : tt(`${warn} تنبيهات بفريقك`, `${warn} warnings`)}</span>${I('i-chev', 'chev')}</button>`; } catch {}
   const stat = (lbl, val, sub = '') => `<div class="h2-st"><small>${lbl}</small><b class="num">${val}</b>${sub}</div>`;
+  const HB = {
+    moves: () => `${A.length ? `<h3 class="h2-h">${tt('خطوتك الجاية', 'Your next moves')}</h3>
+    <div class="h2-list">${A.map((x) => `<button class="h2-act" ${x.b ? `onclick="${x.b[1]}"` : 'disabled'}><span class="h2-ic" style="--c:${x.col}">${I(x.ok ? 'i-check' : x.ic, 'i')}</span><span class="h2-tx"><b>${x.h}</b><small>${x.d}</small></span>${x.b ? `<em>${x.b[0]}</em>` : ''}</button>`).join('')}</div>` : ''}`,
+    ask: () => `<button class="h2-ask" onclick="go('search')">${I('i-sparkle', 'i')}<span>${tt('اسأل المساعد: منو أكابتن؟ شنو أبيع؟', 'Ask: who to captain? who to sell?')}</span></button>`,
+    recent: () => `<div class="h2-hrow"><h3 class="h2-h">${tt('آخر الجولات', 'Recent gameweeks')}</h3><button onclick="go('season')">${t('season')}${I('i-chev', 'chev')}</button></div>
+    <div class="h2-card"><div class="h2-chart" dir="ltr">${recent.map((h) => { const a = G.events.find((e) => e.id === h.event)?.avg || 0, up = h.points >= a; return `<button onclick="seasonGo(${h.event})" aria-label="GW${h.event}"><span class="v num">${h.points}</span><span class="bar"><i class="${up ? 'up' : ''}" style="height:${Math.max(4, (h.points / mx) * 100)}%"></i><s style="bottom:${(a / mx) * 100}%"></s></span><span class="g num">${h.event}</span></button>`; }).join('')}</div>
+      <div class="h2-leg"><span><i class="up"></i>${tt('فوق المعدل', 'Above avg')}</span><span><i></i>${tt('تحت المعدل', 'Below avg')}</span><span><s></s>${tt('معدل الجولة', 'GW average')}</span></div></div>`,
+    leagues: () => `${priv.length ? `<div class="h2-hrow"><h3 class="h2-h">${t('leagues')}</h3><button onclick="go('leagues')">${tt('الكل', 'All')}${I('i-chev', 'chev')}</button></div>
+    <div class="h2-card h2-lg">${priv.slice(0, 3).map((l) => `<button onclick="go('leagues')"><b class="num">${fmt(l.entry_rank)}</b><span><span class="n">${esc(l.name)}</span><small>${tt('من', 'of')} ${fmt(l.rank_count)}</small></span>${l.entry_last_rank && l.entry_rank !== l.entry_last_rank ? `<em class="${l.entry_rank < l.entry_last_rank ? 'up' : 'down'}">${l.entry_rank < l.entry_last_rank ? '▲' : '▼'} ${Math.abs(l.entry_last_rank - l.entry_rank)}</em>` : ''}</button>`).join('')}</div>` : ''}`,
+    news: () => `${news.length ? `<h3 class="h2-h">${tt('أخبار لاعبينك', 'Your player news')}</h3><div class="h2-card h2-nw">${news.slice(0, 4).map((p) => `<button onclick="openPlayer(${p.id})"><span class="mini">${pShirt(p)}</span><span><b>${esc(p.name)}</b><small>${esc(p.news)}</small></span></button>`).join('')}</div>` : ''}`
+  };
   return `<div class="h2">
     ${ck}
     <section class="h2-hero"><span class="gw-mark" aria-hidden="true">${G.cur}</span>
@@ -107,19 +142,10 @@ function vHome2() {
 
     <button class="h2-dl" onclick="go('team')">${I('i-clock', 'i')}<span class="h2-dlt" id="cdLbl">${t('deadline')} ${t('gw')} ${U.gw ?? '—'}<small>${fmtTime(U.deadline)}</small></span><div class="cd h2-cd" id="cd"></div></button>
 
-    ${A.length ? `<h3 class="h2-h">${tt('خطوتك الجاية', 'Your next moves')}</h3>
-    <div class="h2-list">${A.map((x) => `<button class="h2-act" ${x.b ? `onclick="${x.b[1]}"` : 'disabled'}><span class="h2-ic" style="--c:${x.col}">${I(x.ok ? 'i-check' : x.ic, 'i')}</span><span class="h2-tx"><b>${x.h}</b><small>${x.d}</small></span>${x.b ? `<em>${x.b[0]}</em>` : ''}</button>`).join('')}</div>` : ''}
-
-    <button class="h2-ask" onclick="go('search')">${I('i-sparkle', 'i')}<span>${tt('اسأل المساعد: منو أكابتن؟ شنو أبيع؟', 'Ask: who to captain? who to sell?')}</span></button>
-
-    <div class="h2-hrow"><h3 class="h2-h">${tt('آخر الجولات', 'Recent gameweeks')}</h3><button onclick="go('season')">${t('season')}${I('i-chev', 'chev')}</button></div>
-    <div class="h2-card"><div class="h2-chart" dir="ltr">${recent.map((h) => { const a = G.events.find((e) => e.id === h.event)?.avg || 0, up = h.points >= a; return `<button onclick="seasonGo(${h.event})" aria-label="GW${h.event}"><span class="v num">${h.points}</span><span class="bar"><i class="${up ? 'up' : ''}" style="height:${Math.max(4, (h.points / mx) * 100)}%"></i><s style="bottom:${(a / mx) * 100}%"></s></span><span class="g num">${h.event}</span></button>`; }).join('')}</div>
-      <div class="h2-leg"><span><i class="up"></i>${tt('فوق المعدل', 'Above avg')}</span><span><i></i>${tt('تحت المعدل', 'Below avg')}</span><span><s></s>${tt('معدل الجولة', 'GW average')}</span></div></div>
-
-    ${priv.length ? `<div class="h2-hrow"><h3 class="h2-h">${t('leagues')}</h3><button onclick="go('leagues')">${tt('الكل', 'All')}${I('i-chev', 'chev')}</button></div>
-    <div class="h2-card h2-lg">${priv.slice(0, 3).map((l) => `<button onclick="go('leagues')"><b class="num">${fmt(l.entry_rank)}</b><span><span class="n">${esc(l.name)}</span><small>${tt('من', 'of')} ${fmt(l.rank_count)}</small></span>${l.entry_last_rank && l.entry_rank !== l.entry_last_rank ? `<em class="${l.entry_rank < l.entry_last_rank ? 'up' : 'down'}">${l.entry_rank < l.entry_last_rank ? '▲' : '▼'} ${Math.abs(l.entry_last_rank - l.entry_rank)}</em>` : ''}</button>`).join('')}</div>` : ''}
-
-    ${news.length ? `<h3 class="h2-h">${tt('أخبار لاعبينك', 'Your player news')}</h3><div class="h2-card h2-nw">${news.slice(0, 4).map((p) => `<button onclick="openPlayer(${p.id})"><span class="mini">${pShirt(p)}</span><span><b>${esc(p.name)}</b><small>${esc(p.news)}</small></span></button>`).join('')}</div>` : ''}
+    ${quickCmd()}
+    ${homeOrder().filter((k) => HB[k] && !homeHidden().includes(k)).map((k) => `<div class="hb" data-blk="${k}">${HB[k]()}</div>`).join('')}
+    ${tip('home', tt('جديد: تكدر ترتب بطاقات الرئيسية وتخفي اللي ما تحتاجه من زر "رتّب الرئيسية" بالأسفل.', 'New: customize your home.'))}
+    <button class="hb-edit" onclick="homeCustomize()">${I('i-settings', 'i')}${tt('رتّب الرئيسية', 'Customize home')}</button>
     <div class="updated">${t('updated')}: ${fmtTime(new Date(ST.G.fetchedAt).toISOString())}</div>
   </div>`;
 }

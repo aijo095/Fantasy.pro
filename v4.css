@@ -320,3 +320,48 @@ html.ui2 #toast{bottom:calc(96px + env(safe-area-inset-bottom,0px) * .5)}
 .jrs-g{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:14px}
 .jrs-g b{font-size:13px}.jrs-g em{font-style:normal;font-size:11px}
 .jrs-g div[onclick]{cursor:pointer}
+
+/* الأوامر السريعة + تخصيص الرئيسية */
+.qc{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:14px -2px 4px;padding:2px}
+.qc::-webkit-scrollbar{display:none}
+.qc button{flex:none;display:flex;align-items:center;gap:7px;height:42px;padding:0 14px;border-radius:999px;background:var(--v4-s1,#151916);border:1px solid rgba(255,255,255,.07);font-size:12.5px;font-weight:700;color:var(--txt);transition:transform .14s cubic-bezier(.22,1,.36,1)}
+.qc button:active{transform:scale(.95)}.qc button .i{width:17px;height:17px;color:var(--acc)}
+.hb-edit{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin:18px 0 4px;height:42px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--mut);border:1px dashed rgba(255,255,255,.12)}
+.hb-edit .i{width:15px;height:15px}
+.hc{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.hc-r{display:grid;grid-template-columns:48px 1fr 38px 38px;align-items:center;gap:8px;padding:8px 10px;border-radius:16px;background:rgba(255,255,255,.04)}
+.hc-r.off b{opacity:.45}
+.hc-t{width:44px;height:26px;border-radius:99px;background:var(--acc);position:relative;transition:background .2s}
+.hc-t i{position:absolute;top:3px;inset-inline-start:3px;width:20px;height:20px;border-radius:50%;background:#0A0D0B;transition:inset-inline-start .2s}
+.hc-r:not(.off) .hc-t i{inset-inline-start:21px}
+.hc-r.off .hc-t{background:rgba(255,255,255,.14)}.hc-r.off .hc-t i{background:#8A93A3}
+.hc-r b{font-size:13.5px}
+.hc-m{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.05);color:var(--mut);font-size:11px}.hc-m:disabled{opacity:.25}
+
+/* عرض القائمة التكتيكية */
+.pv-seg{display:flex;margin:12px 0 10px}.pv-seg button{display:inline-flex;align-items:center;gap:6px}
+.ll{padding:14px 14px 8px}
+.ll-h{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}.ll-h b{font-size:15px}.ll-h small{font-size:11.5px;color:var(--mut)}.ll-h small b{font:700 14px Inter,sans-serif;color:var(--acc)}
+.ll-g{margin-top:10px}.ll-g>small{display:block;font-size:11px;font-weight:700;color:var(--mut);margin:0 4px 4px}
+.ll-r{width:100%;display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:14px;text-align:start}
+.ll-r:active{background:rgba(255,255,255,.04)}.ll-r.b{opacity:.75}
+.ll-r .mini{width:34px;height:34px;flex:none}
+.ll-i{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.ll-i b{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ll-c{font-style:normal;display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;font:800 9.5px Inter,sans-serif;background:#F5C451;color:#111}.ll-c.V{background:rgba(255,255,255,.18);color:var(--txt)}
+.ll-i small{display:flex;gap:4px;align-items:center;font-size:10.5px}.ll-i .rate{padding:1px 6px;border-radius:6px;font:600 10px Inter,sans-serif}
+.ll-no{color:var(--bad)}.ll-a{color:#FFD66E;font-weight:700}
+.ll-v{font:700 15px Inter,sans-serif;min-width:34px;text-align:end}
+
+/* تلميحات الاستخدام الأول */
+.tip{display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px 12px;border-radius:16px;background:rgba(127,230,166,.08);border:1px solid rgba(127,230,166,.22);transition:opacity .2s,transform .2s}
+.tip.out{opacity:0;transform:translateY(-4px)}
+.tip-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 4px rgba(127,230,166,.18)}
+.tip p{flex:1;margin:0;font-size:12px;line-height:1.65}
+.tip button{flex:none;height:30px;padding:0 12px;border-radius:99px;background:var(--acc);color:#0A0D0B;font-size:11.5px;font-weight:800}
+@media (prefers-reduced-motion:no-preference){.tip-dot{animation:tipP 1.8s ease-in-out infinite}}@keyframes tipP{50%{box-shadow:0 0 0 7px rgba(127,230,166,.05)}}
+/* فرز جدول الأندية */
+.cl-hd button{font:inherit;color:inherit;text-align:center;padding:4px 0;border-radius:8px}
+.cl-hd button:nth-of-type(1){text-align:start}
+.cl-hd button.on{color:var(--acc)}
+.cl-hd button.on::after{content:" ▾";font-size:9px}

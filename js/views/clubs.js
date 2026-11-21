@@ -8,7 +8,7 @@ import { tt } from '../i18n.js';
 import { esc, I, crest, scoreHTML, fmtTime } from '../ui.js';
 import { pShirt } from './common.js';
 
-let SEL = null, TAB = 'res', POS = 'ALL', LISTY = 0;
+let SEL = null, TAB = 'res', POS = 'ALL', LISTY = 0, CSORT = 'pts';
 
 /** جدول الترتيب محسوب من المباريات المنتهية */
 function table() {
@@ -26,11 +26,20 @@ function table() {
 const RL = () => ({ W: tt('فوز', 'W'), D: tt('تعادل', 'D'), L: tt('خسارة', 'L') });
 const fchip = (r) => `<i class="cl-f ${r}">${tt({ W: 'ف', D: 'ت', L: 'خ' }[r], r)}</i>`;
 
+/* الفرز حسب العمود (الترتيب الرسمي يبقى رقم المركز) */
+const FV = { W: 3, D: 1, L: 0 };
+function sortRows(R) {
+  if (CSORT === 'pts') return R;
+  const k = { gd: (x) => x.gf - x.ga, gf: (x) => x.gf, form: (x) => x.form.slice(-5).reduce((a, r) => a + FV[r], 0) }[CSORT];
+  return [...R].sort((a, b) => k(b) - k(a) || b.pts - a.pts);
+}
+window.clubSort = (k) => { CSORT = k; window.render(); };
+
 function listHTML(R) {
   return `<div class="sec"><h2>${I('i-list', 'i')}${tt('ترتيب الأندية', 'League table')}</h2></div>
   <div class="card cl-tb">
-    <div class="cl-hd"><span>#</span><span>${tt('النادي', 'Club')}</span><span>${tt('لعب', 'P')}</span><span>${tt('الفرق', 'GD')}</span><span>${tt('نقاط', 'Pts')}</span></div>
-    ${R.map((x, i) => `<button class="cl-r" onclick="clubOpen(${x.id})"><span class="num cl-n">${i + 1}</span><span class="cl-c">${crest(G_short(x.id), 24)}<b>${esc(tName(x.id))}</b><span class="cl-fm">${x.form.slice(-5).reverse().map(fchip).join('')}</span></span><span class="num">${x.p}</span><span class="num" dir="ltr">${x.gf - x.ga > 0 ? '+' : ''}${x.gf - x.ga}</span><b class="num">${x.pts}</b></button>`).join('')}
+    <div class="cl-hd"><span>#</span><button class="${CSORT === 'form' ? 'on' : ''}" onclick="clubSort('form')">${tt('النادي · الفورم', 'Club · form')}</button><button class="${CSORT === 'gf' ? 'on' : ''}" onclick="clubSort('gf')">${tt('سجّل', 'GF')}</button><button class="${CSORT === 'gd' ? 'on' : ''}" onclick="clubSort('gd')">${tt('الفرق', 'GD')}</button><button class="${CSORT === 'pts' ? 'on' : ''}" onclick="clubSort('pts')">${tt('نقاط', 'Pts')}</button></div>
+    ${sortRows(R).map((x) => `<button class="cl-r" onclick="clubOpen(${x.id})"><span class="num cl-n">${R.indexOf(x) + 1}</span><span class="cl-c">${crest(G_short(x.id), 24)}<b>${esc(tName(x.id))}</b><span class="cl-fm">${x.form.slice(-5).reverse().map(fchip).join('')}</span></span><span class="num">${x.gf}</span><span class="num" dir="ltr">${x.gf - x.ga > 0 ? '+' : ''}${x.gf - x.ga}</span><b class="num">${x.pts}</b></button>`).join('')}
   </div>`;
 }
 const G_short = (id) => tShort(id);

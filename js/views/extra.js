@@ -10,6 +10,7 @@ import { esc, I, fmt, toast, openSheet, closeSheet, sheetHead, LS } from '../ui.
 import { xp, xpN, bestXI, fixturesFor, r1 } from '../engine.js';
 import { pricePredict, PRICE_LABEL } from '../predict.js';
 import { pShirt, playerRow, stTag } from './common.js';
+import { tip } from '../tips.js';
 
 const fxNext = (p, n = 3) => { const out = []; for (let g = ST.G.next; g < ST.G.next + n && g <= (ST.G.lastGW || 38); g++) { const f = fixturesFor(p.team, g); out.push(f.length ? f.map((x) => `<i class="fxc f${x.fdr}">${tShort(x.opp)}${x.home ? '' : '<small>@</small>'}</i>`).join('') : '<i class="fxc blank">—</i>'); } return out.join(''); };
 
@@ -107,7 +108,7 @@ const sk = () => `fp_mscen_${ST.profile?.teamId}`;
 const scenList = () => (LS.get(sk()) || []).filter((x) => x.from === ST.G.next);
 function scenHTML(tot, gain, n, hitsAll) {
   const L = scenList(), same = (x) => JSON.stringify(x.moves) === JSON.stringify(MP.moves), best = L.length ? Math.max(...L.map((x) => x.tot)) : null;
-  return `<div class="card sc"><div class="sc-h"><b>${tt('مقارنة السيناريوهات', 'Compare scenarios')}</b>${n && !L.some(same) ? `<button class="btn btn-p btn-sm" onclick="mpScenSave()">${I('i-plus', 'i', 'width:14px;height:14px')}${tt('احفظ هالسيناريو', 'Save this')}</button>` : ''}</div>
+  return `${tip('scen', tt('جديد: احفظ خطتك كسيناريو، جرّب غيرها، وقارن النقاط المتوقعة بيناتهم.', 'New: save and compare scenarios.'))}<div class="card sc"><div class="sc-h"><b>${tt('مقارنة السيناريوهات', 'Compare scenarios')}</b>${n && !L.some(same) ? `<button class="btn btn-p btn-sm" onclick="mpScenSave()">${I('i-plus', 'i', 'width:14px;height:14px')}${tt('احفظ هالسيناريو', 'Save this')}</button>` : ''}</div>
     ${L.length ? `<div class="sc-l">${L.map((x, i) => `<div class="sc-r ${same(x) ? 'on' : ''}"><div class="sc-i"><b>${esc(x.name)}${x.tot === best && L.length > 1 ? `<em>${tt('الأعلى', 'Top')}</em>` : ''}</b><small>${tt(`${x.n} انتقال`, `${x.n} moves`)}${x.hits ? ` · <bdi>−${x.hits}</bdi>` : ''} · ${tt('الربح', 'gain')} <bdi>${x.gain >= 0 ? '+' : ''}${x.gain}</bdi></small></div><b class="num sc-t">${x.tot}</b><button class="sc-a" onclick="mpScenLoad(${i})" aria-label="${tt('افتح', 'Load')}">${I('i-history', 'i')}</button><button class="sc-a" onclick="mpScenDel(${i})" aria-label="${tt('احذف', 'Delete')}">${I('i-trash', 'i')}</button></div>`).join('')}</div>
       <p class="sc-n">${tt(`الحالي: ${tot} نقطة متوقعة`, `Current: ${tot} xP`)}</p>` : `<p class="sc-n">${n ? tt('احفظ خطتك الحالية، جرّب غيرها، وقارن بينهم هنا.', 'Save this plan, try another and compare here.') : tt('سوّ انتقال بالخطة حتى تكدر تحفظه كسيناريو.', 'Add a move to save it as a scenario.')}</p>`}</div>`;
 }

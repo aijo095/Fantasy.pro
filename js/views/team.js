@@ -10,6 +10,7 @@ import { officialRank } from '../store.js';
 import { liveCalc, rankImpact } from '../live-engine.js';
 import * as FPL from '../fpl.js';
 import { basePlan } from '../app.js';
+import { tip } from '../tips.js';
 
 const FORMS = ['3-4-3', '3-5-2', '4-4-2', '4-3-3', '4-5-1', '5-3-2', '5-4-1'];
 let swapFrom = null, tab = null, chipPrev = '', liveLoading = false, teamGW = null;
@@ -237,7 +238,7 @@ function dnaCard() {
   const diff = (L) => { const v = L.filter((h) => ev(h.event) != null); return v.length ? r1(v.reduce((a, h) => a + (h.points - (h.event_transfers_cost || 0) - ev(h.event)), 0) / v.length) : null; };
   const half = Math.floor(H.length / 2), early = diff(H.slice(0, half)), late = diff(H.slice(half));
   const pill = (v) => (v == null ? '—' : `<b class="num ${v >= 0 ? 'up' : 'down'}" dir="ltr">${v >= 0 ? '+' : ''}${v}</b>`);
-  return `<div class="card dna"><div class="dna-h"><b>${tt('بصمة المدرب', 'Manager DNA')}</b><small>${tt(`مبنية على ${N} جولة`, `Based on ${N} GWs`)}</small></div>
+  return `${tip('dna', tt('جديد: بصمة المدرب تلخص أسلوبك من كل جولاتك. القطاع الأطول = صفة أقوى.', 'New: your manager DNA.'))}<div class="card dna"><div class="dna-h"><b>${tt('بصمة المدرب', 'Manager DNA')}</b><small>${tt(`مبنية على ${N} جولة`, `Based on ${N} GWs`)}</small></div>
     <svg viewBox="-40 -16 ${S + 80} ${S + 32}" class="rs dna-rs">${[25, 50, 75, 100].map((v) => `<circle cx="${c}" cy="${c}" r="${(R0 + ((R - R0) * v) / 100).toFixed(1)}" class="rs-ring${v === 100 ? ' o' : ''}"/>`).join('')}${body}<circle cx="${c}" cy="${c}" r="${R0 - 5}" class="rs-core"/>${lbl}</svg>
     <div class="dna-sw">${str.length ? `<div><small>${tt('نقاط قوتك', 'Strengths')}</small><b>${str.map((x) => x[1]).join('، ')}</b></div>` : ''}${weak.length ? `<div class="w"><small>${tt('تحتاج تحسين', 'To improve')}</small><b>${weak.map((x) => x[1]).join('، ')}</b></div>` : ''}</div>
     <div class="dna-p"><div><small>${tt('أول نص من جولاتك', 'First half')}</small>${pill(early)}</div><div><small>${tt('آخر نص', 'Recent half')}</small>${pill(late)}</div></div>
@@ -488,6 +489,18 @@ function liveView() {
    ${running ? `<div class="flex wrap" style="gap:10px;font-size:11.5px;color:var(--mut);margin:10px 2px"><span class="pst live" style="position:static"><i></i>${tt('يلعب', 'Playing')}</span><span class="pst done" style="position:static">${tt('انتهت', 'FT')}</span><span class="pst soon" style="position:static">${tt('لسه', 'Upcoming')}</span><span><sup style="color:var(--info)">+2</sup> ${tt('بونص الفانتازي', 'FPL bonus')}</span><span>⇅ ${tt('تبديل تلقائي', 'auto-sub')}</span></div>` : ''}
    <p class="mut" style="font-size:11.5px;text-align:center;margin-top:8px">${running ? tt('النقاط تتحدث كل 30 ثانية أثناء المباريات.', 'Refreshes every 30s during matches.') : tt('اضغط أي لاعب حتى تشوف شنو سوّى بهالجولة.', 'Tap a player to see his match.')}</p>`;
 }
+/* طريقة عرض التشكيلة: ملعب أو قائمة تكتيكية بالخطوط (بدون صور لاعبين) */
+let PV = (() => { try { return localStorage.getItem('fp_pv') || 'pitch'; } catch { return 'pitch'; } })();
+function pvSeg() { return `${tip('pv', tt('جديد: بدّل بين الملعب والقائمة. القائمة تبين خصم كل لاعب ونقاطه المتوقعة بسطر واحد.', 'New: switch between pitch and list views.'))}<div class="seg pv-seg">${[['pitch', 'i-pitch', tt('ملعب', 'Pitch')], ['list', 'i-list', tt('قائمة', 'List')]].map(([k, ic, l]) => `<button class="${PV === k ? 'on' : ''}" onclick="pvSet('${k}')">${I(ic, 'i', 'width:15px;height:15px')}${l}</button>`).join('')}</div>`; }
+window.pvSet = (k) => { PV = k; try { localStorage.setItem('fp_pv', k); } catch {} window.render(); };
+function lineupList(P) {
+  const G = ST.G, g = G.next, LBL = { GK: tt('حراسة', 'GK'), DEF: tt('دفاع', 'DEF'), MID: tt('وسط', 'MID'), FWD: tt('هجوم', 'FWD') };
+  const row = (id, bench) => { const p = PM(id); if (!p) return ''; const fx = fixturesFor(p.team, g), a = avail(p, g), v = xp(p, g), cap = id === P.cap ? 'C' : id === P.vc ? 'V' : '';
+    return `<button class="ll-r${bench ? ' b' : ''}" onclick="pitchTap(${id})"><span class="mini">${pShirt(p)}</span><span class="ll-i"><b>${esc(p.name)}${cap ? `<em class="ll-c ${cap}">${cap}</em>` : ''}</b><small>${fx.length ? fx.map((x) => `<span class="rate f${x.fdr}">${tShort(x.opp)} ${x.home ? 'H' : 'A'}</span>`).join(' ') : `<span class="ll-no">${tt('ما يلعب', 'No match')}</span>`}${a < 1 ? `<span class="ll-a">${Math.round(a * 100)}%</span>` : ''}</small></span><b class="num ll-v">${v}</b></button>`; };
+  const lines = ['GK', 'DEF', 'MID', 'FWD'].map((pos) => { const L = P.xi.filter((id) => PM(id)?.pos === pos); return L.length ? `<div class="ll-g"><small>${LBL[pos]} · ${L.length}</small>${L.map((id) => row(id)).join('')}</div>` : ''; }).join('');
+  return `<div class="card ll"><div class="ll-h"><b>${tt('التشكيلة', 'Lineup')} <bdi dir="ltr">${formation(P.xi)}</bdi></b><small>${tt('المتوقع', 'xP')} <b class="num">${projected(P, g)}</b></small></div>${lines}<div class="ll-g"><small>${tt('الدكة', 'Bench')}</small>${P.bench.map((id) => row(id, true)).join('')}</div></div>`;
+}
+
 /** مركز تحكم الجولة: جاهزية التشكيلة (مشاكل حقيقية فقط) + مقارنتها بالتشكيلة المقترحة. ما يغيّر شي إلا إذا ضغطت */
 function readiness(P) {
   const G = ST.G, g = G.next, iss = [];
@@ -500,7 +513,7 @@ function readiness(P) {
   const B = bestXI(P.squad, g), cur = projected(P, g), best = projected({ ...P, xi: B.xi, bench: B.bench, cap: B.cap, vc: B.vc, transfers: P.transfers }, g), gain = r1(best - cur);
   const ins = B.xi.filter((id) => !P.xi.includes(id)).map(PM), outs = P.xi.filter((id) => !B.xi.includes(id)).map(PM), capCh = B.cap !== P.cap ? PM(B.cap) : null;
   const ok = !iss.length;
-  return `<div class="card rdy ${ok ? 'ok' : 'warn'}">
+  return `${tip('rdy', tt('جديد: هنا تشوف إذا تشكيلتك جاهزة للجولة، وتقارنها بالمقترحة. اضغط على أي مشكلة حتى تفتح اللاعب.', 'New: lineup readiness and comparison.'))}<div class="card rdy ${ok ? 'ok' : 'warn'}">
     <div class="rdy-h"><span class="rdy-ic">${I(ok ? 'i-check' : 'i-alert', 'i')}</span><div><b>${ok ? tt('التشكيلة جاهزة', 'Lineup ready') : tt(`التشكيلة تحتاج مراجعة · ${iss.length}`, `Needs review · ${iss.length}`)}</b><small>${tt(`للجولة ${g}، حسب الحالة الرسمية والمباريات`, `For GW${g}, from official status and fixtures`)}</small></div></div>
     ${iss.length ? `<ul class="rdy-l">${iss.slice(0, 5).map((x) => `<li class="s${x.sev}" onclick="openPlayer(${x.id})">${esc(x.t)}</li>`).join('')}</ul>` : ''}
     <div class="rdy-c"><div><small>${tt('تشكيلتك', 'Yours')}</small><b class="num">${cur}</b></div><div><small>${tt('المقترحة', 'Suggested')}</small><b class="num">${best}</b></div><div><small>${tt('الفرق', 'Diff')}</small><b class="num ${gain > 0 ? 'up' : ''}">${gain > 0 ? '+' : ''}${gain}</b></div></div>
@@ -518,7 +531,7 @@ export function vTeam() {
   const actions = `<div class="tactions"><button class="btn btn-p" onclick="bestLineup()">${I('i-sparkle')}${tt('أفضل تشكيلة', 'Best XI')}</button><button class="btn btn-g" onclick="go('market')">${I('i-swap')}${preDeadline ? tt('سجّل انتقال', 'Record transfer') : t('transfers')}</button><button class="icon-btn" onclick="syncTeam(this)" aria-label="refresh" title="${tt('تحديث من الفانتازي', 'Refresh from FPL')}">${I('i-refresh')}</button><button class="icon-btn" onclick="resetToOfficial()" aria-label="reset" title="${tt('رجّع الرسمي', 'Reset')}">${I('i-reset')}</button></div>`;
   return `<div class="tabs2" style="margin-top:2px">${ST.G.cur >= 1 ? `<button class="${tab === 'live' ? 'on' : ''}" onclick="teamTab('live')">${gwRunning() ? '<span class="dotlive"></span>' : I('i-history', 'i', 'width:16px;height:16px;vertical-align:-3px')} ${tt('نقاطي بالجولات', 'My gameweeks')}</button>` : ''}<button class="${tab === 'pitch' ? 'on' : ''}" onclick="teamTab('pitch')">${I('i-pitch', 'i', 'width:16px;height:16px;vertical-align:-3px')} ${tt(`خطة الجولة ${ST.G.next}`, `GW${ST.G.next} plan`)}</button><button class="${tab === 'insight' ? 'on' : ''}" onclick="teamTab('insight')">${I('i-gauge', 'i', 'width:16px;height:16px;vertical-align:-3px')} ${tt('تحليل الفريق', 'Insights')}</button></div>
    ${tab === 'live' ? '' : hero(P) + info}
-   ${tab === 'live' ? liveView() : tab === 'pitch' ? toolbar(P) + pitch(P) + readiness(P) + actions : insight(P)}
+   ${tab === 'live' ? liveView() : tab === 'pitch' ? toolbar(P) + pvSeg() + (PV === 'list' ? lineupList(P) : pitch(P)) + readiness(P) + actions : insight(P)}
    ${WALK() && tab !== 'insight' ? `<button class="walk-again" onclick="walkAgain()">${I('i-pitch', 'i', 'width:15px;height:15px')}${tt('شوف دخول اللاعبين مرة ثانية', 'Replay the walkout')}</button>` : ''}
    ${P.transfers.length ? `<div class="sec"><h2>${I('i-swap')}${tt('انتقالات مسجّلة', 'Recorded transfers')}</h2></div><div class="list">${P.transfers.map((x, i) => `<div class="row"><div class="mini">${pShirt(PM(x.in))}</div><div class="info"><b class="mv" dir="ltr"><span class="down">${esc(PM(x.out).name)}</span><i class="mv-a">→</i><span class="up">${esc(PM(x.in).name)}</span></b><span>${x.cost ? '−4' : tt('مجاني', 'free')} · ${tt('فرق المتوقع', 'xP diff')} ${r1(xpN(PM(x.in), ST.G.next, 3) - xpN(PM(x.out), ST.G.next, 3))}/3</span></div><button class="icon-btn" onclick="undoT(${i})" aria-label="undo">${I('i-x')}</button></div>`).join('')}</div>` : ''}
    ${tab === 'live' ? '' : `<p class="mut" style="font-size:11.5px;text-align:center;margin-top:12px">${tt('حرف <b>H</b> يعني يلعب بملعبه، وحرف <b>A</b> يعني يلعب بملعب الخصم. اضغط لاعب لتفاصيله، أو اختار "بدّل" من صفحته حتى تبدّله. التغييرات تنحفظ كخطة، والتنفيذ بالتطبيق الرسمي.', 'H = home, A = away. Tap a player for details or swap. Changes save as a plan.')}</p>`}`;
