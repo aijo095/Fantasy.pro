@@ -21,11 +21,12 @@ const ROUTES = [
   { re: /^leagues-classic\/\d{1,10}\/standings\/$/, ttl: 600 },
   { re: /^leagues-h2h\/\d{1,10}\/standings\/$/, ttl: 600 },
   { re: /^leagues-h2h-matches\/league\/\d{1,10}\/$/, ttl: 120 },
-  { re: /^event\/\d{1,2}\/live\/$/, ttl: 8 },
+  { re: /^event\/\d{1,2}\/live\/$/, ttl: 1 },
   { re: /^element-summary\/\d{1,5}\/$/, ttl: 3600 },
   { re: /^team\/set-piece-notes\/$/, ttl: 21600 },
 ];
 const memo = new Map();
+const inflight = new Map(); // طلبات المباشر المتزامنة تنتظر نفس الجلب بدل ما تكرره
 /* نسخة احتياطية بقاعدة البيانات: وقت تحديث الفانتازي (الديدلاين) نرجّع آخر بيانات صحيحة بدل ما يوكف التطبيق */
 const BACKUP = (k) => /^(bootstrap-static\/|fixtures\/|entry\/\d+\/(history\/|transfers\/|event\/\d+\/picks\/)?$|event\/\d+\/live\/)/.test(k);
 const lastBackup = new Map();
@@ -112,7 +113,7 @@ export default async function handler(req, res) {
   const ev = parseInt(url.searchParams.get('event') || '0', 10);
   if (path.startsWith('leagues-h2h-matches')) qs = `?page=${Math.min(page, 100)}${ev >= 1 && ev <= 38 ? `&event=${ev}` : ''}`;
   let ttl = route.ttl;
-  if (path === 'fixtures/' && ev >= 1 && ev <= 38) { qs = `?event=${ev}`; ttl = 8; }
+  if (path === 'fixtures/' && ev >= 1 && ev <= 38) { qs = `?event=${ev}`; ttl = 1; }
   // الجولات اللي خلصت ما تتغير: نحفظها يوم كامل، والجاية ما بيها نتائج لحد الإغلاق
   { const evN = ev || +((path.match(/^(?:event|entry\/\d+\/event)\/(\d{1,2})\//) || [])[1] || 0); const stt = evN ? evState(evN) : null;
     if (stt === 'done' && (qs.includes('event=') || /\/(live|picks)\/$/.test(path))) ttl = 86400;
@@ -121,7 +122,7 @@ export default async function handler(req, res) {
   if (RANKY.test(path)) { const m = matchNow(); ttl = m === false ? 3600 : /standings/.test(path) || /history/.test(path) ? 120 : 60; }
   const key = path + qs;
   let fresh = url.searchParams.get('fresh') === '1';
-  if (fresh) { const lf = lastFresh.get(key) || 0; if (Date.now() - lf < (ttl <= 20 ? 4000 : 30000)) fresh = false; else lastFresh.set(key, Date.now()); } // المباشر: تحديث كل ~3 ثواني
+  if (fresh) { const lf = lastFresh.get(key) || 0; if (Date.now() - lf < (ttl <= 2 ? 900 : ttl <= 20 ? 4000 : 30000)) fresh = false; else lastFresh.set(key, Date.now()); } // المباشر: تحديث كل ~3 ثواني
   const hit = memo.get(key);
   if (!fresh && hit && Date.now() - hit.t < ttl * 1000) { stats.hits++; return send(res, 200, hit.d, ttl); }
   stats.misses++;
@@ -133,7 +134,12 @@ export default async function handler(req, res) {
       data = mockFPL(path, { page, event: ev });
       if (data == null) return send(res, 404, { error: 'غير موجود' });
     } else {
-      const r = await fetch(BASE + key, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+      // المباشر (نقاط اللاعبين وأحداث المباريات): نتجاوز كاش موقع الفانتازي نفسه حتى نوصل للنسخة الأحدث فوراً
+      const isLive = ttl <= 2 && (/\/live\/$/.test(path) || qs.includes('event='));
+      const upUrl = BASE + key + (isLive ? (qs ? '&' : '?') + '_=' + Date.now() : '');
+      let pr = isLive ? inflight.get(key) : null;
+      if (!pr) { pr = fetch(upUrl, { headers: { 'User-Agent': UA, Accept: 'application/json', ...(isLive ? { 'Cache-Control': 'no-cache', Pragma: 'no-cache' } : {}) }, cache: 'no-store' }); if (isLive) { inflight.set(key, pr); pr.finally(() => inflight.delete(key)).catch(() => {}); } }
+      const r = (await pr).clone();
       if (r.status === 404) return send(res, 404, { error: 'غير موجود — تأكد من الرقم' });
       if (r.status === 503 || !r.ok) throw Object.assign(new Error('upstream ' + r.status), { updating: r.status === 503 });
       const txt = await r.text();

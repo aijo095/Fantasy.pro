@@ -13,6 +13,13 @@ let gwSel = null, gwUser = false, poll = null, lastFetch = 0;
 window.__lvReset = () => { gwUser = false; };
 const isLiveGW = (g) => (ST.G.fx[g] || []).some((f) => f.started && !f.fin);
 let liveBusy = false, liveSig = '', liveErrAt = 0;
+/* الفانتازي ينشر الحدث بمصدرين (event/live و fixtures) وأحياناً واحد يسبق الثاني — ناخذ الأعلى لكل لاعب */
+const FAST_KEYS = ['goals_scored', 'assists', 'own_goals', 'penalties_saved', 'penalties_missed', 'yellow_cards', 'red_cards', 'saves'];
+function fastMerge(next, fxs) {
+  const cnt = {}; fxs.forEach((f) => { cnt[f.h] = (cnt[f.h] || 0) + 1; cnt[f.a] = (cnt[f.a] || 0) + 1; });
+  fxs.forEach((f) => { if (!f.started) return; (f.stats || []).forEach((st) => { if (!FAST_KEYS.includes(st.identifier)) return;
+    [...(st.h || []), ...(st.a || [])].forEach((x) => { const p = PM(x.element), s = next[x.element]; if (!p || !s || cnt[p.team] !== 1) return; if ((s[st.identifier] || 0) < x.value) next[x.element] = { ...s, [st.identifier]: x.value, _fx: 1 }; }); }); });
+}
 async function refreshLive(force = false) {
   const g = ST.G.cur; if (!g || liveBusy) return;
   liveBusy = true;
@@ -24,6 +31,7 @@ async function refreshLive(force = false) {
     if (sig === liveSig && ST.liveRawGW === g) { lastFetch = Date.now(); freshness(); return; }
     liveSig = sig;
     const next = Object.fromEntries(l.elements.map((x) => [x.id, x.stats]));
+    fastMerge(next, fxNorm); // أي حدث ينزل بأي مصدر من الفانتازي (اللاعبين أو المباريات) يظهر فوراً
     scanLive(ST.live, next, ST.G.fx[g], fxNorm);
     // حركات الأحداث المباشرة للاعبينك (هدف، صناعة، كرت، بونص، نقاط)
     try { if (ST.live && ST.liveRawGW === g && ST.E?.picks) { const ev = []; ST.E.picks.picks.forEach((pk) => { const a = ST.live[pk.element], b = next[pk.element]; if (!a || !b) return; const d = (k) => (b[k] || 0) - (a[k] || 0); if (d('goals_scored') > 0) ev.push({ id: pk.element, k: 'goal' }); if (d('assists') > 0) ev.push({ id: pk.element, k: 'assist' }); if (d('red_cards') > 0) ev.push({ id: pk.element, k: 'red' }); else if (d('yellow_cards') > 0) ev.push({ id: pk.element, k: 'yellow' }); if (d('bonus') > 0) ev.push({ id: pk.element, k: 'bonus', n: d('bonus') }); if (d('penalties_saved') > 0) ev.push({ id: pk.element, k: 'save' }); if (d('own_goals') > 0 || d('penalties_missed') > 0) ev.push({ id: pk.element, k: 'bad' }); { const pp = PM(pk.element); if (pp && (pp.pos === 'GK' || pp.pos === 'DEF') && d('goals_conceded') > 0 && !(a.goals_conceded > 0) && (b.minutes || 0) >= 1) ev.push({ id: pk.element, k: 'leak' }); } const dp = d('total_points'); if (dp) ev.push({ id: pk.element, k: 'pts', n: dp * Math.max(1, pk.multiplier || 1) }); }); if (ev.length) setTimeout(() => window.__fxEvents?.(ev), 400); } } catch {}
@@ -62,7 +70,7 @@ export function freshness() {
 }
 export function startLivePolling() {
   clearInterval(poll); clearInterval(freshT); lastFetch = lastFetch || Date.now(); idleAt = Date.now();
-  const step = () => { if (!ST.G || document.hidden) return; if (liveMode()) { if (Date.now() - lastFetch >= 3.5e3) refreshLive(true); } else if (Date.now() - idleAt >= 2 * 60e3) idleRefresh(); };
+  const step = () => { if (!ST.G || document.hidden) return; if (liveMode()) { if (Date.now() - lastFetch >= 1.5e3) refreshLive(true); } else if (Date.now() - idleAt >= 2 * 60e3) idleRefresh(); };
   poll = setInterval(step, 1000); freshT = setInterval(freshness, 5000); freshness();
   if (!window.__visBound) { window.__visBound = 1; document.addEventListener('visibilitychange', () => { if (!document.hidden && ST.G) { if (liveMode()) refreshLive(true); else if (Date.now() - idleAt > 20e3) idleRefresh(); } }); }
   if (liveMode()) refreshLive(true);

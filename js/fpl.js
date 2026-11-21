@@ -164,8 +164,8 @@ export const fetchPicks = (id, gw) => get(`entry/${id}/event/${gw}/picks/`, {}, 
 export const loadH2H = (id, page = 1) => get(`leagues-h2h/${id}/standings/`, { page }, { ttl: rt(120) });
 export const loadH2HMatches = (id, event, page = 1, fresh = false) => get(`leagues-h2h-matches/league/${id}/`, { ...(event ? { event } : {}), page }, { ttl: 60, fresh });
 export const loadLeague = (id, page = 1) => get(`leagues-classic/${id}/standings/`, { page }, { ttl: rt(120) });
-export const loadLive = (gw, fresh = false) => get(`event/${gw}/live/`, {}, { ttl: 3, fresh });
-export const loadFixturesGW = (gw, fresh = false) => get('fixtures/', { event: gw }, { ttl: 3, fresh });
+export const loadLive = (gw, fresh = false) => get(`event/${gw}/live/`, {}, { ttl: 1, fresh });
+export const loadFixturesGW = (gw, fresh = false) => get('fixtures/', { event: gw }, { ttl: 1, fresh });
 export const loadPlayerSummary = (id) => get(`element-summary/${id}/`, {}, { ttl: 3600 });
 export const serverStatus = () => fetch('/api/fpl?status=1').then((r) => r.json());
 
