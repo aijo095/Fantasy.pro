@@ -39,6 +39,22 @@ function mapFPL(players, pool) {
 }
 const ST_AR = { i: 'مصاب', s: 'موقوف', d: 'مشكوك بمشاركته', u: 'غير متاح', n: 'غير مؤهل' };
 
+
+/* بيانات اللعبة الثقيلة (كل اللاعبين والأسعار) تنحفظ 10 دقايق بدل ما تنحمل بكل فحص — الفحص المباشر يصير خفيف وسريع */
+let BOOT = null;
+const SLIM_E = ['id', 'web_name', 'first_name', 'second_name', 'team', 'element_type', 'status', 'chance_of_playing_next_round', 'now_cost', 'news', 'selected_by_percent', 'price_change_percent', 'price_change_projections', 'price_change_locked_until', 'transfers_in_event', 'transfers_out_event', 'cost_change_event'];
+const pickO = (o, ks) => Object.fromEntries(ks.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
+async function getBoot() {
+  const now = Date.now();
+  if (BOOT && now - BOOT.at < 600e3) return { b: BOOT.b, fresh: false };
+  const k = await getJ('cache:boot2').catch(() => null);
+  if (k?.b && now - k.at < 600e3) { BOOT = k; return { b: k.b, fresh: false }; }
+  const raw = await fpl('bootstrap-static/');
+  const b = { elements: raw.elements.map((e) => pickO(e, SLIM_E)), teams: raw.teams.map((t) => ({ id: t.id, short_name: t.short_name })), events: raw.events.map((e) => pickO(e, ['id', 'is_current', 'is_next', 'deadline_time', 'finished', 'data_checked'])), total_players: raw.total_players };
+  BOOT = { at: now, b }; await setJ('cache:boot2', BOOT, 900).catch(() => {});
+  return { b, fresh: true };
+}
+
 export default async function handler(req, res) {
   if (!kvEnabled) return send(res, 200, { ok: false, reason: 'no kv' });
   const u = new URL(req.url, 'http://x');
@@ -46,14 +62,14 @@ export default async function handler(req, res) {
   if (!force && !(await kv('SET', 'lock:notify', '1', 'NX', 'EX', 55))) return send(res, 200, { ok: true, skipped: 'locked' });
   const log = { users: 0, sent: 0, gone: 0, events: [], mode: 'live' };
   try {
-    const boot = await fpl('bootstrap-static/');
+    const { b: boot, fresh: bootFresh } = await getBoot();
     const P = Object.fromEntries(boot.elements.map((e) => [e.id, e]));
     const T = Object.fromEntries(boot.teams.map((t) => [t.id, t.short_name]));
     const cur = boot.events.find((e) => e.is_current), next = boot.events.find((e) => e.is_next);
     const name = (id) => P[id]?.web_name || '#' + id;
 
     /* ---------- 1) تغيّرات اللاعبين (حالة + سعر) ---------- */
-    const snapP = await getJ('snap:players');
+    const snapP = bootFresh ? await getJ('snap:players') : null; // نقارن الحالة والسعر بس لما تتحدث بيانات اللعبة (كل ~10 دقايق)
     const nh = (t) => (t ? crypto.createHash('md5').update(t).digest('hex').slice(0, 8) : '');
     const nowP = Object.fromEntries(boot.elements.map((e) => [e.id, [e.status, e.chance_of_playing_next_round ?? 100, e.now_cost, nh(e.news)]]));
     const statusCh = new Map(), priceCh = new Map();
@@ -64,7 +80,7 @@ export default async function handler(req, res) {
       if (o[3] !== undefined && v[3] && v[3] !== o[3] && !statusCh.has(+id)) statusCh.set(+id, v); // تحديث نص الخبر (مثلاً موعد الرجوع)
       if (v[2] !== o[2]) priceCh.set(+id, v[2] - o[2]);
     }
-    await setJ('snap:players', nowP);
+    if (bootFresh) await setJ('snap:players', nowP);
     log.events.push(`status:${statusCh.size} price:${priceCh.size}`);
 
     /* ---------- 2) المباشر: أهداف/صناعات/طرد + بداية المباريات ---------- */
@@ -75,7 +91,7 @@ export default async function handler(req, res) {
       // وضع الفحص: سريع وقت المباريات وقبلها بساعتين ونص (حتى ما يتأخر أي حدث)، وهادئ بباقي الأوقات
       const soonKO = fx.some((f) => !f.started && f.kickoff_time && new Date(f.kickoff_time) - Date.now() < 2.5 * 36e5);
       const soonDL = next && new Date(next.deadline_time) - Date.now() < 2 * 36e5 && new Date(next.deadline_time) > Date.now();
-      log.mode = anyLive || soonKO || soonDL ? 'live' : 'idle';
+      log.mode = anyLive ? 'match' : soonKO || soonDL ? 'live' : 'idle';
       const fxSnap = (await getJ('snap:fx:' + cur.id)) || null;
       const fxNow = Object.fromEntries(fx.map((f) => [f.id, f.started ? 1 : 0]));
       if (fxSnap) kick = fx.filter((f) => f.started && !fxSnap[f.id] && !f.finished_provisional);

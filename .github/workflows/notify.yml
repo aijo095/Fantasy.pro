@@ -1,6 +1,7 @@
 name: notify
 # محرك الإشعارات الذكي: وظيفة وحدة تشتغل ~55 دقيقة
-# • وقت المباريات (وقبلها بساعتين ونص، وقبل الإغلاق بساعتين): فحص كل 30 ثانية حتى الأهداف والصناعة والأحداث توصل بلحظتها
+# • وقت المباريات الشغالة: فحص كل 15 ثانية (الفحص خفيف لأن بيانات اللعبة محفوظة 10 دقايق)
+# • قبل المباريات بساعتين ونص وقبل الإغلاق بساعتين: فحص كل 30 ثانية
 # • باقي الأوقات (ما كو مباريات): فحص كل 5 دقايق لتوفير المعالج
 # الوضع يحدده /api/notify نفسه بالحقل mode، وإذا ما رجع شي نعتبره «مباشر» احتياطاً
 # (الجدول كل 10 دقايق احتياط إذا GitHub أخّر أو أسقط تشغيل؛ concurrency يمنع التكرار)
@@ -22,5 +23,5 @@ jobs:
           while [ $(date +%s) -lt $end ]; do
             out=$(curl -sS --max-time 50 https://fantasy-pro-aijo0.vercel.app/api/notify || true)
             echo "$out" | head -c 300; echo
-            if echo "$out" | grep -q '"mode":"idle"'; then sleep 300; else sleep 30; fi
+            if echo "$out" | grep -q '"mode":"idle"'; then sleep 300; elif echo "$out" | grep -q '"mode":"match"'; then sleep 15; else sleep 30; fi
           done
