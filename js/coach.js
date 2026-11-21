@@ -498,3 +498,27 @@ export function playerDecisions(id) {
   Object.keys(pk).forEach((g) => { const x = (pk[g].p || []).find((y) => y[0] === id); if (!x) return; owned++; const v = pts[g]?.[id]?.[0] ?? 0, mult = x[1] || 0; if (mult > 0) { xiN++; ptsOwned += v * mult; } if (x[3] === 1) { capN++; capPts += v * Math.max(2, mult); } });
   return { bought, sold, owned, xiN, ptsOwned, capN, capPts, has: Object.keys(pk).length > 0 };
 }
+
+/* ---------- قصة الموسم (للمربع المتفاعل بالرئيسية) — من الكاش فقط، بدون أي طلب جديد ---------- */
+export function seasonStory() {
+  const c = MEM ? loadCacheMem() : loadCache(), pk = c.picks || {}, pts = c.pts || {};
+  const P = (g, id) => pts[g]?.[id]?.[0];
+  let best = null, capRight = 0, capN = 0;
+  Object.keys(pk).map(Number).sort((a, b) => a - b).forEach((g) => {
+    if (!pts[g]) return;
+    const L = pk[g].p || [], cap = L.find((x) => x[1] >= 2) || L.find((x) => x[3] === 1); if (!cap) return;
+    const v = P(g, cap[0]) ?? 0, mult = Math.max(cap[1] || 0, 2), tot = v * mult; capN++;
+    const xiMax = Math.max(0, ...L.filter((x) => x[1] > 0).map((x) => P(g, x[0]) ?? 0));
+    if (v >= xiMax - 1) capRight++;
+    if (!best || tot > best.tot) best = { gw: g, id: cap[0], pts: v, mult, tot, chip: pk[g].chip };
+  });
+  // انتقالات ناجحة: اللاعب الداخل جاب أكثر من الطالع بجولة الانتقال والجولتين بعدها (من الكاش المتوفر)
+  const TR = ST.E?.transfers || [];
+  let trOk = 0, trN = 0, trGain = 0, trBest = null;
+  TR.forEach((t) => {
+    const gs = [t.event, t.event + 1, t.event + 2].filter((g) => pts[g]); if (!gs.length) return;
+    const d = gs.reduce((s, g) => s + (P(g, t.element_in) ?? 0) - (P(g, t.element_out) ?? 0), 0);
+    trN++; if (d > 0) { trOk++; trGain += d; } if (!trBest || d > trBest.d) trBest = { d, inn: t.element_in, out: t.element_out, gw: t.event };
+  });
+  return { best, capRight, capN, trOk, trN, trGain, trBest, has: Object.keys(pk).length > 0 };
+}

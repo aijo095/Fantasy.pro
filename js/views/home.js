@@ -7,6 +7,7 @@ import { projected, analyze, captainRank, suggestions, xp, avail, dgwBgw, fixtur
 import * as FPL from '../fpl.js';
 import { upcoming } from '../fpl.js';
 import { pShirt } from './common.js';
+import { storyHTML, afterStory } from './story.js';
 import { pricePredict, liveRankEstimate } from '../predict.js';
 import { officialRank } from '../store.js';
 import { liveCalc, rankImpact } from '../live-engine.js';
@@ -107,6 +108,8 @@ function vHome2() {
 
     <button class="h2-dl" onclick="go('team')">${I('i-clock', 'i')}<span class="h2-dlt" id="cdLbl">${t('deadline')} ${t('gw')} ${U.gw ?? '—'}<small>${fmtTime(U.deadline)}</small></span><div class="cd h2-cd" id="cd"></div></button>
 
+    ${storyHTML()}
+
     ${A.length ? `<h3 class="h2-h">${tt('خطوتك الجاية', 'Your next moves')}</h3>
     <div class="h2-list">${A.map((x) => `<button class="h2-act" ${x.b ? `onclick="${x.b[1]}"` : 'disabled'}><span class="h2-ic" style="--c:${x.col}">${I(x.ok ? 'i-check' : x.ic, 'i')}</span><span class="h2-tx"><b>${x.h}</b><small>${x.d}</small></span>${x.b ? `<em>${x.b[0]}</em>` : ''}</button>`).join('')}</div>` : ''}
 
@@ -124,6 +127,6 @@ function vHome2() {
   </div>`;
 }
 export function afterHome() {
-  clearInterval(cdT); tick(); cdT = setInterval(tick, 1000);
+  clearInterval(cdT); tick(); cdT = setInterval(tick, 1000); try { afterStory(); } catch {}
   if (!ST.live && ST.G.cur) FPL.loadLive(ST.G.cur).then((l) => { ST.live = Object.fromEntries(l.elements.map((x) => [x.id, x.stats])); ST.liveRaw = l.elements; ST.liveRawGW = ST.G.cur; if (ST.view === 'home' && liveTeamPoints() != null) window.render(); }).catch(() => {});
 }

@@ -325,3 +325,132 @@ html.ui2 #toast{bottom:calc(96px + env(safe-area-inset-bottom,0px) * .5)}
 .pi-cmp div{display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 6px;border-radius:14px;background:rgba(255,255,255,.035)}
 .pi-cmp small{font-size:10.5px;color:var(--mut)}.pi-cmp b{font:800 20px Inter,sans-serif;color:var(--acc)}.pi-cmp b.mut{color:var(--txt)}.pi-cmp em{font-style:normal;font-size:10px;color:var(--mut)}
 .pi-row.col .pi-bar{width:100%;margin-top:8px}
+
+/* =====================================================================
+   «قصة موسمك» — مربع الشرائح المتفاعل بالرئيسية
+===================================================================== */
+.ss{position:relative;margin:4px 0 18px;padding:14px 16px 12px;border-radius:var(--v4-r-xl,30px);background:
+  radial-gradient(120% 90% at 100% 0%,color-mix(in srgb,var(--sc) 22%,transparent),transparent 60%),
+  radial-gradient(90% 70% at 0% 100%,color-mix(in srgb,var(--sc) 10%,transparent),transparent 70%),var(--v4-s1,#151916);
+  border:1px solid var(--v4-line2,rgba(255,255,255,.1));box-shadow:var(--v4-sh2);overflow:hidden;isolation:isolate;
+  transition:background .6s var(--v4-ease);touch-action:pan-y;user-select:none;-webkit-user-select:none;grid-column:1/-1}
+.ss-prog{display:flex;gap:4px;margin-bottom:10px}
+.ss-prog span{flex:1;height:3px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden}
+.ss-prog i{display:block;height:100%;width:100%;background:var(--v4-ink,#fff);transform-origin:right;transform:scaleX(0);border-radius:3px}
+.ss-prog .done i{transform:scaleX(1)}
+.ss-prog .cur i{animation:ssProg linear forwards}
+.ss.hold .ss-prog .cur i,.ss.off .ss-prog .cur i{animation-play-state:paused}
+@keyframes ssProg{to{transform:scaleX(1)}}
+.ss-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.ss-tag{font-size:12px;font-weight:700;color:var(--sc);display:inline-flex;align-items:center;gap:6px;transition:color .5s}
+.ss-tag::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 0 0 currentColor;animation:ssPing 2.2s infinite}
+@keyframes ssPing{0%{box-shadow:0 0 0 0 color-mix(in srgb,currentColor 55%,transparent)}70%,100%{box-shadow:0 0 0 7px transparent}}
+.ss-pp{width:30px;height:30px;border-radius:50%;border:0;background:rgba(255,255,255,.07);display:inline-flex;align-items:center;justify-content:center;gap:3px;cursor:pointer}
+.ss-pp span{width:3px;height:11px;border-radius:2px;background:var(--v4-ink2,#aaa);transition:.25s}
+.ss.hold .ss-pp span:first-child{width:0;height:0;border-style:solid;border-width:6px 9px 6px 0;border-color:transparent var(--v4-ink2,#aaa) transparent transparent;background:none;border-radius:0}
+.ss.hold .ss-pp span:last-child{display:none}
+.ss-stage{position:relative;min-height:268px}
+.ss-sl{position:absolute;inset:0;opacity:0;transform:translateX(-14px) scale(.985);pointer-events:none;transition:opacity .45s var(--v4-ease),transform .55s var(--v4-ease)}
+.ss-sl.on{opacity:1;transform:none;pointer-events:auto;position:relative}
+.ss-blob{position:absolute;z-index:-1;width:240px;height:240px;top:-70px;left:-80px;transform:scale(var(--sc,1));filter:blur(2px);pointer-events:none}
+.ss-sl.on .ss-blob{animation:ssBlobIn 1s var(--v4-ease) both}
+@keyframes ssBlobIn{from{opacity:0;transform:scale(.6) rotate(-20deg)}}
+.ss-t{display:flex;align-items:center;gap:11px;margin-bottom:14px}
+.ss-t h3{margin:0;font-size:18px;font-weight:800;letter-spacing:-.01em;color:var(--v4-ink)}
+.ss-t p{margin:2px 0 0;font-size:12.5px;color:var(--v4-ink2)}
+.ss-ic{width:20px;height:20px;flex:none}
+.ss-tic{width:40px;height:40px;padding:9px;border-radius:14px;color:var(--c);background:color-mix(in srgb,var(--c) 15%,transparent);box-sizing:border-box}
+.ss-sl.on .draw path,.ss-sl.on .draw circle{stroke-dasharray:80;stroke-dashoffset:80;animation:ssDraw 1s .15s var(--v4-ease) forwards}
+@keyframes ssDraw{to{stroke-dashoffset:0}}
+.ss-sl.on .ss-tic{animation:ssPop .6s var(--v4-ease) both}
+@keyframes ssPop{from{transform:scale(.4) rotate(-25deg);opacity:0}}
+/* حلقات */
+.ss-ring{position:relative;display:inline-grid;place-items:center;flex:none}
+.ss-ring svg{position:absolute;inset:0;width:100%;height:100%}
+.ss-arc{stroke-dashoffset:var(--o)}
+.ss-sl.on .ss-arc{animation:ssArc 1.2s .1s var(--v4-ease) both}
+@keyframes ssArc{from{stroke-dashoffset:var(--C)}}
+.ss-rin{position:relative;display:flex;flex-direction:column;align-items:center;line-height:1.05;text-align:center}
+.ss-rin b{font-size:15px;font-weight:800;color:var(--v4-ink)}
+.ss-rin b+small,.ss-rin small{font-size:10px;color:var(--v4-ink2)}
+/* دوريات */
+.ss-lg{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.ss-lgi{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 6px;border-radius:var(--v4-r-md,18px);background:rgba(255,255,255,.035);border:1px solid var(--v4-line);color:inherit;font:inherit;cursor:pointer;min-width:0}
+.ss-sl.on .ss-lgi{animation:ssUp .55s var(--d) var(--v4-ease) both}
+.ss-lgn{font-size:12.5px;font-weight:700;color:var(--v4-ink);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ss-lgi small{font-size:11px;color:var(--v4-ink3)}
+.ss em.up,.ss .up>em,.ss span.up{color:var(--c-mint);font-style:normal}
+.ss em.dn,.ss span.dn{color:var(--c-coral);font-style:normal}
+@keyframes ssUp{from{opacity:0;transform:translateY(12px)}}
+/* الترتيب */
+.ss-big{display:flex;align-items:baseline;gap:8px;margin-bottom:12px}
+.ss-big b{font-size:46px;font-weight:900;letter-spacing:-.03em;line-height:1;color:var(--v4-ink)}
+.ss-big span{font-size:13px;color:var(--v4-ink2)}
+.ss-rk2{display:flex;align-items:center;gap:14px}
+.ss-rk2>div{display:flex;flex-direction:column;gap:2px}
+.ss-rk2>div small{font-size:11.5px;color:var(--v4-ink3)}
+.ss-rk2>div b{font-size:22px;font-weight:800;color:var(--v4-ink)}
+.ss-spark{display:block;width:100%;height:auto;margin-top:12px;overflow:visible}
+.ss-line{fill:none;stroke:var(--c);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:0}
+.ss-sl.on .ss-line{animation:ssLine 1.4s .2s var(--v4-ease) both}
+@keyframes ssLine{from{stroke-dashoffset:1}}
+.ss-dot{fill:var(--c);stroke:var(--v4-s1);stroke-width:2}
+.ss-sl.on .ss-dot{animation:ssPop .5s 1.4s both}
+.ss-spl{display:flex;justify-content:space-between;font-size:10.5px;color:var(--v4-ink3);margin-top:3px}
+/* نقاط الجولات */
+.ss-gw{display:flex;align-items:flex-end;gap:2px;height:120px;padding-top:6px}
+.ss-gw button{flex:1;min-width:0;height:100%;position:relative;border:0;padding:0;background:none;cursor:pointer}
+.ss-gw i{position:absolute;bottom:0;left:0;right:0;height:var(--h);border-radius:4px 4px 2px 2px;background:rgba(255,255,255,.22);transform-origin:bottom}
+.ss-gw .up i{background:var(--c-mint)}
+.ss-gw s{position:absolute;left:-1px;right:-1px;bottom:var(--a);height:2px;background:rgba(255,255,255,.55);border-radius:2px}
+.ss-gw .on i{background:var(--v4-ink);box-shadow:0 0 0 2px color-mix(in srgb,var(--c-mint) 45%,transparent)}
+.ss-sl.on .ss-gw i{animation:ssBar .6s var(--d) var(--v4-ease) both}
+@keyframes ssBar{from{transform:scaleY(0)}}
+.ss-gd{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;font-size:12px;color:var(--v4-ink2)}
+.ss-gd>*{padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.05)}
+.ss-gd>b{background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--v4-ink)}
+.ss-gd b.num{color:var(--v4-ink)}
+/* الخطوات الصحيحة */
+.ss-mv{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.ss-mv li{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;line-height:1.45;color:var(--v4-ink)}
+.ss-sl.on .ss-mv li{animation:ssUp .5s var(--d) var(--v4-ease) both}
+.ss-mv .ss-ic{color:var(--c);width:22px;height:22px;margin-top:1px}
+.ss-mv li>span{flex:1;min-width:0}
+.ss-mv em{font-style:normal;font-size:11.5px;color:var(--c);margin-inline-start:4px}
+.ss-mb{display:block;height:4px;border-radius:4px;background:rgba(255,255,255,.08);margin-top:5px;overflow:hidden}
+.ss-mb i{display:block;height:100%;width:var(--w);background:var(--c);border-radius:4px;transform-origin:right}
+.ss-sl.on .ss-mb i{animation:ssBarX .9s calc(var(--d) + 150ms) var(--v4-ease) both}
+@keyframes ssBarX{from{transform:scaleX(0)}}
+/* الكابتن */
+.ss-cp{display:flex;flex-direction:column;gap:10px}
+.ss-cpn b{display:block;font-size:22px;font-weight:800;color:var(--v4-ink)}
+.ss-cpn small{font-size:12.5px;color:var(--v4-ink2)}
+.ss-cpv{display:flex;align-items:center;gap:10px}
+.ss-cpv>b{font-size:58px;font-weight:900;line-height:1;letter-spacing:-.03em;color:var(--c-gold);text-shadow:0 0 30px color-mix(in srgb,var(--c-gold) 35%,transparent)}
+.ss-cpv span{display:flex;flex-direction:column;font-size:12.5px;color:var(--v4-ink2)}
+.ss-cpv em{font-style:normal;font-size:15px;font-weight:800;color:var(--v4-dark);background:var(--c-gold);border-radius:8px;padding:1px 7px;align-self:flex-start;margin-bottom:3px}
+.ss-sl.on .ss-cpv>b{animation:ssPop .7s .1s var(--v4-ease) both}
+.ss-why{display:flex;flex-direction:column;gap:7px}
+.ss-why small{font-size:12px;color:var(--v4-ink3)}
+.ss-why>div{display:flex;flex-wrap:wrap;gap:6px}
+.ss-why>div span{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:color-mix(in srgb,var(--c-gold) 12%,transparent);color:var(--v4-ink);font-size:12.5px;animation:ssUp .45s var(--d) var(--v4-ease) both}
+.ss-why .ss-ic{width:16px;height:16px;color:var(--c-gold)}
+.ss-ld{font-size:12px;color:var(--v4-ink3);animation:ssBlink 1.2s infinite}
+@keyframes ssBlink{50%{opacity:.4}}
+.ss-cpc{font-size:11.5px;color:var(--c-gold)}
+/* لمحات */
+.ss-xt{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ss-xt>div{display:flex;flex-direction:column;gap:3px;padding:10px 9px;border-radius:var(--v4-r-md,18px);background:rgba(255,255,255,.035);border:1px solid var(--v4-line);min-width:0}
+.ss-sl.on .ss-xt>div{animation:ssUp .5s var(--d) var(--v4-ease) both}
+.ss-xt .ss-ic{color:var(--c);width:18px;height:18px}
+.ss-xt small{font-size:11px;color:var(--v4-ink3)}
+.ss-xt b{font-size:19px;font-weight:800;color:var(--v4-ink)}
+.ss-xt em{font-style:normal;font-size:10.5px;color:var(--v4-ink2);line-height:1.35}
+.ss-dots{display:flex;justify-content:center;gap:6px;margin-top:12px}
+.ss-dots button{width:7px;height:7px;padding:0;border:0;border-radius:999px;background:rgba(255,255,255,.18);transition:width .35s var(--v4-ease),background .35s;cursor:pointer}
+.ss-dots button.on{width:22px;background:var(--c)}
+.ss .num{font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){
+  .ss *,.ss *::before{animation:none!important;transition:none!important}
+  .ss-prog .cur i{transform:scaleX(.5)}
+}
