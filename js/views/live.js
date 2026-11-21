@@ -17,13 +17,13 @@ async function refreshLive(force = false) {
   const g = ST.G.cur; if (!g || liveBusy) return;
   liveBusy = true;
   try {
-    const [l, fx] = await Promise.all([FPL.loadLive(g, force), FPL.loadFixturesGW(g, force)]);
+    const [l, fx, sc] = await Promise.all([FPL.loadLive(g, force), FPL.loadFixturesGW(g, force), FPL.loadScores(ST.G.fx[g]).catch(() => [])]);
+    const fxNorm = FPL.espnMerge(fx.map((x) => FPL.fxBest({ id: x.id, ev: x.event, h: x.team_h, a: x.team_a, hd: x.team_h_difficulty, ad: x.team_a_difficulty, ko: x.kickoff_time, fin: !!(x.finished || (x.finished_provisional && (x.minutes || 0) >= 90)), started: x.started, hs: x.team_h_score, as: x.team_a_score, min: x.minutes, stats: x.stats || [] })), sc, ST.G.teams);
     // إذا ما تغيّر شي من آخر مرة: نحدّث وقت الجلب بس، بدون إعادة رسم
-    const sig = g + JSON.stringify(l.elements) + JSON.stringify(fx);
+    const sig = g + JSON.stringify(l.elements) + JSON.stringify(fxNorm);
     if (sig === liveSig && ST.liveRawGW === g) { lastFetch = Date.now(); freshness(); return; }
     liveSig = sig;
     const next = Object.fromEntries(l.elements.map((x) => [x.id, x.stats]));
-    const fxNorm = fx.map((x) => FPL.fxBest({ id: x.id, ev: x.event, h: x.team_h, a: x.team_a, hd: x.team_h_difficulty, ad: x.team_a_difficulty, ko: x.kickoff_time, fin: !!(x.finished || (x.finished_provisional && (x.minutes || 0) >= 90)), started: x.started, hs: x.team_h_score, as: x.team_a_score, min: x.minutes, stats: x.stats || [] }));
     scanLive(ST.live, next, ST.G.fx[g], fxNorm);
     // حركات الأحداث المباشرة للاعبينك (هدف، صناعة، كرت، بونص، نقاط)
     try { if (ST.live && ST.liveRawGW === g && ST.E?.picks) { const ev = []; ST.E.picks.picks.forEach((pk) => { const a = ST.live[pk.element], b = next[pk.element]; if (!a || !b) return; const d = (k) => (b[k] || 0) - (a[k] || 0); if (d('goals_scored') > 0) ev.push({ id: pk.element, k: 'goal' }); if (d('assists') > 0) ev.push({ id: pk.element, k: 'assist' }); if (d('red_cards') > 0) ev.push({ id: pk.element, k: 'red' }); else if (d('yellow_cards') > 0) ev.push({ id: pk.element, k: 'yellow' }); if (d('bonus') > 0) ev.push({ id: pk.element, k: 'bonus', n: d('bonus') }); if (d('penalties_saved') > 0) ev.push({ id: pk.element, k: 'save' }); if (d('own_goals') > 0 || d('penalties_missed') > 0) ev.push({ id: pk.element, k: 'bad' }); { const pp = PM(pk.element); if (pp && (pp.pos === 'GK' || pp.pos === 'DEF') && d('goals_conceded') > 0 && !(a.goals_conceded > 0) && (b.minutes || 0) >= 1) ev.push({ id: pk.element, k: 'leak' }); } const dp = d('total_points'); if (dp) ev.push({ id: pk.element, k: 'pts', n: dp * Math.max(1, pk.multiplier || 1) }); }); if (ev.length) setTimeout(() => window.__fxEvents?.(ev), 400); } } catch {}

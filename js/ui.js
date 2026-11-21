@@ -170,7 +170,7 @@ export const timeAgo = (ts) => { const s = Math.round((Date.now() - ts) / 1000);
 /** النتيجة: كل رقم بصندوق مستقل حتى يبقى جنب فريقه (الكتابة العربية تقلب «2 - 0» إذا انكتبت كنص واحد) */
 /* دقيقة المباراة كما يعرضها الفانتازي، مع "نهاية الشوط الأول" وقت الاستراحة */
 const koAgo = (f) => (f.ko ? (Date.now() - new Date(f.ko)) / 60e3 : 0);
-export const isHT = (f) => !!(f?.started && !f.fin && (f.min || 0) === 45 && koAgo(f) >= 49 && koAgo(f) <= 70);
+export const isHT = (f) => !!(f?.ht && !f.fin) || !!(f?.started && !f.fin && (f.min || 0) === 45 && koAgo(f) >= 49 && koAgo(f) <= 70);
 export const fxMin = (f, short = false) => {
   if (isHT(f)) return short ? tt('استراحة', 'HT') : tt('نهاية الشوط الأول', 'Half time');
   const m = f?.min || 0; return `${m}${m === 45 || m >= 90 ? '+' : ''}′`;

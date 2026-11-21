@@ -83,8 +83,36 @@ export async function getLineup(ko, h, a) {
   }
 }
 
+/* النتائج المباشرة السريعة من ESPN (الفانتازي يتأخر بتحديث النتيجة ونهاية المباراة)
+   /api/lineups?scores=20261121,20261122 ← [{h,a,ko,hs,as,st,done,ht,min}] برموز الفانتازي */
+const REV = Object.fromEntries(Object.entries(ABBR).map(([k, v]) => [v, k]));
+const sbMemo = new Map();
+async function scoreboard(day) {
+  const hit = sbMemo.get(day); if (hit && Date.now() - hit.t < 6000) return hit.d;
+  try {
+    const sb = await get(`scoreboard?dates=${day}`);
+    const d = (sb?.events || []).map((e) => {
+      const c = e.competitions?.[0] || {}, cs = c.competitors || [], st = e.status || c.status || {}, ty = st.type || {};
+      const H = cs.find((x) => x.homeAway === 'home'), A = cs.find((x) => x.homeAway === 'away');
+      const ab = (x) => { const s = x?.team?.abbreviation || ''; return REV[s] || s; };
+      const cl = clockMin(st.displayClock);
+      return { h: ab(H), a: ab(A), ko: e.date, hs: H?.score != null ? +H.score : null, as: A?.score != null ? +A.score : null,
+        st: ty.state || 'pre', done: !!ty.completed || ty.state === 'post', ht: /HALFTIME/i.test(ty.name || ''), min: cl ? cl.min : null };
+    });
+    sbMemo.set(day, { t: Date.now(), d }); if (sbMemo.size > 20) sbMemo.delete(sbMemo.keys().next().value);
+    return d;
+  } catch { return hit ? hit.d : []; }
+}
+
 export default async function handler(req, res) {
   const u = new URL(req.url, 'http://x');
+  const sc = u.searchParams.get('scores');
+  if (sc != null) {
+    if (process.env.FPL_MOCK === '1') return send(res, 200, []);
+    const days = [...new Set(sc.split(',').filter((d) => /^\d{8}$/.test(d)))].slice(0, 3);
+    const all = (await Promise.all(days.map(scoreboard))).flat();
+    return send(res, 200, all, 5);
+  }
   const ko = new Date(u.searchParams.get('ko') || ''), h = (u.searchParams.get('h') || '').toUpperCase().slice(0, 4), a = (u.searchParams.get('a') || '').toUpperCase().slice(0, 4);
   if (isNaN(ko) || !/^[A-Z]{3}$/.test(h) || !/^[A-Z]{3}$/.test(a)) return send(res, 400, { error: 'bad params' });
   if (process.env.FPL_MOCK === '1') return send(res, 404, { error: 'mock' });

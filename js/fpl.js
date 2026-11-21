@@ -82,6 +82,32 @@ export function fxBest(o) {
   FXB.set(o.id, { fin: o.fin, started: o.started, hs: o.hs, as: o.as, min: o.min, stats: o.stats });
   return o;
 }
+/* النتائج السريعة من ESPN: الفانتازي يتأخر دقايق بتحديث الأهداف ونهاية المباراة، فندمج نتيجة ESPN فوقه */
+const ymdUTC = (d) => d.toISOString().slice(0, 10).replace(/-/g, '');
+let SC = { k: '', t: 0, d: [] };
+export async function loadScores(fxs) {
+  const now = Date.now(), act = (fxs || []).filter((f) => f.ko && !f.fin && new Date(f.ko) - now < 10 * 60e3 && now - new Date(f.ko) < 5 * 3600e3);
+  if (!act.length) return [];
+  const days = [...new Set(act.flatMap((f) => { const k = new Date(f.ko); return [ymdUTC(new Date(k - 5 * 3600e3)), ymdUTC(k)]; }))].slice(0, 3).join(',');
+  if (SC.k === days && now - SC.t < 3000) return SC.d;
+  try { const r = await fetch('/api/lineups?scores=' + days); const d = r.ok ? await r.json() : null; if (Array.isArray(d)) SC = { k: days, t: now, d }; } catch {}
+  return SC.k === days ? SC.d : [];
+}
+export function espnMerge(fxs, sc, teams) {
+  if (!sc?.length) return fxs;
+  const sh = (id) => teams?.[id]?.short;
+  return fxs.map((f) => {
+    if (!f.ko) return f;
+    const H = sh(f.h), A = sh(f.a), ko = new Date(f.ko);
+    const e = sc.find((x) => x.h === H && x.a === A && Math.abs(new Date(x.ko) - ko) < 6 * 3600e3) || sc.find((x) => (x.h === H || x.a === A) && Math.abs(new Date(x.ko) - ko) < 3 * 3600e3);
+    if (!e || e.st === 'pre') return f;
+    const o = { ...f, started: true, ht: !e.done && e.ht };
+    if (!f.fin && e.hs != null && e.as != null) { o.hs = e.hs; o.as = e.as; }
+    if (e.done) { o.fin = true; o.min = Math.max(f.min || 0, 90); }
+    else if (!f.fin && e.min != null) o.min = Math.max(f.min || 0, e.min);
+    return fxBest(o);
+  });
+}
 export async function loadGame(fresh = false) {
   const [b, f] = await Promise.all([get('bootstrap-static/', {}, { ttl: 900, fresh }), get('fixtures/', {}, { ttl: 1800, fresh })]);
   const teams = {};
