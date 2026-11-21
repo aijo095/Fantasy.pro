@@ -503,13 +503,15 @@ export function playerDecisions(id) {
 export function seasonStory() {
   const c = MEM ? loadCacheMem() : loadCache(), pk = c.picks || {}, pts = c.pts || {};
   const P = (g, id) => pts[g]?.[id]?.[0];
-  let best = null, capRight = 0, capN = 0;
+  let best = null, capRight = 0, capN = 0; const byGw = {};
   Object.keys(pk).map(Number).sort((a, b) => a - b).forEach((g) => {
     if (!pts[g]) return;
     const L = pk[g].p || [], cap = L.find((x) => x[1] >= 2) || L.find((x) => x[3] === 1); if (!cap) return;
     const v = P(g, cap[0]) ?? 0, mult = Math.max(cap[1] || 0, 2), tot = v * mult; capN++;
     const xiMax = Math.max(0, ...L.filter((x) => x[1] > 0).map((x) => P(g, x[0]) ?? 0));
     if (v >= xiMax - 1) capRight++;
+    const top = L.filter((x) => x[1] > 0).reduce((m, x) => ((P(g, x[0]) ?? 0) > (m ? P(g, m[0]) ?? 0 : -1) ? x : m), null);
+    byGw[g] = { cap: cap[0], capPts: v, mult, top: top?.[0], topPts: top ? P(g, top[0]) ?? 0 : 0 };
     if (!best || tot > best.tot) best = { gw: g, id: cap[0], pts: v, mult, tot, chip: pk[g].chip };
   });
   // انتقالات ناجحة: اللاعب الداخل جاب أكثر من الطالع بجولة الانتقال والجولتين بعدها (من الكاش المتوفر)
@@ -520,5 +522,5 @@ export function seasonStory() {
     const d = gs.reduce((s, g) => s + (P(g, t.element_in) ?? 0) - (P(g, t.element_out) ?? 0), 0);
     trN++; if (d > 0) { trOk++; trGain += d; } if (!trBest || d > trBest.d) trBest = { d, inn: t.element_in, out: t.element_out, gw: t.event };
   });
-  return { best, capRight, capN, trOk, trN, trGain, trBest, has: Object.keys(pk).length > 0 };
+  return { best, capRight, capN, trOk, trN, trGain, trBest, byGw, has: Object.keys(pk).length > 0 };
 }

@@ -108,7 +108,7 @@ function vHome2() {
 
     <button class="h2-dl" onclick="go('team')">${I('i-clock', 'i')}<span class="h2-dlt" id="cdLbl">${t('deadline')} ${t('gw')} ${U.gw ?? '—'}<small>${fmtTime(U.deadline)}</small></span><div class="cd h2-cd" id="cd"></div></button>
 
-    ${storyHTML()}
+    ${storyHTML({ livePts })}
 
     ${A.length ? `<h3 class="h2-h">${tt('خطوتك الجاية', 'Your next moves')}</h3>
     <div class="h2-list">${A.map((x) => `<button class="h2-act" ${x.b ? `onclick="${x.b[1]}"` : 'disabled'}><span class="h2-ic" style="--c:${x.col}">${I(x.ok ? 'i-check' : x.ic, 'i')}</span><span class="h2-tx"><b>${x.h}</b><small>${x.d}</small></span>${x.b ? `<em>${x.b[0]}</em>` : ''}</button>`).join('')}</div>` : ''}
