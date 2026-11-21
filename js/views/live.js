@@ -275,7 +275,7 @@ function loadLU(f, ev, force = false) {
   });
 }
 /** ربط لاعبي ESPN بلاعبي الفانتازي بالاسم */
-function mapFPL(players, team) {
+export function mapFPL(players, team) {
   const pool = ST.G.players.filter((p) => p.team === team), used = new Set(), out = {};
   const tests = [
     (e, p) => nrm(p.full) === nrm(e.name),

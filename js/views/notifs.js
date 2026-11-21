@@ -9,8 +9,8 @@ import * as PU from '../push.js';
 
 let filter = 'all';
 const TYPES = [['all', tt('الكل', 'All')], ['deadline', tt('الإغلاق', 'Deadline')], ['injury', tt('الإصابات', 'Injuries')], ['price', tt('الأسعار', 'Prices')], ['goals', tt('الأهداف', 'Goals')], ['league', tt('الدوريات', 'Leagues')]];
-const GROUP = { deadline: 'deadline', injury: 'injury', absent: 'injury', price: 'price', transfer: 'price', goal: 'goals', assist: 'goals', red: 'goals', start: 'goals', league: 'league', admin: 'all' };
-const COL = { deadline: '#34D399', injury: '#F59E0B', absent: '#EF4444', price: '#60A5FA', transfer: '#60A5FA', goal: '#10B981', assist: '#10B981', red: '#EF4444', start: '#A78BFA', league: '#34D399', admin: '#A78BFA' };
+const GROUP = { lineup: 'goals', deadline: 'deadline', injury: 'injury', absent: 'injury', price: 'price', transfer: 'price', goal: 'goals', assist: 'goals', red: 'goals', start: 'goals', league: 'league', admin: 'all' };
+const COL = { lineup: '#A78BFA', deadline: '#34D399', injury: '#F59E0B', absent: '#EF4444', price: '#60A5FA', transfer: '#60A5FA', goal: '#10B981', assist: '#10B981', red: '#EF4444', start: '#A78BFA', league: '#34D399', admin: '#A78BFA' };
 
 export function vNotifs() {
   const list = ST.notifs.filter((n) => filter === 'all' || GROUP[n.type] === filter);
@@ -29,7 +29,7 @@ Object.assign(window, {
 });
 
 /* ---------- الإعدادات ---------- */
-const PREFS = [['deadline', tt('قرب إغلاق الجولة', 'Deadline reminders')], ['injury', tt('إصابات وغيابات لاعبيني', 'Injuries & absences')], ['price', tt('تغير الأسعار (فريقي وقائمة المراقبة)', 'Price changes')], ['goals', tt('أهداف وصناعات وطرد لاعبيني (مباشر)', 'Live goals/assists/reds')], ['start', tt('بداية المباريات', 'Kick-offs')], ['league', tt('تغير ترتيبي بالدوريات', 'League rank changes')]];
+const PREFS = [['deadline', tt('قرب إغلاق الجولة', 'Deadline reminders')], ['injury', tt('إصابات وغيابات لاعبيني', 'Injuries & absences')], ['price', tt('تغير الأسعار (فريقي وقائمة المراقبة)', 'Price changes')], ['goals', tt('أهداف وصناعات وطرد لاعبيني (مباشر)', 'Live goals/assists/reds')], ['lineups', tt('التشكيلة الرسمية لمباريات لاعبيني', 'Official lineups for my players')], ['start', tt('بداية المباريات', 'Kick-offs')], ['league', tt('تغير ترتيبي بالدوريات', 'League rank changes')]];
 export function vSettings() {
   const U = ST.user, P = ST.profile, prov = AU.linkedProviders();
   const sw = (on, fn) => `<button class="switch ${on ? 'on' : ''}" onclick="${fn}" aria-pressed="${on}"><i></i></button>`;

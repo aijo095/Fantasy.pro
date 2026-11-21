@@ -22,13 +22,10 @@ async function get(path) {
 const ymd = (d) => d.toISOString().slice(0, 10).replace(/-/g, '');
 const clockMin = (s) => { const m = String(s || '').match(/(\d+)'(?:\+(\d+))?/); return m ? { min: +m[1], add: m[2] ? +m[2] : 0, txt: s } : null; };
 
-export default async function handler(req, res) {
-  const u = new URL(req.url, 'http://x');
-  const ko = new Date(u.searchParams.get('ko') || ''), h = (u.searchParams.get('h') || '').toUpperCase().slice(0, 4), a = (u.searchParams.get('a') || '').toUpperCase().slice(0, 4);
-  if (isNaN(ko) || !/^[A-Z]{3}$/.test(h) || !/^[A-Z]{3}$/.test(a)) return send(res, 400, { error: 'bad params' });
-  if (process.env.FPL_MOCK === '1') return send(res, 404, { error: 'mock' });
+/** يرجّع { code, d, ttl } — يستخدمه الراوتر وكمان محرك الإشعارات (/api/notify) مباشرة */
+export async function getLineup(ko, h, a) {
   const key = `${h}-${a}-${ymd(ko)}`;
-  const hit = memo.get(key); if (hit && Date.now() < hit.exp) return send(res, 200, hit.d, hit.ttl);
+  const hit = memo.get(key); if (hit && Date.now() < hit.exp) return { code: 200, d: hit.d, ttl: hit.ttl };
   try {
     const H = ABBR[h] || h, A = ABBR[a] || a;
     // تاريخ ESPN حسب توقيت أمريكا الشرقي — نجرب يوم المباراة وقبله
@@ -38,7 +35,7 @@ export default async function handler(req, res) {
       ev = (sb?.events || []).find((e) => { const c = e.competitions?.[0]?.competitors || []; const hh = c.find((x) => x.homeAway === 'home')?.team?.abbreviation, aa = c.find((x) => x.homeAway === 'away')?.team?.abbreviation; return hh === H && aa === A; });
       if (ev) break;
     }
-    if (!ev) return send(res, 404, { error: 'not found' }, 300);
+    if (!ev) return { code: 404, d: { error: 'not found' }, ttl: 300 };
     const s = await get(`summary?event=${ev.id}`);
     const state = ev.status?.type?.state; // pre | in | post
     const sides = {};
@@ -78,8 +75,17 @@ export default async function handler(req, res) {
     const ttl = state === 'post' ? 6 * 3600 : state === 'in' ? 45 : 600;
     memo.set(key, { d, exp: Date.now() + ttl * 1000, ttl });
     if (memo.size > 200) memo.delete(memo.keys().next().value);
-    return send(res, 200, d, ttl);
+    return { code: 200, d, ttl };
   } catch (e) {
-    return send(res, 502, { error: String(e.message || e) });
+    return { code: 502, d: { error: String(e.message || e) }, ttl: 0 };
   }
+}
+
+export default async function handler(req, res) {
+  const u = new URL(req.url, 'http://x');
+  const ko = new Date(u.searchParams.get('ko') || ''), h = (u.searchParams.get('h') || '').toUpperCase().slice(0, 4), a = (u.searchParams.get('a') || '').toUpperCase().slice(0, 4);
+  if (isNaN(ko) || !/^[A-Z]{3}$/.test(h) || !/^[A-Z]{3}$/.test(a)) return send(res, 400, { error: 'bad params' });
+  if (process.env.FPL_MOCK === '1') return send(res, 404, { error: 'mock' });
+  const r = await getLineup(ko, h, a);
+  return send(res, r.code, r.d, r.ttl);
 }

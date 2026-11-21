@@ -2,8 +2,9 @@
 import { upcoming } from './fpl.js';
 import { ST, saveNotifs, PM, tName } from './store.js';
 import { tt } from './i18n.js';
+import { toast } from './ui.js';
 
-const PREF = { deadline: 'deadline', injury: 'injury', absent: 'injury', price: 'price', goal: 'goals', assist: 'goals', red: 'goals', start: 'start', league: 'league', transfer: 'price', admin: null };
+const PREF = { lineup: 'lineups', deadline: 'deadline', injury: 'injury', absent: 'injury', price: 'price', goal: 'goals', assist: 'goals', red: 'goals', start: 'start', league: 'league', transfer: 'price', admin: null };
 export function pushNotif(n) {
   const pref = PREF[n.type];
   if (pref && ST.prefs[pref] === false) return;
@@ -50,5 +51,39 @@ export function scanLive(prev, next, fxPrev, fxNext) {
   if (fxPrev && fxNext) {
     const teams = new Set(squad.map((id) => PM(id)?.team));
     fxNext.forEach((f) => { const o = fxPrev.find((x) => x.id === f.id); if (f.started && o && !o.started && (teams.has(f.h) || teams.has(f.a))) pushNotif({ key: `st_${f.id}`, type: 'start', title: tt(`بدأت مباراة ${tName(f.h)} × ${tName(f.a)}`, `Kick-off: ${tName(f.h)} v ${tName(f.a)}`), body: tt('بيها لاعبين من تشكيلتك', 'Your players are involved'), icon: 'i-live', act: `go('live')` }); });
+  }
+}
+
+/* ---------- التشكيلة الرسمية داخل التطبيق ----------
+   1) أي إشعار يوصل من السيرفر والتطبيق مفتوح ← ينضاف لمركز الإشعارات + تنبيه داخل التطبيق
+   2) إذا التطبيق مفتوح: نفحص كل 3 دقايق مباريات لاعبينك اللي باقي عليها ≤ 80 دقيقة لحد ما تنعلن التشكيلة */
+const TAG_TYPE = [[/^lu_/, 'lineup', 'i-pitch'], [/^(g|a)_/, 'goal', 'i-ball'], [/^r_/, 'red', 'i-alert'], [/^dl/, 'deadline', 'i-clock'], [/^(pc|pp)_/, 'price', 'i-trend'], [/^(st|nw)_/, 'injury', 'i-alert'], [/^ko_/, 'start', 'i-play'], [/^done_/, 'league', 'i-trophy']];
+if (typeof window !== 'undefined') window.addEventListener('fp-push', (e) => {
+  const d = e.detail || {}; if (!d.title) return;
+  const [, type, icon] = TAG_TYPE.find(([re]) => re.test(d.tag || '')) || [null, 'admin', 'i-bell'];
+  const h = String(d.url || '').split('#')[1];
+  const before = ST.notifs.length;
+  pushNotif({ key: `push_${d.tag || d.title}`, type, icon, title: d.title, body: d.body || '', act: h ? `location.hash='#${h}'` : '' });
+  if (ST.notifs.length > before) toast(d.title);
+});
+export async function scanLineups() {
+  const { G, plan } = ST; if (!G || !plan || ST.prefs.lineups === false || document.visibilityState !== 'visible') return;
+  const squad = [...plan.xi, ...plan.bench].map(PM).filter(Boolean), teams = new Set(squad.map((p) => p.team));
+  const fxs = [...(G.fx[G.cur] || []), ...(G.fx[G.next] || [])].filter((f) => !f.started && f.ko && (teams.has(f.h) || teams.has(f.a)));
+  for (const f of fxs) {
+    const mins = (new Date(f.ko) - Date.now()) / 6e4; if (mins > 80 || mins < -15) continue;
+    const key = `push_lu_${f.id}`; if (ST.notifs.some((n) => n.key === key)) continue;
+    const d = await fetch(`/api/lineups?ko=${encodeURIComponent(f.ko)}&h=${G.teams[f.h].short}&a=${G.teams[f.a].short}&v=2`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    const sd = d?.sides; if (!sd?.h || !sd?.a || sd.h.players.filter((x) => x.starter).length < 11 || sd.a.players.filter((x) => x.starter).length < 11) continue;
+    const { mapFPL } = await import('./views/live.js');
+    const ids = (k, team) => { const M = mapFPL(sd[k].players, team); return { st: sd[k].players.filter((x) => x.starter).map((x) => M[x.id]?.id).filter(Boolean), bn: sd[k].players.filter((x) => !x.starter).map((x) => M[x.id]?.id).filter(Boolean) }; };
+    const H = ids('h', f.h), A = ids('a', f.a), mine = squad.filter((p) => p.team === f.h || p.team === f.a);
+    const side = (p) => (p.team === f.h ? H : A);
+    const st = mine.filter((p) => side(p).st.includes(p.id)), bn = mine.filter((p) => side(p).bn.includes(p.id)), out = mine.filter((p) => !st.includes(p) && !bn.includes(p));
+    const capId = plan.cap, capOut = [...bn, ...out].some((p) => p.id === capId);
+    const body = [st.length ? tt(`أساسي: ${st.map((p) => p.name).join('، ')}`, `Starting: ${st.map((p) => p.name).join(', ')}`) : '', bn.length ? tt(`دكة: ${bn.map((p) => p.name).join('، ')}`, `Bench: ${bn.map((p) => p.name).join(', ')}`) : '', out.length ? tt(`برا القائمة: ${out.map((p) => p.name).join('، ')}`, `Not in squad: ${out.map((p) => p.name).join(', ')}`) : ''].filter(Boolean).join(' · ');
+    const title = tt(`📋 التشكيلة الرسمية: ${G.teams[f.h].short}×${G.teams[f.a].short}`, `📋 Official lineups: ${G.teams[f.h].short} v ${G.teams[f.a].short}`) + (capOut ? tt(' ⚠️ كابتنك مو أساسي!', ' ⚠️ your captain isn’t starting!') : '');
+    pushNotif({ key, type: 'lineup', icon: 'i-pitch', title, body, act: "location.hash='#live'" });
+    toast(title);
   }
 }

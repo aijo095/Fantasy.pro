@@ -10,7 +10,7 @@ import { t, tt, setLang, applyDir, lang } from './i18n.js';
 import { $, $$, esc, I, toast, openSheet, closeSheet, LS, fmt, sheetHead, morphHTML, aliasClubs } from './ui.js';
 import { countAll, decorate } from './motion.js';
 import { ST, loadLocal, planKey } from './store.js';
-import { scanStatic, unreadCount } from './notify.js';
+import { scanStatic, unreadCount, scanLineups } from './notify.js';
 import { registerSW, syncPush } from './push.js';
 import './sharecard.js';
 import { VIEWS, AFTER, startLivePolling, freshness } from './views/index.js';
@@ -174,6 +174,7 @@ export async function loadAll(fresh = false) {
     AU.touchProfile(ST.user.uid, { teamName: E.entry.name });
     syncPush();
     scanStatic();
+    if (!window.__luT) { window.__luT = setInterval(() => scanLineups().catch(() => {}), 180e3); setTimeout(() => scanLineups().catch(() => {}), 8000); }
     const wasStale = !!document.getElementById('fresh')?.classList.contains('stale');
     buildNav(); show('#app'); document.body.classList.remove('busy'); if (silent) { render(); } else go(location.hash.slice(1) || 'home'); startLivePolling();
     staleBar();

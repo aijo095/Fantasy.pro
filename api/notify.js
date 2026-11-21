@@ -5,6 +5,7 @@
    • تغيّر سعر لاعب عنده أو بقائمة مراقبته • توقع صعود/نزول السعر الليلة
    • هدف / صناعة / طرد للاعبينه مباشرة  • بداية مباريات لاعبينه
    • نهاية الجولة: نقاطه وترتيبه
+   • التشكيلة الرسمية لمباريات لاعبينه (منو أساسي/دكة/برا) أول ما تنعلن
    الطلب آمن للتكرار: كل تنبيه له مفتاح ما يتكرر، وفي قفل يمنع التشغيل المتزامن
 ========================================================= */
 import { kv, getJ, setJ, kvEnabled, send } from './_kv.js';
@@ -12,11 +13,30 @@ import { sendPush } from './_webpush.js';
 import { newsAr } from '../js/newsar.js';
 import { fetchFeeds, h as trHash } from './news.js';
 import crypto from 'node:crypto';
+import { getLineup } from './lineups.js';
 
 export const config = { maxDuration: 60 };
 const BASE = 'https://fantasy.premierleague.com/api/';
 const UA = 'Mozilla/5.0 (compatible; FantasyPro/2.0)';
 const fpl = async (p) => { const r = await fetch(BASE + p, { headers: { 'User-Agent': UA, Accept: 'application/json' } }); if (!r.ok) throw new Error(`fpl ${r.status} ${p}`); return r.json(); };
+
+/* ربط لاعبي ESPN بلاعبي الفانتازي بالاسم (نفس منطق صفحة المباشر) */
+const nrm = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]/g, '');
+const lastTok = (x) => nrm(String(x || '').trim().split(/\s+/).pop());
+function mapFPL(players, pool) {
+  const used = new Set(), out = {};
+  const full = (p) => `${p.first_name} ${p.second_name}`;
+  const tests = [
+    (e, p) => nrm(full(p)) === nrm(e.name),
+    (e, p) => nrm(p.web_name) === nrm(e.name) || nrm(p.web_name) === nrm(e.last) || nrm(p.web_name) === nrm(e.short),
+    (e, p) => lastTok(full(p)) === lastTok(e.name) && nrm(full(p))[0] === nrm(e.name)[0],
+    (e, p) => nrm(e.name).endsWith(nrm(p.web_name)) && nrm(p.web_name).length >= 4,
+    (e, p) => lastTok(full(p)) === lastTok(e.name),
+    (e, p) => nrm(e.name).includes(nrm(p.web_name)) && nrm(p.web_name).length >= 4,
+  ];
+  tests.forEach((t) => players.forEach((e) => { if (out[e.id]) return; const m = pool.filter((p) => !used.has(p.id) && t(e, p)); if (m.length === 1) { out[e.id] = m[0].id; used.add(m[0].id); } }));
+  return out;
+}
 const ST_AR = { i: 'مصاب', s: 'موقوف', d: 'مشكوك بمشاركته', u: 'غير متاح', n: 'غير مؤهل' };
 
 export default async function handler(req, res) {
@@ -77,6 +97,31 @@ export default async function handler(req, res) {
       if (cur.finished) await kv('SET', 'snap:done:' + cur.id, '1', 'EX', 30 * 86400);
       log.events.push(`live:${liveEv.size} kick:${kick.length} done:${gwDone}`);
     }
+
+
+    /* ---------- 2ب) التشكيلات الرسمية: نفحص المباريات اللي باقي عليها ≤ 80 دقيقة لحد ما تنعلن ---------- */
+    const luNew = [];
+    try {
+      const evs = [cur, next].filter(Boolean), seenF = new Set();
+      for (const e of evs) {
+        const fxs = await fpl(`fixtures/?event=${e.id}`).catch(() => []);
+        for (const f of fxs) {
+          if (seenF.has(f.id) || f.started || !f.kickoff_time) continue; seenF.add(f.id);
+          const mins = (new Date(f.kickoff_time) - Date.now()) / 6e4; if (mins > 80 || mins < -15) continue;
+          if (await kv('GET', 'lu:done:' + f.id)) continue;
+          if (!(await kv('SET', 'lock:lu:' + f.id, '1', 'NX', 'EX', 100))) continue; // نفحص كل مباراة مرة كل ~دقيقتين بس
+          const r = await getLineup(new Date(f.kickoff_time), T[f.team_h], T[f.team_a]).catch(() => null);
+          const sd = r?.code === 200 ? r.d?.sides : null;
+          if (!sd?.h?.players?.filter((x) => x.starter).length || sd.h.players.filter((x) => x.starter).length < 11 || (sd.a?.players || []).filter((x) => x.starter).length < 11) continue;
+          const side = (k, team) => { const pl = sd[k].players, M = mapFPL(pl, boot.elements.filter((x) => x.team === team)); return { st: pl.filter((x) => x.starter).map((x) => M[x.id]).filter(Boolean), bn: pl.filter((x) => !x.starter).map((x) => M[x.id]).filter(Boolean), team }; };
+          const L = { id: f.id, h: side('h', f.team_h), a: side('a', f.team_a), ko: f.kickoff_time };
+          await kv('SET', 'lu:done:' + f.id, '1', 'EX', 3 * 86400);
+          await setJ('lu:fx:' + f.id, L, 3 * 86400);
+          luNew.push(L);
+        }
+      }
+      if (luNew.length) log.events.push(`lineups:${luNew.length}`);
+    } catch {}
 
     /* ---------- 3) توقع الأسعار الليلة (مرة باليوم، المسا) ---------- */
     const total = boot.total_players || 10e6;
@@ -185,6 +230,18 @@ export default async function handler(req, res) {
       if (on('injury')) for (const x of freshNews) if (x.players.some((id) => squad.has(id) || watch.has(id))) {
         const ic = { injury: '🩹', ban: '🟥', press: '🎙️', team: '📋' }[x.cat] || '📰';
         msgs.push({ k: `nw_${trHash(x.link)}`, title: `${ic} ${x.titleAr || x.title}`, body: `${x.src} · اضغط حتى تقرأ`, url: '/#news' });
+      }
+      // التشكيلة الرسمية لمباريات لاعبينه
+      if (on('lineups') && luNew.length) {
+        const mineAll = new Set([...squad, ...watch]);
+        for (const L of luNew) {
+          const inv = [...mineAll].filter((id) => P[id]?.team === L.h.team || P[id]?.team === L.a.team); if (!inv.length) continue;
+          const sideOf = (id) => (P[id].team === L.h.team ? L.h : L.a);
+          const st = inv.filter((id) => sideOf(id).st.includes(id)), bn = inv.filter((id) => sideOf(id).bn.includes(id)), out = inv.filter((id) => !st.includes(id) && !bn.includes(id));
+          const capOut = out.concat(bn).some((id) => mult[id] >= 2);
+          const body = [st.length ? `أساسي: ${st.map(name).join('، ')}` : '', bn.length ? `دكة: ${bn.map(name).join('، ')}` : '', out.length ? `برا القائمة: ${out.map(name).join('، ')}` : ''].filter(Boolean).join(' · ');
+          msgs.push({ k: `lu_${L.id}`, title: `📋 التشكيلة الرسمية: ${T[L.h.team]}×${T[L.a.team]}${capOut ? ' ⚠️ كابتنك مو أساسي!' : ''}`, body, url: '/#live', urg: 'high' });
+        }
       }
       // المباشر
       if (on('goals')) for (const [id, e] of liveEv) if (squad.has(id) && mult[id] > 0) {
