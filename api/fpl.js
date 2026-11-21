@@ -49,6 +49,14 @@ function evState(n) {
   if (e.deadline_time && new Date(e.deadline_time) > Date.now()) return 'future';
   return 'live';
 }
+/* فيه مباراة شغالة هسة؟ (من مواعيد الانطلاق، فما يتأخر حتى لو النسخة المحفوظة قديمة) — null = ما نعرف */
+function matchNow() {
+  const b = memo.get('bootstrap-static/')?.d, cur = b?.events?.find((e) => e.is_current)?.id; if (!cur) return null;
+  const fx = memo.get(`fixtures/?event=${cur}`)?.d || (memo.get('fixtures/')?.d || []).filter((f) => f.event === cur);
+  if (!Array.isArray(fx) || !fx.length) return null;
+  const now = Date.now(); return fx.some((f) => (f.started || (f.kickoff_time && new Date(f.kickoff_time) <= now)) && !f.finished);
+}
+const RANKY = /^(leagues-classic\/\d+\/standings|leagues-h2h\/\d+\/standings|entry\/\d+|entry\/\d+\/history)\/$/;
 const untilDeadline = (n) => { const e = memo.get('bootstrap-static/')?.d?.events?.find((x) => x.id === n); return e?.deadline_time ? new Date(e.deadline_time) - Date.now() : 0; };
 function send(res, code, data, ttl = 0) {
   res.statusCode = code;
@@ -109,6 +117,8 @@ export default async function handler(req, res) {
   { const evN = ev || +((path.match(/^(?:event|entry\/\d+\/event)\/(\d{1,2})\//) || [])[1] || 0); const stt = evN ? evState(evN) : null;
     if (stt === 'done' && (qs.includes('event=') || /\/(live|picks)\/$/.test(path))) ttl = 86400;
     else if (stt === 'future' && (path === 'fixtures/' || /\/live\/$/.test(path))) ttl = Math.max(60, Math.min(1800, Math.round(untilDeadline(evN) / 1000))); }
+  // الترتيب والنقاط: سريع إذا أكو مباراة تنلعب، وكل ساعة إذا ماكو
+  if (RANKY.test(path)) { const m = matchNow(); ttl = m === false ? 3600 : /standings/.test(path) || /history/.test(path) ? 120 : 60; }
   const key = path + qs;
   let fresh = url.searchParams.get('fresh') === '1';
   if (fresh) { const lf = lastFresh.get(key) || 0; if (Date.now() - lf < (ttl <= 20 ? 10000 : 30000)) fresh = false; else lastFresh.set(key, Date.now()); } // المباشر: تحديث كل ~3 ثواني

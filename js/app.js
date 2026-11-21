@@ -174,6 +174,7 @@ export async function loadAll(fresh = false) {
     AU.touchProfile(ST.user.uid, { teamName: E.entry.name });
     syncPush();
     scanStatic();
+    FPL.setMatchNow(() => { const fx = ST.G?.fx?.[ST.G.cur]; if (!fx?.length) return null; const now = Date.now(); return fx.some((f) => (f.started || (f.ko && new Date(f.ko) <= now)) && !f.fin); });
     if (!window.__luT) { window.__luT = setInterval(() => scanLineups().catch(() => {}), 180e3); setTimeout(() => scanLineups().catch(() => {}), 8000); }
     const wasStale = !!document.getElementById('fresh')?.classList.contains('stale');
     buildNav(); show('#app'); document.body.classList.remove('busy'); if (silent) { render(); } else go(location.hash.slice(1) || 'home'); startLivePolling();

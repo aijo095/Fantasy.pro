@@ -5,6 +5,10 @@
 ========================================================= */
 import { LS } from './ui.js';
 import { simWrap, simOn } from './livesim.js';
+/* الترتيب والنقاط: سريع وقت المباريات وكل ساعة إذا ماكو مباراة (التطبيق يحدد الحالة بـ setMatchNow) */
+let MATCH_NOW = () => null;
+export const setMatchNow = (f) => { MATCH_NOW = f; };
+const rt = (fast) => (MATCH_NOW() === false ? 3600 : fast);
 const POS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' };
 const mem = new Map();
 export const lastUpdated = {};
@@ -105,7 +109,7 @@ export async function loadGame(fresh = false) {
 
 export async function loadEntry(id, fresh = false) {
   const [entry, hist, transfers] = await Promise.all([
-    get(`entry/${id}/`, {}, { ttl: 120, fresh }), get(`entry/${id}/history/`, {}, { ttl: 600, fresh }), get(`entry/${id}/transfers/`, {}, { ttl: 120, fresh }).catch(() => []),
+    get(`entry/${id}/`, {}, { ttl: rt(60), fresh }), get(`entry/${id}/history/`, {}, { ttl: rt(120), fresh }), get(`entry/${id}/transfers/`, {}, { ttl: 120, fresh }).catch(() => []),
   ]);
   const gw = entry.current_event || null;
   const picks = gw ? await get(`entry/${id}/event/${gw}/picks/`, {}, { ttl: 300, fresh }).catch(() => null) : null;
@@ -121,9 +125,9 @@ export const fetchHistory = (id) => get(`entry/${id}/history/`, {}, { ttl: 300 }
 export const loadSetPieceNotes = () => get('team/set-piece-notes/', {}, { ttl: 3600 });
 export const fetchTransfers = (id) => get(`entry/${id}/transfers/`, {}, { ttl: 120 });
 export const fetchPicks = (id, gw) => get(`entry/${id}/event/${gw}/picks/`, {}, { ttl: 3600 });
-export const loadH2H = (id, page = 1) => get(`leagues-h2h/${id}/standings/`, { page }, { ttl: 600 });
+export const loadH2H = (id, page = 1) => get(`leagues-h2h/${id}/standings/`, { page }, { ttl: rt(120) });
 export const loadH2HMatches = (id, event, page = 1, fresh = false) => get(`leagues-h2h-matches/league/${id}/`, { ...(event ? { event } : {}), page }, { ttl: 60, fresh });
-export const loadLeague = (id, page = 1) => get(`leagues-classic/${id}/standings/`, { page }, { ttl: 600 });
+export const loadLeague = (id, page = 1) => get(`leagues-classic/${id}/standings/`, { page }, { ttl: rt(120) });
 export const loadLive = (gw, fresh = false) => get(`event/${gw}/live/`, {}, { ttl: 3, fresh });
 export const loadFixturesGW = (gw, fresh = false) => get('fixtures/', { event: gw }, { ttl: 3, fresh });
 export const loadPlayerSummary = (id) => get(`element-summary/${id}/`, {}, { ttl: 3600 });
