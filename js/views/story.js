@@ -19,6 +19,7 @@ import { chipStatus } from '../fpl.js';
 import { liveCalc } from '../live-engine.js';
 import { pricePredict } from '../predict.js';
 import { fixturesFor, xp } from '../engine.js';
+import * as PS from '../intel/stats.js';
 
 const DUR = 7000, POLL = 120e3;
 let SI = 0, SEL = null, HOLD = false, CS_T = 0, CAPX = null, CAPX_K = null, STORY = null, STORY_K = null, LIVE = null, TIPS = [], VIS = true, PT = 0, RIV = null, RIV_K = null;
@@ -353,15 +354,48 @@ function sPrices() {
     body: `<ul class="sy-px">${ch.slice(0, 3).map((p, i) => `<li style="--d:${80 + i * 60}ms"><b>${esc(p.name)}</b><span class="${p.cc > 0 ? 'up' : 'dn'}">${p.cc > 0 ? '▲' : '▼'} ${N(Math.abs(p.cc).toFixed(1))}</span><small>${tt('هالجولة', 'this GW')} · ${N(p.price.toFixed(1))}</small></li>`).join('')}
       ${pr.filter(([p]) => !ch.slice(0, 3).includes(p)).slice(0, 3 - Math.min(2, ch.length) + 1).map(([p, r], i) => `<li style="--d:${260 + i * 60}ms"><b>${esc(p.name)}</b><span class="${r.prog > 0 ? 'up' : 'dn'}">${r.prog > 0 ? tt('ممكن يصعد', 'may rise') : tt('ممكن ينزل', 'may drop')}</span><small>${tt('وصل', 'at')} ${N(`${Math.abs(Math.round(r.prog))}%`)}</small><i class="sy-mb"><i style="--w:${Math.min(100, Math.abs(Math.round(r.prog)))}%;--c:${r.prog > 0 ? 'var(--c-mint)' : 'var(--c-coral)'}"></i></i></li>`).join('')}</ul>` };
 }
+/* المساهمات: كل جولة زاوية مختلفة ولاعبين مختلفين (تدور حسب رقم الجولة) */
+function recent(ids, n = 4) {
+  const G = PS.load().gws || {}, gs = Object.keys(G).map(Number).sort((a, b) => b - a).slice(0, n), o = {};
+  ids.forEach((id) => { o[id] = gs.reduce((a, g) => { const r = G[g]?.[id]; if (r) { a.pts += r[0] || 0; a.min += r[1] || 0; a.xg += (r[3] || 0) / 100; a.xa += (r[4] || 0) / 100; a.dc += r[7] || 0; } return a; }, { pts: 0, min: 0, xg: 0, xa: 0, dc: 0 }); });
+  return { o, n: gs.length };
+}
 function sContrib() {
   const sq = (ST.plan?.squad || (ST.E.picks?.picks || []).map((x) => x.element)).map(PM).filter(Boolean); if (!sq.length) return null;
-  const A = sq.filter((p) => p.pos !== 'GK').map((p) => ({ p, gi: (p.gls || 0) + (p.ast || 0), x: p.xgi || 0 })).sort((a, b) => b.gi - a.gi || b.x - a.x).slice(0, 4);
-  const dcTop = sq.filter((p) => p.pos === 'DEF' || p.pos === 'MID').sort((a, b) => (b.dc || 0) - (a.dc || 0))[0];
-  const mx = Math.max(1, ...A.map((a) => Math.max(a.gi, a.x)));
-  return { k: 'ct', col: 'var(--c-sky)', ic: 'star', h: tt('مساهمات لاعبينك', 'Your players’ output'), sub: tt('مجموع الموسم لكل لاعب', 'Season totals'), to: "go('players')", toL: tt('إحصاءات اللاعبين', 'Player stats'),
-    body: `<div class="sy-leg"><span><i class="g"></i>${tt('أهداف', 'Goals')}</span><span><i class="a"></i>${tt('صناعات', 'Assists')}</span><span><s></s>${tt('المتوقع', 'Expected')}</span></div>
-      <ul class="sy-ctb">${A.map((a, i) => `<li style="--d:${80 + i * 70}ms"><div class="sy-cth"><b>${esc(a.p.name)}</b><span class="sy-ctn"><em class="g">${ic('ball')}${N(a.p.gls || 0)} ${tt('هدف', 'G')}</em><em class="a">${ic('boot')}${N(a.p.ast || 0)} ${tt('صناعة', 'A')}</em></span></div><span class="sy-ctbar"><i class="g" style="--w:${((a.p.gls || 0) / mx) * 100}%"></i><i class="a" style="--w:${((a.p.ast || 0) / mx) * 100}%"></i><s style="--x:${(a.x / mx) * 100}%"></s></span></li>`).join('')}</ul>
-      ${dcTop?.dc ? `<p class="sy-note">${ic('shield')} ${tt(`أكثر مساهمات دفاعية: ${esc(dcTop.name)} (${dcTop.dc})`, `Top defensive contributions: ${esc(dcTop.name)} (${dcTop.dc})`)}</p>` : ''}` };
+  const gw = ST.G.cur || 1, R = recent(sq.map((p) => p.id)), out = sq.filter((p) => p.pos !== 'GK');
+  const bar = (rows, mx, i0 = 0) => rows.map((r, i) => `<li style="--d:${80 + (i + i0) * 70}ms"><div class="sy-cth"><b>${esc(r.p.name)}</b><span class="sy-ctn">${r.tags}</span></div><span class="sy-ctbar">${r.segs.map(([c, v]) => `<i class="${c}" style="--w:${Math.max(0, (v / mx) * 100)}%"></i>`).join('')}</span></li>`).join('');
+  const tag = (c, icn, txt) => `<em class="${c}">${ic(icn)}${txt}</em>`;
+  const MODES = [
+    () => { // أهداف وصناعات بالموسم
+      const A = out.map((p) => ({ p, v: (p.gls || 0) + (p.ast || 0) })).filter((x) => x.v).sort((a, b) => b.v - a.v).slice(0, 4); if (!A.length) return null; const mx = Math.max(...A.map((a) => a.v));
+      return { h: tt('أهداف وصناعات لاعبينك', 'Your goals & assists'), sub: tt('مجموع الموسم', 'Season totals'), leg: [['g', tt('أهداف', 'Goals')], ['a', tt('صناعات', 'Assists')]],
+        rows: A.map((a) => ({ p: a.p, tags: tag('g', 'ball', `${N(a.p.gls || 0)} ${tt('هدف', 'G')}`) + tag('a', 'boot', `${N(a.p.ast || 0)} ${tt('صناعة', 'A')}`), segs: [['g', a.p.gls || 0], ['a', a.p.ast || 0]] })), mx };
+    },
+    () => { // الأخطر بآخر الجولات (المتوقع)
+      if (!R.n) return null; const A = out.map((p) => ({ p, r: R.o[p.id] })).filter((x) => x.r.xg + x.r.xa > 0).sort((a, b) => b.r.xg + b.r.xa - (a.r.xg + a.r.xa)).slice(0, 4); if (!A.length) return null; const mx = Math.max(...A.map((a) => a.r.xg + a.r.xa));
+      return { h: tt('الأخطر بفريقك هسة', 'Most dangerous right now'), sub: tt(`الأهداف والصناعات المتوقعة بآخر ${R.n} جولات`, `xG + xA, last ${R.n} GWs`), leg: [['g', tt('أهداف متوقعة', 'xG')], ['a', tt('صناعات متوقعة', 'xA')]],
+        rows: A.map((a) => ({ p: a.p, tags: tag('g', 'ball', N(a.r.xg.toFixed(1))) + tag('a', 'boot', N(a.r.xa.toFixed(1))), segs: [['g', a.r.xg], ['a', a.r.xa]] })), mx };
+    },
+    () => { // نقاط آخر الجولات
+      if (!R.n) return null; const A = sq.map((p) => ({ p, r: R.o[p.id] })).filter((x) => x.r.pts > 0).sort((a, b) => b.r.pts - a.r.pts).slice(0, 4); if (!A.length) return null; const mx = Math.max(...A.map((a) => a.r.pts));
+      return { h: tt('منو شايل فريقك', 'Who’s carrying your team'), sub: tt(`نقاط آخر ${R.n} جولات`, `Points, last ${R.n} GWs`), leg: [['g', tt('نقاط', 'Points')]],
+        rows: A.map((a) => ({ p: a.p, tags: tag('g', 'star', `${N(a.r.pts)} ${tt('نقطة', 'pts')}`) + tag('a', 'clock', `${N(a.r.min)} ${tt('دقيقة', 'min')}`), segs: [['g', a.r.pts]] })), mx };
+    },
+    () => { // الدفاع
+      const A = sq.filter((p) => p.pos === 'DEF' || p.pos === 'MID' || p.pos === 'GK').map((p) => ({ p, v: (p.dc || 0) })).filter((x) => x.v || x.p.cs).sort((a, b) => b.v - a.v || (b.p.cs || 0) - (a.p.cs || 0)).slice(0, 4); if (!A.length) return null; const mx = Math.max(1, ...A.map((a) => a.v));
+      return { h: tt('صلابة دفاعك', 'Your defensive output'), sub: tt('المساهمات الدفاعية والشباك النظيفة بالموسم', 'Defensive contributions & clean sheets'), leg: [['a', tt('مساهمات دفاعية', 'Def. contributions')]],
+        rows: A.map((a) => ({ p: a.p, tags: tag('a', 'shield', `${N(a.v)} ${tt('مساهمة', 'DC')}`) + tag('g', 'check', `${N(a.p.cs || 0)} ${tt('نظيفة', 'CS')}`), segs: [['a', a.v]] })), mx };
+    },
+    () => { // البونص
+      const A = sq.map((p) => ({ p, v: p.bonus || 0 })).filter((x) => x.v).sort((a, b) => b.v - a.v).slice(0, 4); if (!A.length) return null; const mx = Math.max(...A.map((a) => a.v));
+      return { h: tt('صيّادين البونص', 'Bonus hunters'), sub: tt('نقاط البونص بالموسم', 'Season bonus points'), leg: [['g', tt('بونص', 'Bonus')]],
+        rows: A.map((a) => ({ p: a.p, tags: tag('g', 'star', `${N(a.v)} ${tt('بونص', 'bonus')}`) + tag('a', 'spark', `${N(a.p.bps || 0)} ${tt('نقطة تقييم', 'BPS')}`), segs: [['g', a.v]] })), mx };
+    },
+  ];
+  let M = null; for (let i = 0; i < MODES.length && !M; i++) M = MODES[(gw + i) % MODES.length]();
+  if (!M) return null;
+  return { k: 'ct', col: 'var(--c-sky)', ic: 'star', h: M.h, sub: M.sub, to: "go('players')", toL: tt('إحصاءات اللاعبين', 'Player stats'),
+    body: `<div class="sy-leg">${M.leg.map(([c, l]) => `<span><i class="${c}"></i>${l}</span>`).join('')}</div><ul class="sy-ctb">${bar(M.rows, M.mx)}</ul>` };
 }
 
 /* ---------- شرح كابتن (طلب واحد لملخص اللاعب، ينخزن) ---------- */
@@ -388,7 +422,7 @@ const TREE = {
   live: { lead: [sLvTotal, sLvMine, sLvRival, sLvXI], core: 1 },
   between: { lead: [sRecap, sH2H, sNext, sPrices, sContrib], core: 3 },
 };
-const CORE = [sRank, sLeagues, sGws, sMoves, sExtras];
+const CORE = [sRank, sLeagues, sMoves, sExtras];
 function plan() {
   const D = STORY; if (!D) return [];
   const T = TREE[D.live ? 'live' : 'between'];
