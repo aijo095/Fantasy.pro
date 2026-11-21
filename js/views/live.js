@@ -446,7 +446,7 @@ function lu2Half(sd, team) {
   const ys = [...new Set(out.map((z) => z.y))].sort((a, b) => b - a), map = {};
   ys.forEach((y, i) => (map[y] = i === 0 ? 89 : 72 - (i - 1) * (60 / Math.max(1, ys.length - 2))));
   const cnt = {}; out.forEach((z) => (cnt[z.y] = (cnt[z.y] || 0) + 1));
-  return { out: out.map((z) => ({ ...z, w: Math.min(25, 96 / cnt[z.y]), y: map[z.y] })), M, n };
+  return { out: out.map((z) => ({ ...z, w: Math.min(25, 96 / cnt[z.y]), t: cnt[z.y] >= 4, y: map[z.y] })), M, n };
 }
 function lu2Sheet(f, ev, d) {
   const mine = ST.plan ? new Set([...ST.plan.xi, ...ST.plan.bench]) : new Set(), cap = ST.plan?.cap;
@@ -460,8 +460,8 @@ function lu2Sheet(f, ev, d) {
   const half = sd ? lu2Half(sd, team) : { out: [], M: {} };
   const go = (p) => (p ? `onclick="closeSheet();setTimeout(()=>openPlayer(${p.id}),200)"` : '');
   const dot = (z) => { const p = z.p, my = p && mine.has(p.id), nm = esc(p?.name || z.e.last || z.e.short || z.e.name);
-    return `<button class="lu3-pl${my ? ' my' : ''}" style="left:${z.x}%;top:${z.y}%;width:${z.w}%" ${go(p)}><span class="lu3-sh">${p ? pShirt(p) : pShirt({ team, pos: z.e.pos === 'G' ? 'GK' : 'MID' })}${p && p.id === cap ? '<i class="lu3-cap">C</i>' : ''}${z.e.yc ? '<i class="mc-yc"></i>' : ''}</span><span class="lu3-nm">${z.e.jersey ? `<i>${esc(z.e.jersey)}</i>` : ''}${nm}</span></button>`; };
-  const subs = (sd?.players || []).filter((e) => !e.starter).map((e) => { const p = half.M[e.id], my = p && mine.has(p.id); return `<button class="lu3-sb${my ? ' my' : ''}" ${go(p)}><i>${esc(e.jersey || '')}</i><span>${esc(p?.name || e.last || e.name)}</span>${p ? `<small>${({ GK: tt('حارس', 'GK'), DEF: tt('مدافع', 'DEF'), MID: tt('وسط', 'MID'), FWD: tt('مهاجم', 'FWD') })[p.pos] || ''}</small>` : ''}${e.subIn ? `<em>↑${e.subAt ? ' ' + e.subAt.min + '′' : ''}</em>` : ''}</button>`; }).join('');
+    return `<button class="lu3-pl${my ? ' my' : ''}${z.t ? ' tight' : ''}" style="left:${z.x}%;top:${z.y}%;width:${z.w}%" ${go(p)}><span class="lu3-sh">${z.t && z.e.jersey ? `<i class="lu3-no">${esc(z.e.jersey)}</i>` : ''}${p ? pShirt(p) : pShirt({ team, pos: z.e.pos === 'G' ? 'GK' : 'MID' })}${p && p.id === cap ? '<i class="lu3-cap">C</i>' : ''}${z.e.yc ? '<i class="mc-yc"></i>' : ''}</span><span class="lu3-nm">${!z.t && z.e.jersey ? `<i>${esc(z.e.jersey)}</i>` : ''}${nm}</span></button>`; };
+  const subs = (sd?.players || []).filter((e) => !e.starter).map((e) => { const p = half.M[e.id], my = p && mine.has(p.id); return `<button class="lu3-sb${my ? ' my' : ''}" ${go(p)}><i>${esc(e.jersey || '')}</i><span>${esc(p?.name || e.last || e.name)}</span>${p ? `<small>${({ GK: tt('حارس', 'GK'), DEF: tt('مدافع', 'DEF'), MID: tt('وسط', 'MID'), FWD: tt('مهاجم', 'FWD') })[p.pos] || ''}</small>` : ''}${e.subIn && e.subAt ? `<em>↑ ${e.subAt.min}′</em>` : ''}</button>`; }).join('');
   const st = (p) => (inXI.has(p.id) ? 'xi' : benchIds.has(p.id) ? 'bench' : 'out');
   const LBL = { xi: tt('أساسي', 'Starting'), bench: tt('على الدكة', 'Bench'), out: tt('مو بالقائمة', 'Not in squad') };
   const my = myP.length ? `<div class="lu3-mine">${myP.map((p) => { const s2 = st(p); return `<button class="${s2}" ${go(p)}><span class="lu3-msh">${pShirt(p)}</span><b>${esc(p.name)}${p.id === cap ? ' <i class="lu3-capi">C</i>' : ''}</b><em>${LBL[s2]}</em></button>`; }).join('')}</div>` : '';

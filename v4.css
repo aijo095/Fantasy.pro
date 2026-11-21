@@ -619,3 +619,5 @@ html.ui2 #toast{bottom:calc(96px + env(safe-area-inset-bottom,0px) * .5)}
 .lu3-sb em{flex:none;font-style:normal;font:700 10px Inter,sans-serif;color:var(--c-mint,#6EE7B7)}
 .lu3-sb.my{border-color:color-mix(in srgb,var(--c-mint,#6EE7B7) 45%,transparent)}.lu3-sb.my span{color:var(--c-mint,#6EE7B7)}
 @media(max-width:380px){.lu3-sh{width:32px;height:32px}.lu3-nm{font-size:10px}}
+.lu3-pl.tight .lu3-nm{max-width:100%;padding:2px 6px;font-size:10px;justify-content:center}
+.lu3-no{position:absolute;bottom:-2px;left:-7px;min-width:15px;height:15px;padding:0 3px;border-radius:5px;display:grid;place-items:center;font:800 9px Inter,sans-serif;font-style:normal;background:#0B1220;color:#fff;box-shadow:0 0 0 1.5px rgba(255,255,255,.25)}
