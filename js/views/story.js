@@ -73,8 +73,8 @@ function build(cs) {
   const G = ST.G, E = ST.E, en = E.entry, evOf = (g) => G.events.find((e) => e.id === g);
   const rows = (E.hist?.current || []).filter((h) => evOf(h.event)).map((h) => ({ g: h.event, p: h.points, a: evOf(h.event)?.avg || 0, r: h.overall_rank, t: h.event_transfers || 0, c: h.event_transfers_cost || 0, b: h.points_on_bench || 0, v: h.value, gr: h.rank }));
   const fin = rows.filter((x) => evOf(x.g)?.fin);
-  const SYS = { Overall: tt('العام', 'Overall'), 'Second Chance': tt('الفرصة الثانية', 'Second Chance') };
-  const lg = (en.leagues?.classic || []).filter((l) => l.entry_rank && l.rank_count > 1).map((l) => ({ n: SYS[l.name] || l.name, r: l.entry_rank, c: l.rank_count, lr: l.entry_last_rank, x: l.league_type === 'x', pct: 1 - (l.entry_rank - 1) / l.rank_count }));
+  const SYS = { Overall: tt('العالم', 'World'), Iraq: tt('العراق', 'Iraq'), 'Second Chance': tt('الفرصة الثانية', 'Second Chance') };
+  const lg = (en.leagues?.classic || []).filter((l) => l.entry_rank && l.rank_count > 1).map((l) => ({ raw: l.name, n: SYS[l.name] || l.name, r: l.entry_rank, c: l.rank_count, lr: l.entry_last_rank, x: l.league_type === 'x', pct: 1 - (l.entry_rank - 1) / l.rank_count }));
   const priv = lg.filter((l) => l.x).sort((a, b) => b.pct - a.pct), pub = lg.filter((l) => !l.x).sort((a, b) => a.c - b.c);
   const above = fin.filter((x) => x.p >= x.a).length;
   let streak = 0, cur = 0; fin.forEach((x) => { cur = x.p >= x.a ? cur + 1 : 0; streak = Math.max(streak, cur); });
@@ -177,9 +177,11 @@ function sRank(D) {
       <svg class="sy-spark" viewBox="-6 0 ${W + 12} ${H}" dir="ltr" aria-hidden="true"><path class="sy-line" d="${pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join('')}" pathLength="1"/><circle cx="${bp[0]}" cy="${bp[1]}" r="4" class="sy-dot best"/><circle cx="${lp[0]}" cy="${lp[1]}" r="4.5" class="sy-dot"/></svg><div class="sy-spl" dir="ltr"><span dir="rtl">${tt('ج', 'GW')}${N(F[0].g)}</span><span dir="rtl">${tt('ج', 'GW')}${N(F[F.length - 1].g)}</span></div>` };
 }
 function sLeagues(D) {
-  // أول 3 دوريات خاصة تنعرض تحت بالرئيسية، والعام بالمربع الفوك — هنا الباقي بس
-  const L = [...D.priv.slice(3), ...D.pub.filter((l) => l.n !== tt('العام', 'Overall'))].slice(0, 4); if (!L.length) return null;
-  return { k: 'lg', col: 'var(--c-sky)', ic: 'cup', tab: tt('الدوريات', 'Leagues'), h: tt('ترتيبك بباقي الدوريات', 'Your other leagues'), sub: '', to: "go('leagues')", toL: tt('كل الدوريات', 'All leagues'),
+  // العالم + دوري بلدك + الدوريات الخاصة
+  const reg = ST.E.entry.player_region_name, all = [...D.pub, ...D.priv];
+  const world = all.find((l) => l.raw === 'Overall'), country = reg ? all.find((l) => l.raw === reg) : null;
+  const L = [world, country, ...D.priv].filter(Boolean).slice(0, 6); if (!L.length) return null;
+  return { k: 'lg', col: 'var(--c-sky)', ic: 'cup', tab: tt('الدوريات', 'Leagues'), h: tt('ترتيبك بالدوريات', 'Your league ranks'), sub: '', to: "go('leagues')", toL: tt('كل الدوريات', 'All leagues'),
     body: `<div class="sy-lg">${L.map((l, i) => { const mv = l.lr && l.lr !== l.r ? l.lr - l.r : 0, big = l.r >= 10000; return `<div class="sy-lgi" style="--d:${i * 70}ms">${ring(l.pct, l.pct >= .75 ? 'var(--c-mint)' : l.pct >= .4 ? 'var(--c-sky)' : 'var(--c-peach)', big ? `<small>${tt('أعلى', 'Top')}</small><b class="num">${pctTxt(topPct(l.r, l.c))}٪</b>` : `<b class="num">${fmt(l.r)}</b>`, 58, 5)}<span class="sy-lgn">${esc(l.n)}</span><small>${big ? `${N(fmt(l.r))} ${tt('من', 'of')} ` : `${tt('من', 'of')} `}${N(fmt(l.c))}${mv && !big ? ` <em class="${mv > 0 ? 'up' : 'dn'}">${mv > 0 ? '▲' : '▼'}${N(Math.abs(mv))}</em>` : ''}</small></div>`; }).join('')}</div>` };
 }
 function sGws(D) {
