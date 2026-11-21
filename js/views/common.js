@@ -200,7 +200,9 @@ function playerIntel(p, h, mine) {
   const lvl = why.length >= 2 || av < 0.5 ? ['high', tt('عالية', 'High')] : why.length === 1 ? ['mid', tt('متوسطة', 'Medium')] : ['low', tt('منخفضة', 'Low')];
   host.innerHTML = `<div class="pi">
     <div class="pi-row"><div class="pi-k"><small>${tt('السعر من أول الموسم', 'Price since GW1')}</small><b class="num"><bdi>${v1.toFixed(1)}م</bdi> <em class="${dv > 0 ? 'up' : dv < 0 ? 'down' : ''}"><bdi>${dv > 0 ? '+' : ''}${dv.toFixed(1)}</bdi></em></b></div>${spk}</div>
-    ${avgPpg != null ? `<div class="pi-row"><div class="pi-k"><small>${tt('مقابل متوسط مركزه', 'Vs position average')}</small><b class="num"><bdi>${p.ppg}</bdi> <span class="mut">${tt('نقطة/مباراة مقابل', 'pts/match vs')} <bdi>${avgPpg}</bdi></span></b></div><div class="pi-bar"><i style="width:${better}%"></i><span class="num">${tt(`أفضل من ${better}%`, `Beats ${better}%`)}</span></div></div>` : ''}
+    ${avgPpg != null ? `<div class="pi-row col"><div class="pi-k"><small>${tt('مقارنة بلاعبين نفس مركزه', 'Vs same-position players')}</small></div>
+      <div class="pi-cmp"><div><small>${tt('معدل هذا اللاعب', 'This player')}</small><b class="num"><bdi>${p.ppg}</bdi></b><em>${tt('نقطة بالمباراة', 'pts / match')}</em></div><div><small>${tt('معدل لاعبين مركزه', 'Position average')}</small><b class="num mut"><bdi>${avgPpg}</bdi></b><em>${tt('نقطة بالمباراة', 'pts / match')}</em></div></div>
+      <div class="pi-bar"><i style="width:${better}%"></i><span>${tt(`أفضل من <bdi dir="ltr">${better}%</bdi> من لاعبين مركزه`, `Better than ${better}% of position`)}</span></div></div>` : ''}
     <div class="pi-row col"><div class="pi-k"><small>${tt('المخاطرة', 'Risk')}</small><b class="pi-lv ${lvl[0]}">${lvl[1]}</b></div>${why.length ? `<ul class="pi-why">${why.map((w) => `<li>${w}</li>`).join('')}</ul>` : `<p class="pi-ok">${tt('ماكو مؤشر خطر واضح بالبيانات الحالية', 'No clear risk signals in current data')}</p>`}</div>
     <div class="pi-row col" id="psDec"></div></div>`;
   import('../coach.js').then((CO) => {

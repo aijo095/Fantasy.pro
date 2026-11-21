@@ -320,3 +320,8 @@ html.ui2 #toast{bottom:calc(96px + env(safe-area-inset-bottom,0px) * .5)}
 .jrs-g{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:14px}
 .jrs-g b{font-size:13px}.jrs-g em{font-style:normal;font-size:11px}
 .jrs-g div[onclick]{cursor:pointer}
+/* مقارنة اللاعب بمتوسط مركزه — رقمين واضحين وتحتهم الشريط */
+.pi-cmp{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.pi-cmp div{display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 6px;border-radius:14px;background:rgba(255,255,255,.035)}
+.pi-cmp small{font-size:10.5px;color:var(--mut)}.pi-cmp b{font:800 20px Inter,sans-serif;color:var(--acc)}.pi-cmp b.mut{color:var(--txt)}.pi-cmp em{font-style:normal;font-size:10px;color:var(--mut)}
+.pi-row.col .pi-bar{width:100%;margin-top:8px}
