@@ -203,7 +203,7 @@ function lineChart(series) {
   if (!gws.length) return `<p class="mut" style="font-size:12.5px">${tt('ماكو بيانات كافية', 'Not enough data')}</p>`;
   const val = (s, g) => s.h.filter((x) => x.round === g).reduce((a, x) => a + (x.total_points || 0), 0);
   const mx = Math.max(4, ...series.flatMap((s) => gws.map((g) => val(s, g)))), top = Math.ceil(mx / 4) * 4;
-  return `<div class="gc" role="img" aria-label="${tt('نقاط آخر الجولات', 'Recent GW points')}"><div class="gc-y"><b class="num">${top}</b><b class="num">${top / 2}</b><b class="num">0</b></div><div class="gc-p">${gws.map((g) => { const vs = series.map((s) => val(s, g)), m = Math.max(...vs);
+  return `<div class="gcol" role="img" aria-label="${tt('نقاط آخر الجولات', 'Recent GW points')}"><div class="gc-y"><b class="num">${top}</b><b class="num">${top / 2}</b><b class="num">0</b></div><div class="gc-p">${gws.map((g) => { const vs = series.map((s) => val(s, g)), m = Math.max(...vs);
     return `<div class="gc-g"><div class="gc-cols">${vs.map((v, i) => `<i style="height:${Math.max(2, (Math.max(0, v) / top) * 100)}%;background:${series[i].c}" title="${esc(series[i].n)} · GW${g}: ${v}">${v === m && v > 0 ? `<b class="num">${v}</b>` : ''}</i>`).join('')}</div><small class="num">${g}</small></div>`; }).join('')}</div></div>`;
 }
 export function afterCompare() {
