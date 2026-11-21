@@ -501,7 +501,7 @@ async function poll() {
   try {
     const [l, fx] = await Promise.all([FPL.loadLive(g, true), FPL.loadFixturesGW(g, true)]);
     ST.live = Object.fromEntries(l.elements.map((x) => [x.id, x.stats])); ST.liveRaw = l.elements; ST.liveRawGW = g;
-    if (Array.isArray(fx) && fx.length) ST.G.fx[g] = fx.map((x) => ({ id: x.id, ev: x.event, h: x.team_h, a: x.team_a, hd: x.team_h_difficulty, ad: x.team_a_difficulty, ko: x.kickoff_time, fin: !!(x.finished || (x.finished_provisional && (x.minutes || 0) >= 90)), started: x.started, hs: x.team_h_score, as: x.team_a_score, min: x.minutes, stats: x.stats || [] }));
+    if (Array.isArray(fx) && fx.length) ST.G.fx[g] = fx.map((x) => FPL.fxBest({ id: x.id, ev: x.event, h: x.team_h, a: x.team_a, hd: x.team_h_difficulty, ad: x.team_a_difficulty, ko: x.kickoff_time, fin: !!(x.finished || (x.finished_provisional && (x.minutes || 0) >= 90)), started: x.started, hs: x.team_h_score, as: x.team_a_score, min: x.minutes, stats: x.stats || [] }));
     if (ST.view === 'home') window.render?.();
   } catch {}
 }

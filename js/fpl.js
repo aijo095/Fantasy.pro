@@ -72,6 +72,16 @@ function expand(d) {
 function pruneLS() { try { Object.keys(localStorage).filter((k) => k.startsWith('fpc_') && !k.includes('bootstrap')).forEach((k) => localStorage.removeItem(k)); } catch {} }
 export const clearStale = () => markStale(false);
 
+
+/* حالة المباراة ما ترجع لورا: إذا وصلت نسخة أقدم (مثلاً من الكاش وفيها الدقيقة 45)، نبقي على الأحدث (دقيقة أكبر / بدت / خلصت) */
+const FXB = new Map();
+export function fxBest(o) {
+  if (!o || o.id == null) return o;
+  const rank = (x) => (x.fin ? 1e6 : 0) + (x.started ? 1e3 : 0) + (x.min || 0), b = FXB.get(o.id);
+  if (b && rank(b) > rank(o)) return { ...o, fin: b.fin, started: b.started, hs: b.hs, as: b.as, min: b.min, stats: b.stats?.length ? b.stats : o.stats };
+  FXB.set(o.id, { fin: o.fin, started: o.started, hs: o.hs, as: o.as, min: o.min, stats: o.stats });
+  return o;
+}
 export async function loadGame(fresh = false) {
   const [b, f] = await Promise.all([get('bootstrap-static/', {}, { ttl: 900, fresh }), get('fixtures/', {}, { ttl: 1800, fresh })]);
   const teams = {};
@@ -95,7 +105,7 @@ export async function loadGame(fresh = false) {
   const cur = events.find((e) => e.cur), nxt = events.find((e) => e.next);
   const fx = {}, fxList = [];
   f.forEach((x) => {
-    const o = { id: x.id, ev: x.event, h: x.team_h, a: x.team_a, hd: x.team_h_difficulty, ad: x.team_a_difficulty, ko: x.kickoff_time, fin: !!(x.finished || (x.finished_provisional && (x.minutes || 0) >= 90)), started: x.started, hs: x.team_h_score, as: x.team_a_score, min: x.minutes, stats: x.stats || [] };
+    const o = fxBest({ id: x.id, ev: x.event, h: x.team_h, a: x.team_a, hd: x.team_h_difficulty, ad: x.team_a_difficulty, ko: x.kickoff_time, fin: !!(x.finished || (x.finished_provisional && (x.minutes || 0) >= 90)), started: x.started, hs: x.team_h_score, as: x.team_a_score, min: x.minutes, stats: x.stats || [] });
     fxList.push(o); if (x.event) (fx[x.event] = fx[x.event] || []).push(o);
   });
   return {

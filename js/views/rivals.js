@@ -26,7 +26,7 @@ const LVG = {}, XG = {}, MT = {}; let mtGW = null;
 /* الجولة شغّالة؟ نعتمد على وقت انطلاق المباريات حتى لو بيانات المباريات بالجهاز قديمة */
 const isLiveGW = (g) => { const now = Date.now(); return (ST.G.fx[g] || []).some((f) => !f.fin && (f.started || (f.ko && new Date(f.ko) <= now && now - new Date(f.ko) < 4 * 3600e3))); };
 const normFx = (x) => ({ id: x.id, ev: x.event, h: x.team_h, a: x.team_a, hd: x.team_h_difficulty, ad: x.team_a_difficulty, ko: x.kickoff_time, fin: !!(x.finished || (x.finished_provisional && (x.minutes || 0) >= 90)), started: x.started, hs: x.team_h_score, as: x.team_a_score, min: x.minutes, stats: x.stats || [] });
-async function refreshFx(gw) { try { const fx = await FPL.loadFixturesGW(gw, true); if (Array.isArray(fx) && fx.length) ST.G.fx[gw] = fx.map(normFx); } catch {} }
+async function refreshFx(gw) { try { const fx = await FPL.loadFixturesGW(gw, true); if (Array.isArray(fx) && fx.length) ST.G.fx[gw] = fx.map((x) => FPL.fxBest(normFx(x))); } catch {} }
 async function ensureLive(gw, fresh = false) {
   if (!fresh && LV.gw === gw && LV.map && Date.now() - LV.at < 25e3) return;
   const l = await FPL.loadLive(gw, fresh); LV = { gw, map: Object.fromEntries(l.elements.map((x) => [x.id, x.stats])), at: Date.now() }; LVG[gw] = LV.map;
