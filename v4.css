@@ -106,7 +106,7 @@ html.v4 .meter i{border-radius:var(--v4-pill)}
 html.v4 .set-row{border-radius:var(--v4-r-md);padding:14px 4px}
 
 /* ---------- الأوراق السفلية ---------- */
-html.v4 .ov .sh,html.v4 .sheet{border-radius:var(--v4-r-xl) var(--v4-r-xl) 0 0!important;background:var(--v4-s1)!important}
+html.v4 .ov > .sh,html.v4 .sheet{border-radius:var(--v4-r-xl) var(--v4-r-xl) 0 0!important;background:var(--v4-s1)!important}
 
 /* ---------- الحركة: احترام تقليل الحركة ---------- */
 @media (prefers-reduced-motion:reduce){
