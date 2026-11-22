@@ -53,35 +53,42 @@ function appLeagueView({ l, hs }) {
    <div class="sec"><h2>${I('i-chart')}${tt('مقارنة النقاط', 'Points comparison')}</h2></div><div class="card">${lineChart(gws, table.slice(0, 4).map((m, i) => ({ name: m.name, color: ['#34D399', '#60A5FA', '#10B981', '#FB7185'][i], vals: gws.map((g) => m.h.find((x) => x.event === g)?.points ?? null) })))}</div>
    <div class="grid g2" style="margin-top:12px">${l.owner === ST.user.uid ? `<button class="btn btn-r" onclick="delLg('${l.code}')">${I('i-trash')}${tt('حذف الدوري', 'Delete league')}</button>` : `<button class="btn btn-r" onclick="leaveLg('${l.code}')">${I('i-logout')}${tt('مغادرة', 'Leave')}</button>`}<button class="btn btn-g" onclick="appData['${l.code}']=null;openApp('${l.code}')">${I('i-refresh')}${t('refresh')}</button></div>`;
 }
+/* «إنت ضد …»: كل البيانات (التاريخ + التشكيلتين) تنجلب سوا وتنرسم مرة وحدة بمكان محجوز — بدون قفزات أو تقطيع،
+   والنتيجة تنحفظ دقيقة حتى إذا رجعت تفتحها تطلع فوراً */
+const RVC = {};
+const rvSkel = `<div class="rvsk"><div class="sk h1"></div><div class="sk h2"></div><div class="sk h3"></div><div class="sk h4"></div></div>`;
 async function rivalSheet(entry, name) {
-  openSheet(`${sheetHead(I('i-swords'), tt('إنت ضد ', 'You vs ') + esc(name))}<div id="rv" class="aiload"><i></i><i></i><i></i></div>`);
-  try {
-    const [a, b] = await Promise.all([FPL.fetchHistory(ST.profile.teamId), FPL.fetchHistory(entry)]);
-    const gws = a.current.map((x) => x.event); let w = 0, lo = 0, d = 0;
-    gws.forEach((g) => { const x = a.current.find((y) => y.event === g)?.points, y = b.current.find((z) => z.event === g)?.points; if (x == null || y == null) return; x > y ? w++ : x < y ? lo++ : d++; });
-    const ta = a.current.at(-1)?.total_points ?? 0, tb = b.current.at(-1)?.total_points ?? 0;
-    document.getElementById('rv').outerHTML = `<div class="vs"><div><b>${tt('إنت', 'You')}</b><div class="big">${fmt(ta)}</div></div><div class="mid">VS</div><div><b>${esc(name)}</b><div class="big">${fmt(tb)}</div></div></div><div class="vsbar"><i style="width:${(ta / (ta + tb || 1)) * 100}%"></i></div>
+  const gw = ST.G.cur, k = `${entry}:${gw}`, c = RVC[k], t0 = performance.now();
+  openSheet(`${sheetHead(I('i-swords'), tt('إنت ضد ', 'You vs ') + esc(name))}<div id="rv">${c && Date.now() - c.at < 60e3 ? c.html : rvSkel}</div>`);
+  if (c && Date.now() - c.at < 60e3) return;
+  const [ha, hb, pa, pb] = await Promise.all([FPL.fetchHistory(ST.profile.teamId), FPL.fetchHistory(entry), gw ? FPL.fetchPicks(ST.profile.teamId, gw).catch(() => null) : null, gw ? FPL.fetchPicks(entry, gw).catch(() => null) : null].map((p) => Promise.resolve(p).catch((e) => ({ __err: e }))));
+  let html;
+  if (ha?.__err || hb?.__err) html = `<p class="mut">${esc((ha.__err || hb.__err).message)}</p>`;
+  else html = rvMain(ha, hb, name) + rvDiff(pa, pb, name, gw);
+  RVC[k] = { html, at: Date.now() };
+  const el = document.getElementById('rv'); if (!el) return;
+  await new Promise((r) => setTimeout(r, Math.max(0, 340 - (performance.now() - t0)))); // نخلي حركة فتح الورقة تخلص أول
+  requestAnimationFrame(() => { const e2 = document.getElementById('rv'); if (e2) { e2.innerHTML = html; e2.classList.add('rv-in'); } });
+}
+function rvMain(a, b, name) {
+  const gws = a.current.map((x) => x.event); let w = 0, lo = 0, d = 0;
+  gws.forEach((g) => { const x = a.current.find((y) => y.event === g)?.points, y = b.current.find((z) => z.event === g)?.points; if (x == null || y == null) return; x > y ? w++ : x < y ? lo++ : d++; });
+  const ta = a.current.at(-1)?.total_points ?? 0, tb = b.current.at(-1)?.total_points ?? 0;
+  return `<div class="vs"><div><b>${tt('إنت', 'You')}</b><div class="big">${fmt(ta)}</div></div><div class="mid">${tt('ضد', 'VS')}</div><div><b>${esc(name)}</b><div class="big">${fmt(tb)}</div></div></div><div class="vsbar"><i style="width:${(ta / (ta + tb || 1)) * 100}%"></i></div>
      <div class="kv"><div><b class="up">${w}</b><span>${tt('جولات فزت', 'GWs won')}</span></div><div><b>${d}</b><span>${tt('تعادل', 'Drawn')}</span></div><div><b class="down">${lo}</b><span>${tt('خسرت', 'Lost')}</span></div></div>
      <div class="card">${lineChart(gws, [{ name: tt('إنت', 'You'), color: '#34D399', vals: gws.map((g) => a.current.find((x) => x.event === g)?.points ?? null) }, { name: esc(name), color: '#60A5FA', vals: gws.map((g) => b.current.find((x) => x.event === g)?.points ?? null) }])}</div>`;
-    rivalDiff(entry, name);
-  } catch (e) { document.getElementById('rv').outerHTML = `<p class="mut">${esc(e.message)}</p>`; }
 }
-/* الفروقات بين فريقك وفريق المنافس بالجولة الحالية */
-async function rivalDiff(entry, name) {
-  const gw = ST.G.cur, host = document.querySelector('.sheet .sh-body') || document.querySelector('.sheet'); if (!host || !gw) return;
-  const box = document.createElement('div'); host.appendChild(box);
-  try {
-    const [a, b] = await Promise.all([FPL.fetchPicks(ST.profile.teamId, gw), FPL.fetchPicks(entry, gw)]);
+function rvDiff(a, b, name, gw) {
+  if (!a?.picks || !b?.picks || a.__err || b.__err) return `<p class="mut" style="font-size:12px;margin-top:10px">${tt('تشكيلة المنافس تنكشف بعد إغلاق الجولة.', 'Rival picks show after the deadline.')}</p>`;
     const ca = ST.live && ST.liveRawGW === gw ? liveCalc(a, gw) : null, cb = ca ? liveCalc(b, gw) : null;
     const mult = (pk, id) => pk.picks.find((x) => x.element === id)?.multiplier ?? 0;
     const ids = [...new Set([...a.picks, ...b.picks].map((x) => x.element))];
     const diff = ids.map((id) => ({ id, ma: mult(a, id), mb: mult(b, id), pts: ST.live?.[id]?.total_points ?? null })).filter((x) => x.ma !== x.mb);
     const mine = diff.filter((x) => x.ma > x.mb), theirs = diff.filter((x) => x.mb > x.ma);
     const li = (x, me) => { const p = PM(x.id); return p ? `<div class="row tap" onclick="openPlayer(${p.id})"><div class="info"><b>${esc(p.name)}</b><span>${me ? `×${x.ma} ${tt('عندك', 'you')}` : `×${x.mb} ${tt('عنده', 'them')}`}${(me ? x.mb : x.ma) ? ` · ×${me ? x.mb : x.ma} ${me ? tt('عنده', 'them') : tt('عندك', 'you')}` : ''}</span></div>${x.pts != null ? `<div class="col">${x.pts}<small>${tt('نقطة', 'pts')}</small></div>` : ''}</div>` : ''; };
-    box.innerHTML = `<div class="sec"><h2>${I('i-compare')}${tt('الفروقات بالجولة', 'Differentials this GW')} ${gw}</h2></div>
+  return `<div class="sec"><h2>${I('i-compare')}${tt('الفروقات بالجولة', 'Differentials this GW')} ${gw}</h2></div>
      ${ca ? `<div class="kv"><div><b class="up">${ca.total}</b><span>${tt('إنت مباشر', 'You live')}</span></div><div><b>${ca.total - cb.total >= 0 ? '+' : ''}${ca.total - cb.total}</b><span>${tt('الفرق', 'Gap')}</span></div><div><b style="color:var(--info)">${cb.total}</b><span>${esc(name)}</span></div></div>` : ''}
      <div class="grid g2"><div><div class="mut" style="font-size:12px;margin:4px 2px">${tt('عندك وما عنده', 'Only you')}</div><div class="list">${mine.map((x) => li(x, true)).join('') || '<p class="mut" style="padding:10px">—</p>'}</div></div><div><div class="mut" style="font-size:12px;margin:4px 2px">${tt('عنده وما عندك', 'Only them')}</div><div class="list">${theirs.map((x) => li(x, false)).join('') || '<p class="mut" style="padding:10px">—</p>'}</div></div></div>`;
-  } catch { box.innerHTML = `<p class="mut" style="font-size:12px;margin-top:10px">${tt('تشكيلة المنافس تنكشف بعد إغلاق الجولة.', 'Rival picks show after the deadline.')}</p>`; }
 }
 Object.assign(window, {
   lgTab: (x) => { tab = x; open = null; window.render(); },

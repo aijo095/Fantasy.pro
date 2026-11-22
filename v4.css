@@ -765,3 +765,9 @@ html.ui2 #toast{bottom:calc(96px + env(safe-area-inset-bottom,0px) * .5)}
 /* ملعب الخصم (نفس فريقي): المختلف شارة اسمه حمرة، والمشترك باهت */
 .rv3-tp .pitch{margin-top:0}
 .rv3-tp .pl{position:relative}
+/* «إنت ضد»: هيكل بنفس حجم المحتوى حتى ما تقفز الورقة */
+.rvsk{display:flex;flex-direction:column;gap:10px}
+.rvsk .sk{border-radius:16px;background:linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.08),rgba(255,255,255,.04));background-size:200% 100%;animation:rvsk 1.2s linear infinite}
+.rvsk .h1{height:110px}.rvsk .h2{height:72px}.rvsk .h3{height:200px}.rvsk .h4{height:220px}
+@keyframes rvsk{to{background-position:-200% 0}}
+#rv.rv-in{animation:rv2In .3s var(--v4-ease,ease) both}
