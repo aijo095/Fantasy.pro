@@ -393,7 +393,13 @@ function sheetBody(entry, gw = S.gw) {
   const caps = !isMe && cm && ch ? `<section class="rv3-sec"><h5>${I('i-crown')}${tt('مواجهة الكباتن', 'Captain duel')}${cm.q.id === ch.q.id ? `<small>${tt('نفس الكابتن — تلغي بعض', 'Same captain — cancels out')}</small>` : ''}</h5><div class="rv3-caps">${capBox(cm, 'me', tt('كابتنك', 'Yours'))}${capBox(ch, 'him', tt('كابتنه', 'His'))}</div></section>` : '';
   // ---- الكرت والانتقالات
   const chip = m.picks.active_chip ? CHIP[m.picks.active_chip] || m.picks.active_chip : '';
-  const meta = chip || hit || m.tr?.length ? `<div class="rv3-meta">${chip ? `<span class="chip">${I('i-bolt')}${chip}</span>` : ''}${hit ? `<span class="hit">${tt('خصم', 'Hit')} <bdi class="num">−${hit}</bdi></span>` : ''}${(m.tr || []).map((x) => `<span class="tr"><b>${esc(PM(x.element_in)?.name || '?')}</b>${I('i-back', 'i', 'width:11px;height:11px')}<s>${esc(PM(x.element_out)?.name || '?')}</s></span>`).join('')}</div>` : '';
+  const meta = chip || hit ? `<div class="rv3-meta">${chip ? `<span class="chip">${I('i-bolt')}${chip}</span>` : ''}${hit ? `<span class="hit">${tt('خصم', 'Hit')} <bdi class="num">−${hit}</bdi></span>` : ''}</div>` : '';
+  // ---- انتقالاته بالجولة
+  const trP = (id) => { const r = R(id); return r ? r.pts : lpts(id, gw); };
+  const trs = m.tr || [], net = trs.reduce((a, x) => a + (trP(x.element_in) || 0) - (trP(x.element_out) || 0), 0) - hit;
+  const trSide = (id, cls, lbl) => { const q = PM(id); return `<div class="side ${cls}"><span class="sh">${q ? pShirt(q) : ''}</span><div><small>${lbl}</small><b>${esc(q?.name || '?')}</b></div><strong class="num">${trP(id) ?? 0}</strong></div>`; };
+  const trHTML = `<section class="rv3-sec"><h5>${I('i-swap')}${isMe ? tt('انتقالاتك بالجولة', 'Your transfers') : tt('انتقالاته بالجولة', 'His transfers')}${trs.length ? `<small class="${net >= 0 ? 'up' : 'dn'}">${tt('الحصيلة', 'Net')} <bdi class="num">${net > 0 ? '+' : ''}${net}</bdi>${hit ? ` (${tt('بعد خصم', 'after hit')} ${hit})` : ''}</small>` : ''}</h5>
+    ${trs.length ? `<div class="rv3-trs">${trs.map((x, i) => `<div class="rv3-tr" style="--d:${i * 70}ms">${trSide(x.element_in, 'in', tt('دخل', 'In'))}<span class="ar">${I('i-swap')}</span>${trSide(x.element_out, 'out', tt('طلع', 'Out'))}</div>`).join('')}</div>` : `<p class="rv3-none">${m.picks.active_chip === 'freehit' || m.picks.active_chip === 'wildcard' ? tt('لعب الكرت وغيّر فريقه', 'Played a chip') : tt('ما سوى انتقالات بهالجولة', 'No transfers this GW')}</p>`}</section>`;
   // ---- الملعب
   const prev = RVPREV[`${entry}:${gw}`] || {}, nextPrev = {};
   const card = (p, bench) => {
@@ -404,7 +410,7 @@ function sheetBody(entry, gw = S.gw) {
     return `<button class="rv3-pl${diff ? ' diff' : !isMe ? ' same' : ''}${r?.subOut ? ' out' : ''}${bench && !counted ? ' benched' : ''}${playing ? ' live' : ''}" onclick="closeSheet();setTimeout(()=>playerGW(${q.id},${gw},${Math.max(1, mult)}),200)">
       ${d > 0 ? `<i class="rv3-bump">+${d}</i>` : ''}
       <span class="rv3-sh">${pShirt(q)}${p.is_captain ? `<i class="b c">${mult === 3 ? '3×' : 'C'}</i>` : p.is_vice_captain ? '<i class="b v">V</i>' : ''}${r?.subIn ? '<i class="b in">↑</i>' : r?.subOut ? '<i class="b ob">↓</i>' : ''}</span>
-      <span class="rv3-tag"><span class="nm">${esc(q.name)}</span><span class="pt${p.is_captain && counted ? ' cap' : ''}">${waiting && !raw ? `<small>${fx[0]?.ko ? new Date(fx[0].ko).toLocaleTimeString(document.dir === 'ltr' ? 'en-GB' : 'ar-IQ', { hour: 'numeric', minute: '2-digit' }) : '—'}</small>` : pts}</span></span></button>`;
+      <span class="rv3-tag"><span class="nm">${esc(q.name)}</span><span class="pt${p.is_captain && counted ? ' cap' : ''}">${waiting && !raw ? `<small>${fx[0]?.ko ? new Date(fx[0].ko).toLocaleString(document.dir === 'ltr' ? 'en-GB' : 'ar-IQ', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '—'}</small>` : pts}</span></span></button>`;
   };
   const xi = ps.filter((p) => p.position <= 11), bench = ps.filter((p) => p.position > 11);
   const lines = ['GK', 'DEF', 'MID', 'FWD'].map((pos) => xi.filter((p) => PM(p.element)?.pos === pos)).filter((l) => l.length).reverse();
@@ -423,7 +429,7 @@ function sheetBody(entry, gw = S.gw) {
       <div class="rv3-bal"><div class="s up"><b class="num">${sm}</b><small>${tt('عندك وما عنده', 'Only you')}</small></div><div class="bar"><i class="m" style="flex:${sm || 0.0001}"></i><i class="t" style="flex:${st || 0.0001}"></i></div><div class="s dn"><b class="num">${st}</b><small>${tt('عنده وما عندك', 'Only him')}</small></div></div>
       <div class="rv3-dif"><div>${D.mine.map((x) => li(x, 'up')).join('') || '<p class="mut">—</p>'}</div><div>${D.theirs.map((x) => li(x, 'dn')).join('') || '<p class="mut">—</p>'}</div></div></section>`;
   }
-  return head + duel + caps + meta + pitch + difHTML + h2Block + (live ? `<p class="rv3-foot"><i></i>${tt('النقاط تتحدث كل 4 ثواني وقت المباريات', 'Points update every 4s during matches')}</p>` : '');
+  return head + duel + caps + meta + trHTML + pitch + difHTML + h2Block + (live ? `<p class="rv3-foot"><i></i>${tt('النقاط تتحدث كل 4 ثواني وقت المباريات', 'Points update every 4s during matches')}</p>` : '');
 }
 /* تحديث ورقة الخصم: كل 4 ثواني إذا أكو مباراة تنلعب والورقة مفتوحة، وإلا كل 30 ثانية */
 let rvSheetT = null;
