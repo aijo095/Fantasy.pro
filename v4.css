@@ -753,3 +753,12 @@ html.ui2 #toast{bottom:calc(96px + env(safe-area-inset-bottom,0px) * .5)}
 .lu4-mid small{font-size:11px;color:var(--v4-ink2,#b4bcb6);white-space:nowrap}
 .lu4-my{grid-column:1/-1;justify-self:center;display:inline-flex;align-items:center;gap:5px;margin-top:2px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.05);font-size:11.5px;font-weight:600;color:var(--v4-ink2)}
 .lu2-list .lu4-c{margin:0}.lu2-list{display:flex;flex-direction:column;gap:8px}
+/* بطاقة تشكيلة مضغوطة: سطر واحد أصغر من بطاقات النتائج */
+.lu5-c{display:flex;align-items:center;gap:8px;width:100%;height:46px;padding:0 12px;border-radius:14px;border:1px solid rgba(110,231,183,.2);background:rgba(110,231,183,.045);color:var(--v4-ink,#fff);font:inherit;cursor:pointer;transition:background .2s}
+.lu5-c:active{background:rgba(110,231,183,.1)}
+.lu5-t{display:flex;align-items:center;gap:6px;flex:none}
+.lu5-t b{font:700 12.5px Inter,sans-serif}.lu5-t i{font-style:normal;color:var(--v4-ink3,#8a948c)}
+.lu5-k{flex:1;min-width:0;font-size:11px;color:var(--v4-ink3);text-align:start;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lu5-my{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.06);font:700 11px Inter,sans-serif;color:var(--v4-ink2)}
+.lu5-ok{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:rgba(110,231,183,.16);color:var(--c-mint,#6EE7B7)}
+.lu2-list{gap:6px}
