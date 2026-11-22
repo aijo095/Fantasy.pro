@@ -111,6 +111,43 @@ function remainingXP(m) {
   m.calc.rows.forEach((r) => { if (r.m === 0 && !r.subIn) return; const p = PM(r.id); if (!p) return; const f = fx.filter((x) => x.h === p.team || x.a === p.team); const left = f.filter((x) => !x.fin); if (!left.length) return; const frac = left.reduce((a, x) => a + (x.started ? Math.max(0, 1 - (x.min || 0) / 90) : 1), 0) / Math.max(1, f.length); exp += xp(p, gw) * frac * Math.max(1, r.m); n += frac; });
   return { exp, n };
 }
+
+/* احتمال الفوز الذكي: اللاعبين المشتركين بنفس المضاعف يلغون بعض، فنحسب بس «الفرق المتبقي» —
+   كل لاعب باقي يلعب: (مضاعفي − مضاعفه) × نقاطه الجاية. النقاط الجاية من نموذج: احتمال يلعب، ونقاط الظهور،
+   وأهداف/صناعات بتوزيع بواسون حسب نقاطه المتوقعة ومركزه وكم باقي من مباراته. نحاكيها 4000 مرة (بذرة ثابتة حتى الرقم ما يرمش) */
+function winChance(me, o, gw = S.gw) {
+  const fx = ST.G.fx[gw] || [], gap = (me.calc.total || 0) - (o.calc.total || 0);
+  const mul = (c, id) => { const r = c.rows.find((x) => x.id === id); return r && (r.m > 0 || r.subIn) && !r.subOut ? Math.max(1, r.m) : 0; };
+  const ids = [...new Set([...me.calc.rows, ...o.calc.rows].map((r) => r.id))], P = [];
+  let nMe = 0, nHim = 0;
+  ids.forEach((id) => {
+    const d = mul(me.calc, id) - mul(o.calc, id); if (!d) return;
+    const p = PM(id); if (!p) return;
+    const f = fx.filter((x) => x.h === p.team || x.a === p.team), left = f.filter((x) => !x.fin); if (!left.length) return;
+    const notStarted = left.filter((x) => !x.started).length, liveFrac = left.filter((x) => x.started).reduce((a, x) => a + Math.max(0, 1 - (x.min || 0) / 95), 0);
+    const pl = (ST.live?.[id]?.minutes || 0) > 0, pp = p.st === 'a' || p.st == null ? (p.chance ?? 100) / 100 * 0.93 : (p.chance ?? 0) / 100;
+    const E = Math.max(0.5, xp(p, gw) || 2); // متوقع مباراة كاملة
+    const gpos = { GK: 0, DEF: 0.3, MID: 0.45, FWD: 0.62 }[p.pos] ?? 0.45, gpts = { GK: 6, DEF: 6, MID: 5, FWD: 4 }[p.pos] ?? 5;
+    const lam90 = Math.max(0.03, (E - 2) / (gpos * gpts + (1 - gpos) * 3 || 3));
+    P.push({ d, notStarted, liveFrac: pl || left.some((x) => x.started) ? liveFrac : 0, pp: pl ? 1 : pp, lam90, gpos, gpts, cs: (p.pos === 'GK' || p.pos === 'DEF') ? 0.28 : p.pos === 'MID' ? 0.07 : 0 });
+    if (d > 0) nMe++; else nHim++;
+  });
+  if (!P.length) return { pw: gap > 0 ? 100 : gap < 0 ? 0 : 50, pd: gap === 0 ? 100 : 0, nMe, nHim, gap, decided: true };
+  let seed = 1234567 + gap * 97 + P.length * 13; const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const pois = (l) => { let k = 0, t = Math.exp(-l), q = rnd(); while (q > t && k < 8) { q *= rnd(); k++; } return k; };
+  const N = 4000; let w = 0, dr = 0;
+  for (let i = 0; i < N; i++) {
+    let sum = 0;
+    for (const x of P) {
+      let pts = 0;
+      for (let m = 0; m < x.notStarted; m++) { if (rnd() > x.pp) continue; pts += rnd() < 0.82 ? 2 : 1; const k = pois(x.lam90); for (let j = 0; j < k; j++) pts += rnd() < x.gpos ? x.gpts : 3; if (rnd() < x.cs) pts += x.gpts === 6 ? 4 : 1; }
+      if (x.liveFrac > 0) { const k = pois(x.lam90 * x.liveFrac); for (let j = 0; j < k; j++) pts += rnd() < x.gpos ? x.gpts : 3; }
+      sum += x.d * pts;
+    }
+    const v = gap + sum; if (v > 0) w++; else if (v === 0) dr++;
+  }
+  return { pw: Math.round((w / N) * 100), pd: Math.round((dr / N) * 100), nMe, nHim, gap, decided: false };
+}
 const Phi = (z) => { const tt2 = 1 / (1 + 0.2316419 * Math.abs(z)), d = 0.3989423 * Math.exp(-z * z / 2), p = d * tt2 * (0.3193815 + tt2 * (-0.3565638 + tt2 * (1.781478 + tt2 * (-1.821256 + tt2 * 1.330274)))); return z > 0 ? 1 - p : p; };
 
 /* ---------- الترتيب الحالي ---------- */
@@ -277,9 +314,8 @@ export function vRivals() {
   if (sel.kind === 'h' && S.opp && !(curFin && S.nextOpp)) {
     const o = S.members.find((m) => m.entry === S.opp);
     if (o && me?.calc && o.calc) {
-      const a = remainingXP(me), b = remainingXP(o), mu = me.calc.total + a.exp - (o.calc.total + b.exp), sd = Math.max(1.5, Math.sqrt((a.n + b.n) * 16));
-      const pw = Math.round(Phi(mu / sd) * 100);
-      top = `<div class="card rv-h2h"><div class="mut" style="font-size:12px;text-align:center">${tt(`مواجهتك بالجولة ${S.gw}`, `Your GW${S.gw} match`)}</div><div class="rv-vs"><div><b>${tt('إنت', 'You')}</b><span class="num big-num">${me.calc.total}</span></div><div class="rv-prob" style="--p:${pw}"><b>${pw}%</b><small>${tt('احتمال فوزك', 'Win chance')}</small></div><div><b>${esc(o.name)}</b><span class="num big-num">${o.calc.total}</span></div></div><div class="mut" style="font-size:11.5px;text-align:center">${tt(`متبقي متوقع: إنت +${a.exp.toFixed(1)} · هو +${b.exp.toFixed(1)}`, `Remaining xP: you +${a.exp.toFixed(1)} · them +${b.exp.toFixed(1)}`)}</div><button class="btn btn-g btn-b" style="margin-top:10px" onclick="rvOpen(${o.entry})">${I('i-pitch', 'i', 'width:16px;height:16px')}${tt('شوف تشكيلته والفروقات', 'See lineup & differentials')}</button></div>`;
+      const W = winChance(me, o), pw = W.pw;
+      top = `<div class="card rv-h2h"><div class="mut" style="font-size:12px;text-align:center">${tt(`مواجهتك بالجولة ${S.gw}`, `Your GW${S.gw} match`)}</div><div class="rv-vs"><div><b>${tt('إنت', 'You')}</b><span class="num big-num">${me.calc.total}</span></div><div class="rv-prob" style="--p:${pw}"><b>${pw}%</b><small>${tt('احتمال فوزك', 'Win chance')}</small></div><div><b>${esc(o.name)}</b><span class="num big-num">${o.calc.total}</span></div></div><div class="mut" style="font-size:11.5px;text-align:center">${W.decided ? (W.gap > 0 ? tt('محسومة لك — ماكو لاعب باقي يفرق', 'Decided — no differentials left') : W.gap < 0 ? tt('محسومة له — اللاعبين الباقين مشتركين أو ماكو', 'Decided — no differentials left') : tt('تعادل محسوم', 'Draw')) : tt(`باقي يفرق: إنت ${W.nMe} لاعب · هو ${W.nHim} لاعب${W.pd >= 3 ? ` · تعادل ${W.pd}%` : ''}`, `Differentials left: you ${W.nMe} · him ${W.nHim}${W.pd >= 3 ? ` · draw ${W.pd}%` : ''}`)}</div><button class="btn btn-g btn-b" style="margin-top:10px" onclick="rvOpen(${o.entry})">${I('i-pitch', 'i', 'width:16px;height:16px')}${tt('شوف تشكيلته والفروقات', 'See lineup & differentials')}</button></div>`;
     }
   }
   if (sel.kind === 'h' && S.nextOpp && !top) {
