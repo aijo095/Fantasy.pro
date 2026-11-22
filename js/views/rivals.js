@@ -413,7 +413,7 @@ function sheetBody(entry, gw = S.gw) {
       <span class="rv3-tag"><span class="nm">${esc(q.name)}</span><span class="pt${p.is_captain && counted ? ' cap' : ''}">${waiting && !raw ? `<small>${fx[0]?.ko ? new Date(fx[0].ko).toLocaleString(document.dir === 'ltr' ? 'en-GB' : 'ar-IQ', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '—'}</small>` : pts}</span></span></button>`;
   };
   const xi = ps.filter((p) => p.position <= 11), bench = ps.filter((p) => p.position > 11);
-  const lines = ['GK', 'DEF', 'MID', 'FWD'].map((pos) => xi.filter((p) => PM(p.element)?.pos === pos)).filter((l) => l.length).reverse();
+  const lines = ['GK', 'DEF', 'MID', 'FWD'].map((pos) => xi.filter((p) => PM(p.element)?.pos === pos)).filter((l) => l.length); // نفس فريقي: الحارس فوك والمهاجمين تحت
   const pitch = `<section class="rv3-sec"><div class="rv3-pitch">
       <div class="rv3-turf"><svg viewBox="0 0 68 100" preserveAspectRatio="none" aria-hidden="true"><g fill="none" stroke="rgba(255,255,255,.22)" stroke-width=".3"><rect x="2.5" y="2.5" width="63" height="95" rx="1"/><line x1="2.5" y1="50" x2="65.5" y2="50"/><circle cx="34" cy="50" r="8.5"/><circle cx="34" cy="50" r=".6" fill="rgba(255,255,255,.4)"/><rect x="16" y="2.5" width="36" height="14"/><rect x="16" y="83.5" width="36" height="14"/><rect x="26" y="2.5" width="16" height="5"/><rect x="26" y="92.5" width="16" height="5"/><path d="M28 16.5a6 6 0 0 0 12 0M28 83.5a6 6 0 0 1 12 0"/></g></svg></div>
       ${lines.map((l) => `<div class="rv3-row">${l.map((p) => card(p)).join('')}</div>`).join('')}</div>
