@@ -396,10 +396,10 @@ function sheetBody(entry, gw = S.gw) {
   const meta = chip || hit ? `<div class="rv3-meta">${chip ? `<span class="chip">${I('i-bolt')}${chip}</span>` : ''}${hit ? `<span class="hit">${tt('خصم', 'Hit')} <bdi class="num">−${hit}</bdi></span>` : ''}</div>` : '';
   // ---- انتقالاته بالجولة
   const trP = (id) => { const r = R(id); return r ? r.pts : lpts(id, gw); };
-  const trs = m.tr || [], net = trs.reduce((a, x) => a + (trP(x.element_in) || 0) - (trP(x.element_out) || 0), 0) - hit;
+  const trs = m.tr || [];
   const trSide = (id, cls, lbl) => { const q = PM(id); return `<div class="side ${cls}"><span class="sh">${q ? pShirt(q) : ''}</span><div><small>${lbl}</small><b>${esc(q?.name || '?')}</b></div><strong class="num">${trP(id) ?? 0}</strong></div>`; };
-  const trHTML = `<section class="rv3-sec"><h5>${I('i-swap')}${isMe ? tt('انتقالاتك بالجولة', 'Your transfers') : tt('انتقالاته بالجولة', 'His transfers')}${trs.length ? `<small class="${net >= 0 ? 'up' : 'dn'}">${tt('الحصيلة', 'Net')} <bdi class="num">${net > 0 ? '+' : ''}${net}</bdi>${hit ? ` (${tt('بعد خصم', 'after hit')} ${hit})` : ''}</small>` : ''}</h5>
-    ${trs.length ? `<div class="rv3-trs">${trs.map((x, i) => `<div class="rv3-tr" style="--d:${i * 70}ms">${trSide(x.element_in, 'in', tt('دخل', 'In'))}<span class="ar">${I('i-swap')}</span>${trSide(x.element_out, 'out', tt('طلع', 'Out'))}</div>`).join('')}</div>` : `<p class="rv3-none">${m.picks.active_chip === 'freehit' || m.picks.active_chip === 'wildcard' ? tt('لعب الكرت وغيّر فريقه', 'Played a chip') : tt('ما سوى انتقالات بهالجولة', 'No transfers this GW')}</p>`}</section>`;
+  const trHTML = `<section class="rv3-sec"><h5>${I('i-swap')}${isMe ? tt('انتقالاتك بالجولة', 'Your transfers') : tt('انتقالاته بالجولة', 'His transfers')}${hit ? `<small class="dn">${tt('خصم', 'Hit')} <bdi class="num">−${hit}</bdi></small>` : ''}</h5>
+    ${trs.length ? `<div class="rv3-trs">${trs.map((x, i) => `<div class="rv3-tr" style="--d:${i * 70}ms">${trSide(x.element_in, 'in', tt('اشترى', 'Bought'))}<span class="ar">${I('i-swap')}</span>${trSide(x.element_out, 'out', tt('باع', 'Sold'))}</div>`).join('')}</div>` : `<p class="rv3-none">${m.picks.active_chip === 'freehit' || m.picks.active_chip === 'wildcard' ? tt('لعب الكرت وغيّر فريقه', 'Played a chip') : tt('ما سوى انتقالات بهالجولة', 'No transfers this GW')}</p>`}</section>`;
   // ---- الملعب
   const prev = RVPREV[`${entry}:${gw}`] || {}, nextPrev = {};
   const card = (p, bench) => {
