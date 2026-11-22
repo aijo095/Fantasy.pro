@@ -393,7 +393,7 @@ function sheetBody(entry, gw = S.gw) {
   const caps = !isMe && cm && ch ? `<section class="rv3-sec"><h5>${I('i-crown')}${tt('مواجهة الكباتن', 'Captain duel')}${cm.q.id === ch.q.id ? `<small>${tt('نفس الكابتن — تلغي بعض', 'Same captain — cancels out')}</small>` : ''}</h5><div class="rv3-caps">${capBox(cm, 'me', tt('كابتنك', 'Yours'))}${capBox(ch, 'him', tt('كابتنه', 'His'))}</div></section>` : '';
   // ---- الكرت والانتقالات
   const chip = m.picks.active_chip ? CHIP[m.picks.active_chip] || m.picks.active_chip : '';
-  const meta = chip || hit ? `<div class="rv3-meta">${chip ? `<span class="chip">${I('i-bolt')}${chip}</span>` : ''}${hit ? `<span class="hit">${tt('خصم', 'Hit')} <bdi class="num">−${hit}</bdi></span>` : ''}</div>` : '';
+  const meta = chip ? `<div class="rv3-meta">${chip ? `<span class="chip">${I('i-bolt')}${chip}</span>` : ''}</div>` : ''; // الخصم ينعرض بقسم الانتقالات بس
   // ---- انتقالاته بالجولة
   const trP = (id) => { const r = R(id); return r ? r.pts : lpts(id, gw); };
   const trs = m.tr || [];
