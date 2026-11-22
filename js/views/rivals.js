@@ -415,9 +415,7 @@ function sheetBody(entry, gw = S.gw) {
   };
   // نفس ملعب فريقي: الدقيقة جوة الشارة والنبض للي يلعب
   const bump = {}; (m.calc?.rows || []).forEach((r) => { const v = r.pts * Math.max(1, r.m); nextPrev[r.id] = v; if (prev[r.id] != null && v > prev[r.id]) bump[r.id] = v - prev[r.id]; });
-  const dset = !isMe ? new Set((m.calc?.rows || []).map((r) => r.id).filter((id) => !mine.has(id))) : null;
-  const pitch = m.calc ? `<section class="rv3-sec rv3-tp">${pitchHTML(m.calc, gw, { diff: dset, bump })}
-    ${!isMe ? `<div class="rv3-legend"><span><i class="k diff"></i>${tt('مو عندك (يفرق بالنتيجة)', 'Not in your team')}</span><span><i class="k same"></i>${tt('مشترك (يلغي بعض)', 'Shared')}</span></div>` : ''}</section>` : '';
+  const pitch = m.calc ? `<section class="rv3-sec rv3-tp">${pitchHTML(m.calc, gw, { bump })}</section>` : '';
   RVPREV[`${entry}:${gw}`] = nextPrev;
   // ---- ميزان الفروقات
   let difHTML = '';
