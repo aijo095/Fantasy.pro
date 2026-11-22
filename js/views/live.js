@@ -437,10 +437,13 @@ function lu2Section(fx, ev) {
   return `<div class="lu2-box ${LU2OPEN() ? 'open' : ''}"><button class="lu2-hd" onclick="lu2Tog(this)">${I('i-pitch', 'i', 'width:16px;height:16px')}<b>${tt('التشكيلات الرسمية', 'Official line-ups')}</b>${L.length ? `<span class="lu2-n">${L.length}</span>` : ''}${I('i-chev', 'lu2-arr')}</button>
   <div class="lu2-body">${L.length ? `<div class="lu2-list">${L.map((f) => { const d = LU[f.id]?.d;
     const myN = ST.G.players.filter((p) => mine.has(p.id) && (p.team === f.h || p.team === f.a)).length;
-    return `<button class="lu2-c ok" onclick="openLineup(${f.id},${ev})">
-      <span class="lu2-t" dir="ltr">${crest(tShort(f.h), 24)}<b>${tShort(f.h)}</b><i>v</i><b>${tShort(f.a)}</b>${crest(tShort(f.a), 24)}</span>
-      <span class="lu2-s"><em class="ok">✓ ${tt('انعلنت', 'Announced')}</em><small dir="ltr">${esc(d.sides?.h?.formation || '—')} · ${esc(d.sides?.a?.formation || '—')}</small></span>
-      ${myN ? `<span class="lu2-my">${tt(`${myN} من لاعبينك`, `${myN} yours`)}</span>` : ''}${I('i-chev', 'chev')}</button>`; }).join('')}</div>` : `<p class="lu2-empty">${tt('ماكو تشكيلات معلنة هسة — أول ما تنعلن تشكيلة أي مباراة تنزل هنا تلقائياً.', 'No line-ups out yet — they appear here as soon as they are announced.')}</p>`}</div></div>`;
+    const ko = f.ko ? new Date(f.ko).toLocaleString(document.dir === 'ltr' ? 'en-GB' : 'ar-IQ', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '';
+    const tm = (t, form) => `<span class="lu4-tm">${crest(tShort(t), 30)}<b>${esc(tName(t))}</b><small dir="ltr">${esc(form || '—')}</small></span>`;
+    return `<button class="lu4-c" onclick="openLineup(${f.id},${ev})">
+      ${tm(f.h, d.sides?.h?.formation)}
+      <span class="lu4-mid"><em>${I('i-check', 'i', 'width:12px;height:12px')}${tt('انعلنت', 'Announced')}</em><small>${ko}</small></span>
+      ${tm(f.a, d.sides?.a?.formation)}
+      ${myN ? `<span class="lu4-my">${I('i-users', 'i', 'width:12px;height:12px')}${tt(`${myN} من لاعبينك`, `${myN} of yours`)}</span>` : ''}</button>`; }).join('')}</div>` : `<p class="lu2-empty">${tt('ماكو تشكيلات معلنة هسة — أول ما تنعلن تشكيلة أي مباراة تنزل هنا تلقائياً.', 'No line-ups out yet — they appear here as soon as they are announced.')}</p>`}</div></div>`;
 }
 // التشكيلة تبقى لحد ما تبدي المباراة وبعدها تختفي
 const luPre = (f) => !f.started && !f.fin && (!f.ko || new Date(f.ko) > Date.now());
