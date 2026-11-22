@@ -119,7 +119,7 @@ export default async function handler(req, res) {
     if (stt === 'done' && (qs.includes('event=') || /\/(live|picks)\/$/.test(path))) ttl = 86400;
     else if (stt === 'future' && (path === 'fixtures/' || /\/live\/$/.test(path))) ttl = Math.max(60, Math.min(1800, Math.round(untilDeadline(evN) / 1000))); }
   // الترتيب والنقاط: سريع إذا أكو مباراة تنلعب، وكل ساعة إذا ماكو
-  if (RANKY.test(path)) { const m = matchNow(); ttl = m === false ? 3600 : /standings/.test(path) || /history/.test(path) ? 120 : 60; }
+  if (RANKY.test(path)) { const m = matchNow(); ttl = m === false ? 3600 : /standings/.test(path) ? 30 : /history/.test(path) ? 120 : 60; }
   const key = path + qs;
   let fresh = url.searchParams.get('fresh') === '1';
   if (fresh) { const lf = lastFresh.get(key) || 0; if (Date.now() - lf < (ttl <= 2 ? 900 : ttl <= 20 ? 4000 : 30000)) fresh = false; else lastFresh.set(key, Date.now()); } // المباشر: تحديث كل ~3 ثواني

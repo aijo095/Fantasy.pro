@@ -48,6 +48,8 @@ function startLiveTimer() {
     if (!isLiveGW(S.gw) && Date.now() - (LV.at || 0) < 60e3) return; // بين المباريات: كل دقيقة (البونص والتعديلات)
     try { await Promise.all([ensureLive(S.gw, true), refreshFx(S.gw)]); } catch { return; }
     await pool(S.members.filter((m) => !m.picks), 4, async (m) => { try { m.picks = await FPL.fetchPicks(m.entry, S.gw); } catch {} });
+    // الجدول الرسمي من الفانتازي: نعيد جلبه كل 30 ثانية حتى يمشي ويا الفانتازي أول بأول
+    if (Date.now() - (S.tAt || S.at || 0) > 30e3) { S.tAt = Date.now(); try { const d = S.L.kind === 'c' ? await FPL.loadLeague(S.L.id, 1, true) : await FPL.loadH2H(S.L.id, 1, true); const res = d?.standings?.results; if (res?.length) { S.table = res; res.forEach((r) => { const m = S.members.find((x) => x.entry === r.entry); if (m) Object.assign(m, { rank: r.rank, total: r.total, gwPts: r.event_total }); }); } } catch {} }
     if (sel?.kind === 'h') { const k = `${S.L.id}:${S.gw}`; if (MT[k]?.rows && Date.now() - (MT[k].at || 0) > 60e3) loadMT(S.L, S.gw, true); }
     S.members.forEach(recalc); Object.values(S.extra || {}).forEach(recalc); (S.others || []).forEach(recalc);
     Object.values(XG[S.gw] || {}).forEach(recalc);
@@ -122,6 +124,13 @@ async function loadOthers() {
   await pool(others, 6, async (m) => { try { m.picks = await FPL.fetchPicks(m.entry, gw); m.calc = liveCalc(m.picks, gw, undefined, LV.map); } catch { m.picks = null; } });
   if (ST.view === 'rivals' && !document.querySelector('.ov')) window.render();
 }
+/* نقاط الجولة بنفس طريقة الفانتازي بجدول الدوري: نقاط الأساسيين حسب المضاعف بالتشكيلة (بدون بونص مؤقت وبدون تبديلات تلقائية — الفانتازي يضيفها بعدين) */
+function fplGW(m) {
+  const pk = m?.picks; if (!pk?.picks || !LV.map) return null;
+  const pts = pk.picks.reduce((a, x) => a + (x.multiplier > 0 ? (LV.map[x.element]?.total_points || 0) * x.multiplier : 0), 0);
+  return pts - (pk.entry_history?.event_transfers_cost || 0);
+}
+const fplOf = (e) => fplGW(S.members?.find((x) => x.entry === e) || S.others?.find((x) => x.entry === e));
 const calcOf = (e) => (S.members?.find((x) => x.entry === e) || S.others?.find((x) => x.entry === e))?.calc || null;
 const liveTableOn = () => { const ev = ST.G.events.find((e) => e.id === S.gw); return !!(S.table?.length && S.gw === ST.G.cur && ev && !ev.fin && gwStarted() && LV.map); };
 function liveTable() {
@@ -132,8 +141,8 @@ function liveTable() {
       const c = m?.calc, eh = m?.picks?.entry_history, cost = eh?.event_transfers_cost || 0;
       // نقاط الجولة بالفانتازي ممكن تكون قبل الخصم أو بعده — نكتشفها من سجل الجولة
       const fplNet = cost && eh && r.event_total === eh.points ? r.event_total - cost : r.event_total || 0;
-      const base = (r.total || 0) - fplNet, gwPts = c ? c.total : fplNet;
-      return { ...r, lgw: gwPts, ltot: base + gwPts, has: !!c };
+      const fg = fplGW(m), base = (r.total || 0) - fplNet, gwPts = fg != null ? fg : fplNet;
+      return { ...r, lgw: gwPts, ltot: base + gwPts, has: fg != null };
     });
     rows.sort((a, b) => b.ltot - a.ltot || a.rank - b.rank);
     rows.forEach((r, i) => { r.lrank = i > 0 && rows[i - 1].ltot === r.ltot ? rows[i - 1].lrank : i + 1; });
@@ -144,7 +153,7 @@ function liveTable() {
   const by = Object.fromEntries(rows.map((r) => [r.entry, r]));
   mt.forEach((x) => {
     const a = x.entry_1_entry, b = x.entry_2_entry; if (!a || !b || !by[a] || !by[b]) return;
-    const pa = calcOf(a)?.total ?? x.entry_1_points ?? 0, pb = calcOf(b)?.total ?? x.entry_2_points ?? 0;
+    const pa = fplOf(a) ?? x.entry_1_points ?? 0, pb = fplOf(b) ?? x.entry_2_points ?? 0;
     by[a].lpf += pa; by[b].lpf += pb;
     if (pa > pb) { by[a].lw++; by[a].lpts += 3; by[b].ll++; by[a].lres = 'w'; by[b].lres = 'l'; }
     else if (pb > pa) { by[b].lw++; by[b].lpts += 3; by[a].ll++; by[a].lres = 'l'; by[b].lres = 'w'; }

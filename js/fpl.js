@@ -161,9 +161,9 @@ export const fetchHistory = (id) => get(`entry/${id}/history/`, {}, { ttl: 300 }
 export const loadSetPieceNotes = () => get('team/set-piece-notes/', {}, { ttl: 3600 });
 export const fetchTransfers = (id) => get(`entry/${id}/transfers/`, {}, { ttl: 120 });
 export const fetchPicks = (id, gw) => get(`entry/${id}/event/${gw}/picks/`, {}, { ttl: 3600 });
-export const loadH2H = (id, page = 1) => get(`leagues-h2h/${id}/standings/`, { page }, { ttl: rt(120) });
+export const loadH2H = (id, page = 1, fresh = false) => get(`leagues-h2h/${id}/standings/`, { page }, { ttl: rt(30), fresh });
 export const loadH2HMatches = (id, event, page = 1, fresh = false) => get(`leagues-h2h-matches/league/${id}/`, { ...(event ? { event } : {}), page }, { ttl: 60, fresh });
-export const loadLeague = (id, page = 1) => get(`leagues-classic/${id}/standings/`, { page }, { ttl: rt(120) });
+export const loadLeague = (id, page = 1, fresh = false) => get(`leagues-classic/${id}/standings/`, { page }, { ttl: rt(30), fresh });
 export const loadLive = (gw, fresh = false) => get(`event/${gw}/live/`, {}, { ttl: 1, fresh });
 export const loadFixturesGW = (gw, fresh = false) => get('fixtures/', { event: gw }, { ttl: 1, fresh });
 export const loadPlayerSummary = (id) => get(`element-summary/${id}/`, {}, { ttl: 3600 });
