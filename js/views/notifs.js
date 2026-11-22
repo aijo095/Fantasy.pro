@@ -3,6 +3,7 @@ import { ST, saveNotifs } from '../store.js';
 import { t, tt, lang } from '../i18n.js';
 import { esc, I, toast, timeAgo, fmtTime, LS, CLUB_AR, crest } from '../ui.js';
 import * as AU from '../auth.js';
+import { CONFIG } from '../config.js';
 import * as FPL from '../fpl.js';
 import { updateBadge, loadAll } from '../app.js';
 import * as PU from '../push.js';
@@ -39,7 +40,7 @@ export function vSettings() {
    <div class="card"><div class="set-row"><span>${tt('اسم الفريق', 'Team')}</span><b>${esc(ST.E.entry.name)}</b></div><div class="set-row"><span>Team ID</span><b class="num">${P.teamId}</b></div><div class="set-row"><span>${tt('النادي المفضل', 'Favourite club')}</span><select class="sel" onchange="setFav(this.value)"><option value="">—</option>${Object.values(ST.G.teams).map((tm) => `<option value="${tm.id}" ${String(P.fav) === String(tm.id) ? 'selected' : ''}>${lang() === 'en' ? tm.name : CLUB_AR[tm.short] || tm.name}</option>`).join('')}</select></div>
     <button class="btn btn-g btn-b" style="margin-top:10px" onclick="changeTeam()">${I('i-swap')}${tt('تغيير رقم الفريق', 'Change Team ID')}</button></div>
    ${AU.firebaseOn ? `<div class="sec"><h2>${I('i-shield')}${tt('طرق الدخول المرتبطة', 'Linked sign-in methods')}</h2></div>
-   <div class="card">${AU.firebaseOn ? [['google', 'google.com', 'Google'], ['apple', 'apple.com', 'Apple'], ['facebook', 'facebook.com', 'Facebook'], ['twitter', 'twitter.com', 'X']].map(([k, id, n]) => `<div class="set-row"><span>${n}</span>${prov.includes(id) ? `<span class="tag lime">${I('i-check')}${tt('مرتبط', 'Linked')}</span>` : `<button class="btn btn-g btn-sm" onclick="linkP('${k}')">${tt('ربط', 'Link')}</button>`}</div>`).join('') : `<p class="mut" style="font-size:13px;margin:0">${tt('ربط Google/Apple/Facebook يحتاج إعداد Firebase (شوف README).', 'Linking providers requires Firebase setup (see README).')}</p>`}</div>` : ''}
+   <div class="card">${AU.firebaseOn ? [['google', 'google.com', 'Google'], ['apple', 'apple.com', 'Apple'], ['facebook', 'facebook.com', 'Facebook'], ['twitter', 'twitter.com', 'X']].filter(([k]) => CONFIG.providers[k === 'twitter' ? 'x' : k]).map(([k, id, n]) => `<div class="set-row"><span>${n}</span>${prov.includes(id) ? `<span class="tag lime">${I('i-check')}${tt('مرتبط', 'Linked')}</span>` : `<button class="btn btn-g btn-sm" onclick="linkP('${k}')">${tt('ربط', 'Link')}</button>`}</div>`).join('') : `<p class="mut" style="font-size:13px;margin:0">${tt('ربط Google/Apple/Facebook يحتاج إعداد Firebase (شوف README).', 'Linking providers requires Firebase setup (see README).')}</p>`}</div>` : ''}
    <div class="sec"><h2>${I('i-bell')}${tt('الإشعارات', 'Notifications')}</h2></div>
    <div class="card push-card" id="pushCard">${pushCardHTML()}</div>
    <div class="card" style="margin-top:10px">${PREFS.map(([k, l]) => `<div class="set-row"><span>${l}</span>${sw(ST.prefs[k] !== false, `setPref('${k}')`)}</div>`).join('')}

@@ -1,6 +1,6 @@
 /* إشعارات الجوال (Web Push): تسجيل الـ Service Worker والاشتراك ومزامنة التفضيلات */
 import { ST } from './store.js';
-import { srvToken } from './auth.js';
+import { srvToken, firebaseOn, getIdToken } from './auth.js';
 import { lang } from './i18n.js';
 
 export const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -15,8 +15,11 @@ export function registerSW() {
   return regP;
 }
 const b64ToU8 = (s) => { const p = '='.repeat((4 - (s.length % 4)) % 4); const b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, (c) => c.charCodeAt(0)); };
+// هوية المستخدم للسيرفر: توكن Firebase إذا مفعّل، وإلا توكن الحساب القديم
+const hasAcc = () => !!((firebaseOn && ST.user) || srvToken());
+async function tok() { if (firebaseOn) { try { const t = await getIdToken(); if (t) return t; } catch {} } return srvToken(); }
 async function api(action, body = {}) {
-  const r = await fetch('/api/push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, token: srvToken(), ...body }) });
+  const r = await fetch('/api/push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, token: await tok(), prev: firebaseOn ? srvToken() : '', ...body }) });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(d.error || 'خطأ ' + r.status);
   return d;
@@ -27,7 +30,7 @@ const ctx = () => ({ teamId: ST.profile?.teamId, prefs: ST.prefs, lang: lang(), 
 export async function pushState() {
   if (!pushSupported()) return isIOS() && !isStandalone() ? 'need-install' : 'unsupported';
   if (isIOS() && !isStandalone()) return 'need-install';
-  if (!srvToken()) return 'need-account';
+  if (!hasAcc()) return 'need-account';
   if (Notification.permission === 'denied') return 'denied';
   const reg = await registerSW(); if (!reg) return 'unsupported';
   const sub = await reg.pushManager.getSubscription();
@@ -51,6 +54,6 @@ export const testPush = () => api('test');
 let syncT = 0;
 /** يرسل التفضيلات وقائمة المراقبة للسيرفر (مؤخَّر حتى ما يتكرر) */
 export function syncPush() {
-  if (!srvToken() || !pushSupported() || Notification.permission !== 'granted') return;
+  if (!hasAcc() || !pushSupported() || Notification.permission !== 'granted') return;
   clearTimeout(syncT); syncT = setTimeout(() => api('prefs', ctx()).catch(() => {}), 800);
 }

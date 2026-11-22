@@ -8,6 +8,7 @@
 import { kv, getJ, setJ, kvEnabled, send, readBody } from './_kv.js';
 import { getVapid, sendPush } from './_webpush.js';
 import { verify } from './account.js';
+import { verifyFirebase } from './_fbauth.js';
 
 export default async function handler(req, res) {
   if (!kvEnabled) return send(res, 200, { enabled: false });
@@ -16,7 +17,7 @@ export default async function handler(req, res) {
   const origin = req.headers.origin || req.headers.referer || '';
   if (origin && host && !origin.includes(host)) return send(res, 403, { error: 'forbidden' });
   let b; try { b = await readBody(req); } catch { return send(res, 400, { error: 'bad json' }); }
-  const uid = verify(b.token);
+  const uid = verify(b.token) || (await verifyFirebase(b.token));
   if (!uid) return send(res, 401, { error: 'سجّل دخول بحساب أولاً' });
   const key = 'push:' + uid;
   const cur = (await getJ(key)) || { subs: [], prefs: {} };
@@ -30,6 +31,9 @@ export default async function handler(req, res) {
       if (b.lang) cur.lang = b.lang;
       if (Array.isArray(b.watch)) cur.watch = b.watch.slice(0, 60).map(Number);
       await setJ(key, cur); await kv('SADD', 'push:users', uid);
+      // نفس الجهاز كان مشترك بحساب قديم؟ نشيله حتى ما يوصل الإشعار مرتين
+      const old = verify(b.prev);
+      if (old && old !== uid) { const O = await getJ('push:' + old); if (O?.subs) { O.subs = O.subs.filter((x) => x.endpoint !== s.endpoint); await setJ('push:' + old, O); if (!O.subs.length) await kv('SREM', 'push:users', old); } }
       return send(res, 200, { ok: true, devices: cur.subs.length });
     }
     if (b.action === 'prefs') {
