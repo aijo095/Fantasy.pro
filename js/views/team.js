@@ -469,6 +469,20 @@ function liveCard(r, i, gw = ST.G.cur) {
   const mvp = mvpId === r.id;
   return `<div class="pl ${r.cap ? 'capt' : ''} ${r.subOut ? 'dim' : ''} ${mvp ? 'mvp' : ''}" data-pid="${p.id}" style="--d:${i * 35}ms" onclick="playerGW(${p.id},${gw},${Math.max(1, r.m)})" role="button">${mvp ? `<span class="mvp-b"><svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="m12 2 2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8Z"/></svg>${tt('نجم الجولة', 'Star')}</span>` : ''}${r.cap ? `<span class="cb">${r.m === 3 ? '3×' : 'C'}</span>` : r.vc ? `<span class="cb v">${r.m > 1 ? 'C' : 'V'}</span>` : ''}${r.subIn ? `<span class="rk" style="background:var(--acc);color:var(--on-acc)">⇅</span>` : r.subOut ? `<span class="rk r2">⇅</span>` : ''}${pzRing(p, r, wait ? 'wait' : st, gw, i)}<div class="sh">${pShirt(p)}</div><div class="nm">${esc(p.name)}</div><div class="lb lpts" style="background:${bg}">${(st === 'soon' || wait) && !shown ? '—' : shown}${r.bonus ? `<sup>+${r.bonus}</sup>` : ''}</div>${wait ? `<div class="pst wait">${ls === 'out' ? tt('خارج القائمة', 'Not in squad') : tt('ما نزل بعد', 'Not on yet')}</div>` : `<div class="pst ${st}">${st === 'live' ? '<i></i>' : ''}${stl}</div>`}</div>`;
 }
+
+/** نفس ملعب «فريقي» بالمباشر (الدقيقة جوة الشارة والنبض للي يلعب) — تستخدمه صفحة الخصم.
+    diff: لاعبين مو موجودين بفريقك (يتعلّمون)، و bump: نقاط زادت من آخر تحديث */
+export function pitchHTML(c, gw, { diff = null, bump = {} } = {}) {
+  const saved = mvpId; mvpId = null;
+  const on = c.rows.filter((r) => (r.m > 0 && !r.subOut) || r.subIn), off = c.rows.filter((r) => !on.includes(r));
+  const rows = ['GK', 'DEF', 'MID', 'FWD'].map((pos) => on.filter((r) => PM(r.id)?.pos === pos)).filter((l) => l.length);
+  let k = 0;
+  const mk = (r) => { let h = liveCard(r, k++, gw); if (diff) h = h.replace('<div class="pl ', `<div class="pl ${diff.has(r.id) ? 'rvd' : 'rvs'} `); if (bump[r.id] > 0) h = h.replace(/^(<div [^>]*>)/, `$1<i class="rv3-bump">+${bump[r.id]}</i>`); return h; };
+  const out = `<div class="pitch">${LINES}${rows.map((r) => `<div class="prow">${r.map(mk).join('')}</div>`).join('')}</div>
+    <div class="benchbox"><div class="t"><span>${I('i-bench', 'i', 'width:16px;height:16px;vertical-align:-3px')} ${t('bench')} <span class="mut" style="font-size:12px">· ${off.reduce((a, r) => a + r.pts, 0)} ${tt('نقطة', 'pts')}</span></span></div>
+    <div class="prow" dir="ltr">${off.map((r) => `<div class="slot">${mk(r)}</div>`).join('')}</div></div>`;
+  mvpId = saved; return out;
+}
 async function loadGW(g) {
   if (gwCache[g]) return;
   gwCache[g] = { loading: true };

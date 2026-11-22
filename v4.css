@@ -762,3 +762,9 @@ html.ui2 #toast{bottom:calc(96px + env(safe-area-inset-bottom,0px) * .5)}
 .lu5-my{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.06);font:700 11px Inter,sans-serif;color:var(--v4-ink2)}
 .lu5-ok{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:rgba(110,231,183,.16);color:var(--c-mint,#6EE7B7)}
 .lu2-list{gap:6px}
+/* ملعب الخصم (نفس فريقي): المختلف شارة اسمه حمرة، والمشترك باهت */
+.rv3-tp .pitch{margin-top:0}
+.rv3-tp .pl.rvd .nm,.rv3-tp .pl.rvd .name{background:linear-gradient(90deg,#7F1D1D,#991B1B)!important;color:#fff}
+.rv3-tp .pl.rvd{filter:drop-shadow(0 0 6px rgba(248,113,113,.45))}
+.rv3-tp .pl.rvs{opacity:.62}
+.rv3-tp .pl{position:relative}

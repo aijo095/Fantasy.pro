@@ -11,6 +11,7 @@ import * as FPL from '../fpl.js';
 import { liveCalc } from '../live-engine.js';
 import { xp } from '../engine.js';
 import { pShirt } from './common.js';
+import { pitchHTML } from './team.js';
 
 let sel = null, S = {}, busy = false, lastRefresh = 0, showAll = false, ltOfficial = false;
 const CHIP = { wildcard: tt('وايلد كارد', 'Wildcard'), freehit: tt('فري هت', 'Free Hit'), bboost: tt('بنش بوست', 'Bench Boost'), '3xc': tt('تريبل كابتن', 'Triple Captain'), manager: tt('المدرب', 'Manager') };
@@ -412,13 +413,11 @@ function sheetBody(entry, gw = S.gw) {
       <span class="rv3-sh">${pShirt(q)}${p.is_captain ? `<i class="b c">${mult === 3 ? '3×' : 'C'}</i>` : p.is_vice_captain ? '<i class="b v">V</i>' : ''}${r?.subIn ? '<i class="b in">↑</i>' : r?.subOut ? '<i class="b ob">↓</i>' : ''}</span>
       <span class="rv3-tag"><span class="nm">${esc(q.name)}</span><span class="pt${p.is_captain && counted ? ' cap' : ''}">${waiting && !raw ? `<small>${fx[0]?.ko ? new Date(fx[0].ko).toLocaleString(document.dir === 'ltr' ? 'en-GB' : 'ar-IQ', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '—'}</small>` : pts}</span></span></button>`;
   };
-  const xi = ps.filter((p) => p.position <= 11), bench = ps.filter((p) => p.position > 11);
-  const lines = ['GK', 'DEF', 'MID', 'FWD'].map((pos) => xi.filter((p) => PM(p.element)?.pos === pos)).filter((l) => l.length); // نفس فريقي: الحارس فوك والمهاجمين تحت
-  const pitch = `<section class="rv3-sec"><div class="rv3-pitch">
-      <div class="rv3-turf"><svg viewBox="0 0 68 100" preserveAspectRatio="none" aria-hidden="true"><g fill="none" stroke="rgba(255,255,255,.22)" stroke-width=".3"><rect x="2.5" y="2.5" width="63" height="95" rx="1"/><line x1="2.5" y1="50" x2="65.5" y2="50"/><circle cx="34" cy="50" r="8.5"/><circle cx="34" cy="50" r=".6" fill="rgba(255,255,255,.4)"/><rect x="16" y="2.5" width="36" height="14"/><rect x="16" y="83.5" width="36" height="14"/><rect x="26" y="2.5" width="16" height="5"/><rect x="26" y="92.5" width="16" height="5"/><path d="M28 16.5a6 6 0 0 0 12 0M28 83.5a6 6 0 0 1 12 0"/></g></svg></div>
-      ${lines.map((l) => `<div class="rv3-row">${l.map((p) => card(p)).join('')}</div>`).join('')}</div>
-    <div class="rv3-bench"><span>${tt('الدكة', 'Bench')}</span><div class="rv3-row">${bench.map((p) => card(p, true)).join('')}</div></div>
-    ${!isMe ? `<div class="rv3-legend"><span><i class="k diff"></i>${tt('مو عندك (يفرق بالنتيجة)', 'Not in your team')}</span><span><i class="k same"></i>${tt('مشترك (يلغي بعض)', 'Shared')}</span><span><i class="k live"></i>${tt('يلعب هسة', 'Playing')}</span></div>` : ''}</section>`;
+  // نفس ملعب فريقي: الدقيقة جوة الشارة والنبض للي يلعب
+  const bump = {}; (m.calc?.rows || []).forEach((r) => { const v = r.pts * Math.max(1, r.m); nextPrev[r.id] = v; if (prev[r.id] != null && v > prev[r.id]) bump[r.id] = v - prev[r.id]; });
+  const dset = !isMe ? new Set((m.calc?.rows || []).map((r) => r.id).filter((id) => !mine.has(id))) : null;
+  const pitch = m.calc ? `<section class="rv3-sec rv3-tp">${pitchHTML(m.calc, gw, { diff: dset, bump })}
+    ${!isMe ? `<div class="rv3-legend"><span><i class="k diff"></i>${tt('مو عندك (يفرق بالنتيجة)', 'Not in your team')}</span><span><i class="k same"></i>${tt('مشترك (يلغي بعض)', 'Shared')}</span></div>` : ''}</section>` : '';
   RVPREV[`${entry}:${gw}`] = nextPrev;
   // ---- ميزان الفروقات
   let difHTML = '';
