@@ -1,96 +1,150 @@
 /* Hallmark · checked: 2026-11-24 · genre: atmospheric (inferred) · scope: app
-   built: the project · redesign: refine (club smart analysis) */
-/* التحليل الذكي للنوادي: ملخص، شجرة فروع قابلة للفتح، خريطة الأهداف، توقيت الأهداف، ومقارنات بالدوري */
-:root { --ci-for: #2FA36B; --ci-ag: #8B74EE; --ci-line: rgba(255, 255, 255, .08); --ci-soft: rgba(255, 255, 255, .04) }
+   built: the project · redesign: refine (club smart analysis v2) */
+/* التحليل الذكي للنوادي: أرقام رئيسية، أبرز الملاحظات، شجرة فروع، رسوم تفاعلية */
+:root { --ci-for: #2FA36B; --ci-ag: #8B74EE; --ci-line: rgba(255, 255, 255, .08); --ci-soft: rgba(255, 255, 255, .035); --ci-e: cubic-bezier(.22, 1, .36, 1) }
 
-.ci { display: grid; gap: 4px; margin-top: 6px }
-.ci-load { display: grid; gap: 6px; padding: 10px 2px; font-size: 12.5px; color: var(--mut) }
+.ci { display: grid; gap: 6px; margin-top: 8px }
+.ci .sec { margin-top: 14px }
+.ci-load { display: grid; gap: 8px; padding: 12px 14px; border-radius: 14px; background: var(--ci-soft); font-size: 12.5px; color: var(--mut) }
 .ci-load i { display: block; height: 3px; border-radius: 3px; background: var(--ci-line); position: relative; overflow: hidden }
 .ci-load i::after { content: ''; position: absolute; inset: 0; transform-origin: 100% 50%; transform: scaleX(var(--p)); background: var(--acc); transition: transform .4s ease }
-.ci-foot { font-size: 12px; color: var(--mut); text-align: center; margin: 14px 0 4px; text-wrap: balance }
+.ci-foot { font-size: 12px; color: var(--mut); text-align: center; margin: 16px 0 4px; text-wrap: balance }
+.ci-d { font-family: Inter, sans-serif; font-weight: 600; color: var(--txt); font-variant-numeric: tabular-nums }
 
-/* البطاقات */
+.ci-kpi { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px }
+.ci-k { display: grid; gap: 4px; justify-items: start; padding: 12px 12px 10px; border-radius: 16px; background: var(--card-a, var(--s1)); border: 1px solid var(--ci-line); min-width: 0 }
+.ci-k small { font-size: 11.5px; color: var(--mut); line-height: 1.3 }
+.ci-k b { font: 700 24px/1.05 Inter, sans-serif; letter-spacing: -.01em }
+.ci-kr { font-size: 11px; color: var(--mut); padding: 2px 8px; border-radius: 999px; background: var(--ci-soft) }
+.ci-kr.g { color: var(--ci-for); background: rgba(47, 163, 107, .12) }
+.ci-kr.b { color: #A796F5; background: rgba(139, 116, 238, .14) }
+
 .ci-top { display: grid; gap: 10px }
-.ci-it { display: grid; gap: 6px; padding: 14px 16px; border-radius: 18px; background: var(--card-a, var(--s1)); border: 1px solid var(--ci-line) }
-.ci-it[role=button] { cursor: pointer }
+.ci-it { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 14px 16px; border-radius: 18px; background: var(--card-a, var(--s1)); border: 1px solid var(--ci-line) }
+.ci-it.has-n { grid-template-columns: minmax(0, 1fr) auto; align-items: start }
+.ci-it[role=button] { cursor: pointer; transition: transform .15s ease }
+.ci-it[role=button]:active { transform: scale(.985) }
 .ci-it[role=button]:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px }
+.ci-ib { display: grid; gap: 6px; min-width: 0 }
 .ci-ih { display: flex; align-items: center; gap: 8px; min-width: 0 }
-.ci-ih b { font-size: 15px; font-weight: 700; line-height: 1.35; min-width: 0; overflow-wrap: break-word }
-.ci-ih svg.i { width: 18px; height: 18px; flex: none; color: var(--mut) }
-.ci-it.t-g .ci-ih svg.i { color: var(--ci-for) }
-.ci-it.t-b .ci-ih svg.i { color: var(--ci-ag) }
-.ci-it p { margin: 0; font-size: 13.5px; line-height: 1.65; color: var(--mut); text-wrap: pretty }
+.ci-ih h3 { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.35; min-width: 0; overflow-wrap: break-word; text-wrap: balance }
+.ci-tn { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: var(--ci-soft); flex: none }
+.ci-tn svg.i { width: 15px; height: 15px; color: var(--mut) }
+.t-g .ci-tn { background: rgba(47, 163, 107, .14) } .t-g .ci-tn svg.i { color: var(--ci-for) }
+.t-b .ci-tn { background: rgba(139, 116, 238, .16) } .t-b .ci-tn svg.i { color: #A796F5 }
+.ci-it p { margin: 0; display: grid; gap: 3px; font-size: 13.5px; line-height: 1.7; color: var(--mut); text-wrap: pretty }
+.ci-num { display: grid; justify-items: end; gap: 2px; padding-top: 2px; min-width: 64px; text-align: end }
+.ci-num b { font: 700 22px/1 Inter, sans-serif; color: var(--txt); white-space: nowrap }
+.t-g .ci-num b { color: var(--ci-for) } .t-b .ci-num b { color: #A796F5 }
+.ci-num small { font-size: 11px; color: var(--mut); line-height: 1.3; max-width: 92px }
+.ci-trw { grid-column: 1 / -1 }
 .ci-top .ci-it { padding: 16px 18px }
-.ci-top .ci-ih b { font-size: 16px }
+.ci-top .ci-ih h3 { font-size: 16px }
 .ci-new { font-style: normal; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(var(--acc-rgb), .14); color: var(--acc); flex: none; margin-inline-start: auto }
 
-/* مسار المقارنة بالدوري */
-.ci-tr { position: relative; height: 6px; margin: 6px 0 0; border-radius: 6px; background: var(--ci-line) }
-.ci-tr-avg { position: absolute; top: -3px; width: 2px; height: 12px; margin-left: -1px; border-radius: 2px; background: var(--txt); opacity: .55 }
-.ci-tr-me { position: absolute; top: -4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 0 3px var(--bg, #0b0f14) }
-.ci-tr-l { display: flex; justify-content: space-between; font-size: 11px; color: var(--mut); margin-top: 4px }
+.ci-tr { position: relative; height: 6px; border-radius: 6px; background: linear-gradient(90deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .12)) }
+.ci-tr-avg { position: absolute; top: -3px; width: 2px; height: 12px; margin-left: -1px; border-radius: 2px; background: var(--txt); opacity: .5 }
+.ci-tr-me { position: absolute; top: -4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 0 3px var(--bg, #0b0f14), 0 0 12px rgba(var(--acc-rgb), .45) }
+.ci-tr-l { display: flex; justify-content: space-between; font-size: 11px; color: var(--mut); margin-top: 6px }
 
-/* الشجرة */
-.ci-tree { position: relative; display: grid; gap: 10px; padding-inline-start: 18px }
-.ci-tree::before { content: ''; position: absolute; inset-inline-start: 6px; top: 22px; bottom: 22px; width: 2px; border-radius: 2px; background: linear-gradient(var(--ci-line), var(--ci-line)) }
-.ci-br { position: relative; border-radius: 20px; background: var(--card-b, var(--s1)); border: 1px solid var(--ci-line) }
-.ci-br::before { content: ''; position: absolute; inset-inline-start: -16px; top: 26px; width: 12px; height: 2px; background: var(--ci-line) }
-.ci-br[open]::before { background: rgba(var(--acc-rgb), .5) }
-.ci-br > summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; min-height: 56px }
+.ci-fl { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px 0 6px }
+.ci-fl::-webkit-scrollbar { display: none }
+.ci-fl button { flex: none; height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--ci-line); background: var(--ci-soft); color: var(--mut); font: inherit; font-size: 13px; transition: background-color .15s ease, color .15s ease, border-color .15s ease }
+.ci-fl button.on { color: var(--txt); background: rgba(255, 255, 255, .09); border-color: rgba(255, 255, 255, .16) }
+.ci-fl button.on.g { color: var(--ci-for); border-color: rgba(47, 163, 107, .4); background: rgba(47, 163, 107, .1) }
+.ci-fl button.on.b { color: #A796F5; border-color: rgba(139, 116, 238, .45); background: rgba(139, 116, 238, .1) }
+.ci-fl button:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px }
+
+.ci-tree { position: relative; display: grid; gap: 10px; padding-inline-start: 20px }
+.ci-tree::before { content: ''; position: absolute; inset-inline-start: 7px; top: 28px; bottom: 28px; width: 2px; border-radius: 2px; background: var(--ci-line) }
+.ci-br { position: relative; border-radius: 20px; background: var(--card-b, var(--s1)); border: 1px solid var(--ci-line); transition: border-color .2s ease }
+.ci-br::before { content: ''; position: absolute; inset-inline-start: -19px; top: 25px; width: 10px; height: 10px; border-radius: 50%; background: var(--bg, #0b0f14); border: 2px solid rgba(255, 255, 255, .2); transition: background-color .2s ease, border-color .2s ease }
+.ci-br[open] { border-color: rgba(255, 255, 255, .13) }
+.ci-br[open]::before { background: var(--acc); border-color: var(--acc) }
+.ci-br > summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; min-height: 60px }
 .ci-br > summary::-webkit-details-marker { display: none }
 .ci-br > summary:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; border-radius: 20px }
-.ci-bi { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: rgba(var(--acc-rgb), .1); color: var(--acc); flex: none }
+.ci-bi { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 13px; background: rgba(var(--acc-rgb), .1); color: var(--acc); flex: none }
 .ci-bi svg.i { width: 20px; height: 20px }
 .ci-bt { display: grid; gap: 2px; min-width: 0; flex: 1 }
-.ci-bt b { font-size: 15px }
+.ci-bt b { font-size: 15.5px }
 .ci-bt small { font-size: 12.5px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
-.ci-bn { font-size: 12px; color: var(--mut); min-width: 22px; height: 22px; display: grid; place-items: center; border-radius: 8px; background: var(--ci-soft) }
-.ci-cv { width: 16px; height: 16px; color: var(--mut); transition: transform .2s ease; flex: none }
+.ci-bn { font: 600 12px Inter, sans-serif; color: var(--mut); min-width: 24px; height: 24px; display: grid; place-items: center; border-radius: 8px; background: var(--ci-soft) }
+.ci-cv { width: 16px; height: 16px; color: var(--mut); transition: transform .25s var(--ci-e); flex: none }
 .ci-br[open] .ci-cv { transform: rotate(-90deg) }
 .ci-bb { display: grid; gap: 10px; padding: 0 12px 12px }
-.ci-bb .ci-it { background: var(--ci-soft); border-color: transparent; border-radius: 14px; padding: 12px 14px }
+.ci-bb .ci-it { background: var(--ci-soft); border-color: transparent; border-radius: 15px; padding: 13px 14px }
+@media (prefers-reduced-motion: no-preference) {
+  .ci-br[open] .ci-bb > * { animation: ciIn .42s var(--ci-e) both }
+  .ci-br[open] .ci-bb > *:nth-child(2) { animation-delay: 40ms } .ci-br[open] .ci-bb > *:nth-child(3) { animation-delay: 80ms } .ci-br[open] .ci-bb > *:nth-child(n+4) { animation-delay: 120ms }
+}
+@keyframes ciIn { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
 
-/* اللوحات البيانية */
-.ci-viz { padding: 12px 12px 10px; border-radius: 14px; background: var(--ci-soft) }
-.ci-vh { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap }
-.ci-vh b { font-size: 13.5px }
-.ci-zt { margin: 0 }
+.ci-viz { padding: 14px 12px 12px; border-radius: 15px; background: linear-gradient(180deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .02)); border: 1px solid var(--ci-line) }
+.ci-vh { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap }
+.ci-vh h4 { margin: 0; font-size: 14px; font-weight: 700 }
 .ci-lg { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--mut) }
 .ci-lg i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-inline-start: 6px }
 .ci-lg i.f { background: var(--ci-for) } .ci-lg i.a { background: var(--ci-ag) }
+.ci-tg { display: flex; padding: 3px; border-radius: 999px; background: rgba(0, 0, 0, .25); border: 1px solid var(--ci-line) }
+.ci-tg button { height: 30px; padding: 0 14px; border-radius: 999px; border: 0; background: none; color: var(--mut); font: inherit; font-size: 12.5px; transition: background-color .15s ease, color .15s ease }
+.ci-tg button.on.a { background: rgba(139, 116, 238, .22); color: #C5B8FF }
+.ci-tg button.on.f { background: rgba(47, 163, 107, .22); color: #8EE5B5 }
+.ci-tg button:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px }
+.ci-cap { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px; margin-top: 10px; padding: 8px 12px; border-radius: 12px; background: rgba(0, 0, 0, .22); font-size: 12.5px; color: var(--mut) }
+.ci-cap b { color: var(--txt); font-weight: 600 }
+.ci-cap .num { color: var(--txt); font-weight: 700 }
 
 .ci-pitch { width: 100%; height: auto; display: block }
-.ci-pitch .pf { fill: rgba(255, 255, 255, .025); stroke: rgba(255, 255, 255, .14); stroke-width: 1.2 }
-.ci-pitch .pl { fill: none; stroke: rgba(255, 255, 255, .14); stroke-width: 1.2 }
+.ci-pitch .pf { fill: rgba(47, 163, 107, .04); stroke: rgba(255, 255, 255, .16); stroke-width: 1.2 }
+.ci-pitch .pl { fill: none; stroke: rgba(255, 255, 255, .16); stroke-width: 1.2 }
+.ci-pitch .pg { fill: none; stroke: rgba(255, 255, 255, .4); stroke-width: 2 }
 .ci-pitch .pd { fill: rgba(255, 255, 255, .3) }
-.ci-pitch text { font: 700 15px Inter, sans-serif; fill: var(--txt); text-anchor: middle }
-.ci-pitch text.on { fill: #fff }
-.ci-pitch text.pk { font-size: 10px; font-weight: 600; fill: var(--mut) }
+.ci-pitch text { font: 700 16px Inter, sans-serif; fill: #fff; text-anchor: middle; pointer-events: none }
+.ci-pitch text.pk { font-size: 11px }
+.ci-pitch .zc { cursor: pointer; outline: none }
+.ci-pitch .zc rect { stroke: transparent; stroke-width: 2; transition: stroke .15s ease }
+.ci-pitch .zc.sel rect, .ci-pitch .zc:focus-visible rect { stroke: #fff }
+.ci-pitch .zc.pen.sel circle { stroke: #fff; stroke-width: 2 }
+@media (prefers-reduced-motion: no-preference) { .ci-pitch .zc { animation: ciFade .5s var(--ci-e) both; animation-delay: calc(var(--i, 0) * 45ms) } }
+@keyframes ciFade { from { opacity: 0 } to { opacity: 1 } }
 .ci-pl { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--mut); margin-top: 6px; direction: ltr }
 
-.ci-time { width: 100%; height: auto; display: block }
+.ci-time { width: 100%; height: auto; display: block; overflow: visible }
 .ci-time .f { fill: var(--ci-for) } .ci-time .a { fill: var(--ci-ag) }
-.ci-time .base { stroke: rgba(255, 255, 255, .18); stroke-width: 1 }
-.ci-time .v { font: 600 10px Inter, sans-serif; fill: var(--txt); text-anchor: middle }
+.ci-time .base { stroke: rgba(255, 255, 255, .22); stroke-width: 1 }
+.ci-time .h2bg { fill: rgba(255, 255, 255, .025) }
+.ci-time .hl { fill: rgba(255, 255, 255, .06) }
+.ci-time .v { font: 700 10.5px Inter, sans-serif; fill: var(--txt); text-anchor: middle }
 .ci-time .ax { font: 500 9.5px Inter, sans-serif; fill: var(--mut); text-anchor: middle }
+.ci-time .ax.on { fill: var(--txt); font-weight: 700 }
+.ci-time .hit { fill: transparent; cursor: pointer; outline: none }
+.ci-time .hit:focus-visible { stroke: var(--acc); stroke-width: 1.5 }
+@media (prefers-reduced-motion: no-preference) {
+  .ci-time path { transform-box: fill-box; animation: ciGrowU .6s var(--ci-e) both; animation-delay: calc(var(--i, 0) * 50ms) }
+  .ci-time path.f { transform-origin: 50% 100% } .ci-time path.a { transform-origin: 50% 0 }
+}
+@keyframes ciGrowU { from { transform: scaleY(0) } to { transform: scaleY(1) } }
+.ci-halves { display: grid; grid-template-columns: 1fr 1fr; font-size: 11px; color: var(--mut); text-align: center; margin-top: 4px; direction: ltr }
+.ci-time text, .ci-pitch text { direction: ltr; unicode-bidi: plaintext }
 
-.ci-bf { display: grid; gap: 7px }
-.ci-bfr { display: grid; grid-template-columns: 22px minmax(0, 1fr) 76px minmax(0, 1fr) 22px; align-items: center; gap: 8px; font-size: 12.5px }
+.ci-bf { display: grid; gap: 8px }
+.ci-bfr { display: grid; grid-template-columns: 24px minmax(0, 1fr) 80px minmax(0, 1fr) 24px; align-items: center; gap: 8px; font-size: 12.5px }
 .ci-bfr .l { text-align: center; color: var(--txt) }
-.ci-bfr .n { font: 600 12px Inter, sans-serif; text-align: center }
-.ci-bfr .n.f { color: var(--ci-for) } .ci-bfr .n.a { color: var(--ci-ag) }
-.ci-bfr .b { height: 10px; border-radius: 5px; background: var(--ci-line); overflow: hidden; display: flex }
-.ci-bfr .b.f { justify-content: flex-end } .ci-bfr .b.a { justify-content: flex-start }
-.ci-bfr .b i { display: block; height: 100% }
-.ci-bfr .b.f i { background: var(--ci-for); border-radius: 5px 0 0 5px }
-.ci-bfr .b.a i { background: var(--ci-ag); border-radius: 0 5px 5px 0 }
+.ci-bfr .n { font: 700 12.5px Inter, sans-serif; text-align: center }
+.ci-bfr .n.f { color: var(--ci-for) } .ci-bfr .n.a { color: #A796F5 }
+.ci-bfr .b { height: 10px; border-radius: 5px; background: rgba(255, 255, 255, .06); overflow: hidden }
+.ci-bfr .b i { display: block; height: 100%; width: 100%; transform: scaleX(var(--w)); border-radius: 5px }
+.ci-bfr .b.f i { background: var(--ci-for); transform-origin: 0 50% }
+.ci-bfr .b.a i { background: var(--ci-ag); transform-origin: 100% 50% }
+@media (prefers-reduced-motion: no-preference) { .ci-bfr .b i { animation: ciGrowX .6s var(--ci-e) both; animation-delay: calc(var(--i, 0) * 40ms) } }
+@keyframes ciGrowX { from { transform: scaleX(0) } }
 
 .ci-nx { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px }
 .ci-nxg { display: grid; gap: 4px; justify-items: stretch; text-align: center }
 .ci-nxg small { font-size: 11px; color: var(--mut) }
-.ci-nxg .rate { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 10px; padding: 6px 2px; font: 700 12px Inter, sans-serif; min-height: 40px }
+.ci-nxg .rate { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 12px; padding: 7px 2px; font: 700 12px Inter, sans-serif; min-height: 44px }
 .ci-nxg .rate em { font-style: normal; font-size: 10px; font-weight: 500; opacity: .8 }
 .ci-bl { color: var(--mut); padding: 10px 0 }
 
-@media (prefers-reduced-motion: reduce) { .ci-cv, .ci-load i::after { transition: none } }
-.ci-time text, .ci-pitch text { direction: ltr; unicode-bidi: plaintext }
+@media (prefers-reduced-motion: reduce) { .ci-cv, .ci-load i::after, .ci-it, .ci-br, .ci-br::before { transition: none } }
