@@ -7,8 +7,9 @@ import { ST, tShort, tName } from '../store.js';
 import { tt } from '../i18n.js';
 import { esc, I, crest, scoreHTML, fmtTime } from '../ui.js';
 import { pShirt } from './common.js';
+import { load as ciLoad, analyse, memory, progress as ciProg, goalsW, gamesW } from '../club-intel.js';
 
-let SEL = null, TAB = 'res', POS = 'ALL', LISTY = 0;
+let SEL = null, TAB = 'ai', POS = 'ALL', LISTY = 0, ZM = 'A', SAVED = null;
 
 /** جدول الترتيب محسوب من المباريات المنتهية */
 function table() {
@@ -42,8 +43,8 @@ function clubHTML(R) {
   const next = all.filter((f) => !f.fin).sort((a, b) => (a.ev || 999) - (b.ev || 999) || String(a.ko).localeCompare(String(b.ko)));
   const mine = new Set(ST.plan?.squad || []);
   const res = (f) => { const h = f.h === tid, gf = h ? f.hs : f.as, ga = h ? f.as : f.hs; return gf > ga ? 'W' : gf < ga ? 'L' : 'D'; };
-  const tabs = [['res', tt(`النتائج (${past.length})`, `Results (${past.length})`)], ['next', tt(`الجاية (${next.length})`, `Upcoming (${next.length})`)], ['pl', tt('اللاعبين', 'Players')]];
-  let body = '';
+  const tabs = [['ai', tt('التحليل الذكي', 'Smart analysis')], ['res', tt(`النتائج (${past.length})`, `Results (${past.length})`)], ['next', tt(`الجاية (${next.length})`, `Upcoming (${next.length})`)], ['pl', tt('اللاعبين', 'Players')]];
+  let body = TAB === 'ai' ? aiHTML(tid) : '';
   if (TAB === 'res') body = past.length ? `<div class="card cl-ls">${past.map((f) => { const r = res(f); return `<button class="cl-m tap" onclick="openMatchC(${f.id},${f.ev})"><span class="cl-gw num">${f.ev}</span><div class="cl-sc"><span class="${f.h === tid ? 'me' : ''}">${esc(tName(f.h))}</span>${scoreHTML(f.hs, f.as, 'num')}<span class="${f.a === tid ? 'me' : ''}">${esc(tName(f.a))}</span></div><i class="cl-f ${r} w">${RL()[r]}</i></button>`; }).join('')}</div>` : `<p class="mut cl-e">${tt('ما لعب أي مباراة بعد', 'No matches played yet')}</p>`;
   if (TAB === 'next') body = next.length ? `<div class="card cl-ls">${next.map((f) => { const h = f.h === tid, opp = h ? f.a : f.h, d = h ? f.hd : f.ad; return `<${f.ev ? `button class="cl-m tap" onclick="openMatchC(${f.id},${f.ev})"` : 'div class="cl-m"'}><span class="cl-gw num">${f.ev || '—'}</span><div class="cl-op">${crest(tShort(opp), 22)}<b>${esc(tName(opp))}</b><small>${h ? tt('بملعبه', 'Home') : tt('خارج ملعبه', 'Away')}</small></div><div class="cl-kd"><span class="rate f${d}">${d}</span><small>${f.ko ? fmtTime(f.ko) : tt('موعد غير محدد', 'TBC')}</small></div></${f.ev ? 'button' : 'div'}>`; }).join('')}</div>` : `<p class="mut cl-e">${tt('ماكو مباريات جاية', 'No upcoming matches')}</p>`;
   if (TAB === 'pl') {
@@ -67,7 +68,7 @@ Object.assign(window, {
   clubOpen: (id) => {
     if (id == null) return closeClub();
     const opening = SEL == null; if (opening) LISTY = window.scrollY;
-    SEL = id; TAB = 'res'; POS = 'ALL';
+    SEL = id; TAB = 'ai'; POS = 'ALL'; SAVED = null;
     if (opening) { try { history.pushState({ v: 'clubs', c: id }, '', '#clubs'); } catch {} }
     paint(); window.scrollTo(0, 0);
   },
@@ -75,13 +76,101 @@ Object.assign(window, {
   clubBack: () => { if (history.state && history.state.c != null) history.back(); else closeClub(); },
   clubTab: (k) => { TAB = k; window.render(); },
   clubPos: (k) => { POS = k; window.render(); },
+  clubZM: (k) => { ZM = k; window.render(); },
 });
+
+/* ============ التحليل الذكي: الشجرة ============ */
+const BR = () => [
+  ['att', 'i-goal', tt('الهجوم', 'Attack')], ['def', 'i-shield', tt('الدفاع', 'Defence')], ['zone', 'i-matrix', tt('المناطق', 'Zones')],
+  ['time', 'i-clock', tt('التوقيت', 'Timing')], ['set', 'i-target', tt('الكرات الثابتة', 'Set pieces')], ['style', 'i-activity', tt('الأسلوب', 'Style')],
+  ['mind', 'i-trophy', tt('النتائج والشخصية', 'Results & mentality')], ['disc', 'i-alert', tt('الانضباط', 'Discipline')],
+  ['fpl', 'i-pitch', tt('اللاعبين والفانتازي', 'Players & FPL')], ['next', 'i-cal', tt('الجاي', 'Coming up')],
+];
+const TONE = { g: 'i-up', b: 'i-down', n: 'i-info' };
+function track(R) {
+  if (!R || R.max === R.min) return '';
+  const x = (v) => ((v - R.min) / (R.max - R.min)) * 100;
+  return `<div class="ci-tr" dir="ltr" aria-hidden="true"><i class="ci-tr-avg" style="left:${x(R.avg).toFixed(1)}%"></i><i class="ci-tr-me" style="left:${x(R.v).toFixed(1)}%"></i></div><div class="ci-tr-l"><span>${tt(`المركز ${R.r} من ${R.n}`, `${R.r} of ${R.n}`)}</span><span>${tt('الخط = معدل الدوري', 'line = league avg')}</span></div>`;
+}
+function item(x, fresh, rich = true) {
+  return `<div class="ci-it t-${x.tone}"${x.pid ? ` role="button" tabindex="0" onclick="openPlayer(${x.pid})"` : ''}><div class="ci-ih">${I(TONE[x.tone] || 'i-info', 'i')}<b>${esc(x.title)}</b>${fresh ? `<em class="ci-new">${tt('جديد', 'New')}</em>` : ''}</div>${x.text ? `<p>${esc(x.text)}</p>` : ''}${rich ? track(x.R) : ''}</div>`;
+}
+function zoneMap(A) {
+  const Z = ZM === 'F' ? A.zF : A.zA, c = Z.cell, g = (k) => c[k] || 0;
+  const cells = [
+    ['six', g('sl') + g('sc') + g('sr') + g('s?'), 110, 0, 80, 26], ['bl', g('bl'), 60, 26, 60, 64], ['bc', g('bc') + g('b?'), 120, 26, 60, 64], ['br', g('br'), 180, 26, 60, 64],
+    ['ol', g('ol'), 0, 90, 100, 90], ['oc', g('oc') + g('o?'), 100, 90, 100, 90], ['or', g('or'), 200, 90, 100, 90],
+  ];
+  const tot = cells.reduce((a, x) => a + x[1], 0) + g('pc'), mx = Math.max(1, ...cells.map((x) => x[1]));
+  const col = ZM === 'F' ? 'var(--ci-for)' : 'var(--ci-ag)';
+  return `<div class="ci-viz"><div class="ci-vh"><b>${tt('من وين دخلت الأهداف', 'Where the goals came from')}</b><div class="cl-seg sm ci-zt"><button class="${ZM === 'A' ? 'on' : ''}" onclick="clubZM('A')">${tt('استقبل', 'Conceded')}</button><button class="${ZM === 'F' ? 'on' : ''}" onclick="clubZM('F')">${tt('سجّل', 'Scored')}</button></div></div>
+  <svg class="ci-pitch" viewBox="-2 -12 304 196" dir="ltr" role="img" aria-label="${tt('خريطة الأهداف', 'Goal map')}">
+    <rect x="0" y="0" width="300" height="180" rx="6" class="pf"/><path d="M60 0V90H240V0M110 0V26H190V0" class="pl"/><path d="M125 0V-8H175V0" class="pl"/><circle cx="150" cy="62" r="2" class="pd"/>
+    ${cells.map(([k, v, x, y, w, h]) => `<rect x="${x + 1.5}" y="${y + 1.5}" width="${w - 3}" height="${h - 3}" rx="5" fill="${col}" fill-opacity="${v ? (0.18 + (v / mx) * 0.72).toFixed(2) : 0}"/>${v ? `<text x="${x + w / 2}" y="${y + h / 2 + 5}" class="${v / mx > 0.55 ? 'on' : ''}">${v}</text>` : ''}`).join('')}
+    ${g('pc') ? `<text x="150" y="76" class="pk">${tt(`جزاء ${g('pc')}`, `Pen ${g('pc')}`)}</text>` : ''}
+  </svg>
+  <div class="ci-pl"><span>${tt('يسار المهاجم', "Attacker's left")}</span><span>${tt(goalsW(tot), `${tot} goals`)}</span><span>${tt('يمين المهاجم', "Attacker's right")}</span></div></div>`;
+}
+function timeChart(A) {
+  const mx = Math.max(1, ...A.tbF, ...A.tbA), W = 300, cw = W / 6, H = 64, L = ['1–15', '16–30', '31–45', '46–60', '61–75', '76–90'];
+  const bar = (v, i, up) => { const h = (v / mx) * (H - 12), x = i * cw + cw * 0.22, w = cw * 0.56; return v ? `<path d="${up ? `M${x} ${H}V${H - h + 3}q0 -3 3 -3h${w - 6}q3 0 3 3V${H}Z` : `M${x} ${H + 2}V${H + 2 + h - 3}q0 3 3 3h${w - 6}q3 0 3 -3V${H + 2}Z`}" class="${up ? 'f' : 'a'}"/><text x="${x + w / 2}" y="${up ? H - h - 4 : H + h + 14}" class="v">${v}</text>` : ''; };
+  return `<div class="ci-viz"><div class="ci-vh"><b>${tt('الأهداف حسب الدقائق', 'Goals by minute')}</b><span class="ci-lg"><i class="f"></i>${tt('سجّل', 'Scored')}<i class="a"></i>${tt('استقبل', 'Conceded')}</span></div>
+  <svg class="ci-time" viewBox="0 -4 ${W} ${H * 2 + 22}" dir="ltr" role="img" aria-label="${tt('الأهداف حسب الدقائق', 'Goals by minute')}"><line x1="0" x2="${W}" y1="${H + 1}" y2="${H + 1}" class="base"/>${A.tbF.map((v, i) => bar(v, i, true)).join('')}${A.tbA.map((v, i) => bar(v, i, false)).join('')}${L.map((l, i) => `<text x="${i * cw + cw / 2}" y="${H * 2 + 16}" class="ax">${l}</text>`).join('')}</svg></div>`;
+}
+function butterfly(title, rows) {
+  const mx = Math.max(1, ...rows.flatMap((r) => [r[1], r[2]]));
+  return `<div class="ci-viz"><div class="ci-vh"><b>${title}</b><span class="ci-lg"><i class="f"></i>${tt('سجّل', 'Scored')}<i class="a"></i>${tt('استقبل', 'Conceded')}</span></div><div class="ci-bf">${rows.filter((r) => r[1] || r[2]).map(([l, f, a]) => `<div class="ci-bfr"><span class="n f">${f}</span><span class="b f" dir="ltr"><i style="width:${(f / mx) * 100}%"></i></span><span class="l">${l}</span><span class="b a"><i style="width:${(a / mx) * 100}%"></i></span><span class="n a">${a}</span></div>`).join('')}</div></div>`;
+}
+function nextViz(gws, tid) {
+  const G = ST.G;
+  return `<div class="ci-nx">${gws.map((g) => { const fs = (G.fx[g] || []).filter((f) => f.h === tid || f.a === tid); return `<div class="ci-nxg"><small>${tt(`ج${g}`, `GW${g}`)}</small>${fs.length ? fs.map((f) => { const h = f.h === tid, o = h ? f.a : f.h, d = h ? f.hd : f.ad; return `<span class="rate f${d}">${esc(tShort(o))}<em>${h ? tt('د', 'H') : tt('خ', 'A')}</em></span>`; }).join('') : `<span class="ci-bl">—</span>`}</div>`; }).join('')}</div>`;
+}
+function aiHTML(tid) {
+  ciLoad(tid, () => { if (ST.view === 'clubs' && SEL === tid && TAB === 'ai') window.render(); });
+  const R = analyse(tid), A = R.A, M = memory(tid, R);
+  if (!A.p) return `<p class="mut cl-e">${tt('ما لعب أي مباراة بعد، فماكو بيانات نحللها', 'No matches played yet')}</p>`;
+  const all = Object.entries(R.branches).flatMap(([br, xs]) => xs.filter((x) => !x.always).map((x) => ({ ...x, br })));
+  const score = (x) => x.w / (1 + 0.3 * (M.seen[x.id] || 0)) + (M.freshIds.has(x.id) ? 0.45 : 0);
+  const top = [...all].sort((a, b) => score(b) - score(a)).slice(0, 4);
+  if (SAVED !== tid) { SAVED = tid; M.save(top.map((x) => x.id)); }
+  const chg = M.changes.filter((c) => !c.ref);
+  const cov = ciProg.total ? Math.round((ciProg.done / ciProg.total) * 100) : 100;
+  const loading = ciProg.running && cov < 100;
+  const howRows = (k) => { const F = A.howF, Ag = A.howA; return [[tt('قدم يمنى', 'Right foot'), F.r || 0, Ag.r || 0], [tt('قدم يسرى', 'Left foot'), F.l || 0, Ag.l || 0], [tt('رأسية', 'Header'), F.h || 0, Ag.h || 0], [tt('جزاء', 'Penalty'), F.p || 0, Ag.p || 0], [tt('عكسية', 'Own goal'), F.og || 0, Ag.og || 0], [tt('غيرها', 'Other'), F.o || 0, Ag.o || 0]]; };
+  const astRows = () => { const F = A.astF, Ag = A.astA; return [[tt('عرضية', 'Cross'), F.c || 0, Ag.c || 0], [tt('بينية', 'Through ball'), F.t || 0, Ag.t || 0], [tt('ركنية', 'Corner'), F.k || 0, Ag.k || 0], [tt('ضربة حرة', 'Free kick'), F.f || 0, Ag.f || 0], [tt('مرتدة', 'Counter'), F.x || 0, Ag.x || 0], [tt('تمريرة', 'Pass'), (F.a || 0) + (F.hp || 0), (Ag.a || 0) + (Ag.hp || 0)], [tt('فردية', 'Solo'), F['-'] || 0, Ag['-'] || 0]]; };
+  const vizFor = (br) => {
+    if (A.ne < 3) return '';
+    if (br === 'zone') return zoneMap(A);
+    if (br === 'time') return timeChart(A);
+    if (br === 'att') return butterfly(tt('شلون تدخل الأهداف', 'How goals go in'), howRows());
+    if (br === 'set') return butterfly(tt('من وين جت الأهداف', 'Goal sources'), astRows());
+    return '';
+  };
+  const br = BR().map(([id, ic, name]) => {
+    let xs = R.branches[id].filter((x) => !x.always).sort((a, b) => b.w - a.w);
+    const nx = R.branches[id].find((x) => x.viz === 'next');
+    if (!xs.length && !vizFor(id)) return '';
+    const fr = xs.some((x) => M.freshIds.has(x.id));
+    return `<details class="ci-br"${id === 'zone' || id === 'att' || id === 'def' ? ' open' : ''}><summary><span class="ci-bi">${I(ic, 'i')}</span><span class="ci-bt"><b>${name}</b><small>${esc(xs[0]?.title || '')}</small></span>${fr ? `<em class="ci-new">${tt('جديد', 'New')}</em>` : ''}<span class="ci-bn num">${xs.length}</span>${I('i-chev', 'i ci-cv')}</summary>
+      <div class="ci-bb">${vizFor(id)}${nx ? nextViz(nx.gws, tid) : ''}${xs.map((x) => item(x, M.freshIds.has(x.id))).join('')}</div></details>`;
+  }).join('');
+  return `<div class="ci">
+    ${loading ? `<div class="ci-load"><span>${tt(`يحلل مباريات الدوري للمقارنة… ${ciProg.done} من ${ciProg.total}`, `Analysing league matches… ${ciProg.done}/${ciProg.total}`)}</span><i style="--p:${cov}%"></i></div>` : ''}
+    ${A.ne < 3 && !loading ? `<div class="note">${I('i-info', 'i')}<span>${tt('تحليل الأهداف والتسديدات بالتفصيل يحتاج بيانات المباريات، وبعدها ما وصلت. الملاحظات الحالية من بيانات الفانتازي.', 'Detailed shot data not available yet; showing FPL-based insights.')}</span></div>` : ''}
+    <div class="sec"><h2>${I('i-sparkle', 'i')}${tt('أبرز ما يميّزه', 'What stands out')}</h2></div>
+    <div class="ci-top">${top.map((x) => item(x, M.freshIds.has(x.id), false)).join('')}</div>
+    ${chg.length ? `<div class="sec"><h2>${I('i-refresh', 'i')}${tt('شنو تغيّر من آخر مرة', 'What changed')}</h2></div><div class="ci-top ci-chg">${chg.map((x) => item(x, false, false)).join('')}</div>` : ''}
+    <div class="sec"><h2>${I('i-layers', 'i')}${tt('الشجرة الكاملة', 'Full breakdown')}</h2></div>
+    <div class="ci-tree">${br}</div>
+    <p class="ci-foot">${tt(`محسوبة من ${gamesW(A.p)}${A.ne ? `، منها ${A.ne} بتحليل كل هدف وتسديدة` : ''}. تتحدث وحدها بعد كل جولة.`, `Built from ${A.p} matches${A.ne ? ` (${A.ne} with shot-level data)` : ''}. Updates every gameweek.`)}</p>
+  </div>`;
+}
 
 /* رجوع الجهاز/الإيماءة/زر الرجوع العلوي: من صفحة النادي يرجع لقائمة الأندية */
 /** رسم مباشر بدل المقارنة (morph): صفحة النادي والقائمة مختلفات كلياً فالاستبدال أسرع وما يعلّق */
 function paint() { window.__noMorph = true; try { window.render(); } finally { window.__noMorph = false; } }
 /** رجوع لقائمة الأندية بنفس مكان التمرير اللي جان بي — نفس اللقطة اللي يعرضها الآيفون أثناء السحب */
-function closeClub() { SEL = null; TAB = 'res'; POS = 'ALL'; paint(); window.scrollTo(0, LISTY); requestAnimationFrame(() => window.scrollTo(0, LISTY)); }
+function closeClub() { SEL = null; TAB = 'ai'; POS = 'ALL'; paint(); window.scrollTo(0, LISTY); requestAnimationFrame(() => window.scrollTo(0, LISTY)); }
 const prevHook = window.__backHook;
 window.__backHook = (fromPop) => {
   if (ST.view === 'clubs' && SEL != null) { if (fromPop) { closeClub(); return 'popped'; } window.clubBack(); return true; }

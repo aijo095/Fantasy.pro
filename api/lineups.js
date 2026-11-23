@@ -4,6 +4,7 @@
    الفانتازي ما ينشر التشكيلات، فنجيبها من بيانات ESPN العامة للمباريات.
 ========================================================= */
 import { endJSON } from './_etag.js';
+import { parseMatch } from './_matchstats.js';
 const BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/';
 const ABBR = { MCI: 'MNC', MUN: 'MAN' }; // رموز الفانتازي ← رموز ESPN
 const memo = new Map();
@@ -112,6 +113,23 @@ export default async function handler(req, res) {
     const days = [...new Set(sc.split(',').filter((d) => /^\d{8}$/.test(d)))].slice(0, 3);
     const all = (await Promise.all(days.map(scoreboard))).flat();
     return send(res, 200, all, 5);
+  }
+  // تحليل مباراة (أهداف وتسديدات بالجهة والعمق + إحصائيات الفريقين): /api/lineups?mx=1&ko=..&h=ARS&a=CHE
+  if (u.searchParams.get('mx')) {
+    const ko2 = new Date(u.searchParams.get('ko') || ''), h2 = (u.searchParams.get('h') || '').toUpperCase().slice(0, 4), a2 = (u.searchParams.get('a') || '').toUpperCase().slice(0, 4);
+    if (isNaN(ko2) || !/^[A-Z]{3}$/.test(h2) || !/^[A-Z]{3}$/.test(a2)) return send(res, 400, { error: 'bad params' });
+    if (process.env.FPL_MOCK === '1') return send(res, 404, { error: 'mock' });
+    try {
+      const H = ABBR[h2] || h2, A = ABBR[a2] || a2; let ev = null;
+      for (const d of [new Date(ko2.getTime() - 5 * 3600e3), ko2, new Date(ko2.getTime() - 29 * 3600e3)]) {
+        const sb = await get(`scoreboard?dates=${ymd(d)}`).catch(() => null);
+        ev = (sb?.events || []).find((e) => { const c = e.competitions?.[0]?.competitors || []; return c.find((x) => x.homeAway === 'home')?.team?.abbreviation === H && c.find((x) => x.homeAway === 'away')?.team?.abbreviation === A; });
+        if (ev) break;
+      }
+      if (!ev) return send(res, 404, { error: 'not found' }, 3600);
+      const m = parseMatch(await get(`summary?event=${ev.id}`), h2, a2);
+      return send(res, 200, m, m.st === 'post' ? 30 * 86400 : 300);
+    } catch (e) { return send(res, 502, { error: String(e.message || e) }); }
   }
   const ko = new Date(u.searchParams.get('ko') || ''), h = (u.searchParams.get('h') || '').toUpperCase().slice(0, 4), a = (u.searchParams.get('a') || '').toUpperCase().slice(0, 4);
   if (isNaN(ko) || !/^[A-Z]{3}$/.test(h) || !/^[A-Z]{3}$/.test(a)) return send(res, 400, { error: 'bad params' });

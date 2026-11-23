@@ -1,0 +1,96 @@
+/* Hallmark · checked: 2026-11-24 · genre: atmospheric (inferred) · scope: app
+   built: the project · redesign: refine (club smart analysis) */
+/* التحليل الذكي للنوادي: ملخص، شجرة فروع قابلة للفتح، خريطة الأهداف، توقيت الأهداف، ومقارنات بالدوري */
+:root { --ci-for: #2FA36B; --ci-ag: #8B74EE; --ci-line: rgba(255, 255, 255, .08); --ci-soft: rgba(255, 255, 255, .04) }
+
+.ci { display: grid; gap: 4px; margin-top: 6px }
+.ci-load { display: grid; gap: 6px; padding: 10px 2px; font-size: 12.5px; color: var(--mut) }
+.ci-load i { display: block; height: 3px; border-radius: 3px; background: var(--ci-line); position: relative; overflow: hidden }
+.ci-load i::after { content: ''; position: absolute; inset: 0; transform-origin: 100% 50%; transform: scaleX(var(--p)); background: var(--acc); transition: transform .4s ease }
+.ci-foot { font-size: 12px; color: var(--mut); text-align: center; margin: 14px 0 4px; text-wrap: balance }
+
+/* البطاقات */
+.ci-top { display: grid; gap: 10px }
+.ci-it { display: grid; gap: 6px; padding: 14px 16px; border-radius: 18px; background: var(--card-a, var(--s1)); border: 1px solid var(--ci-line) }
+.ci-it[role=button] { cursor: pointer }
+.ci-it[role=button]:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px }
+.ci-ih { display: flex; align-items: center; gap: 8px; min-width: 0 }
+.ci-ih b { font-size: 15px; font-weight: 700; line-height: 1.35; min-width: 0; overflow-wrap: break-word }
+.ci-ih svg.i { width: 18px; height: 18px; flex: none; color: var(--mut) }
+.ci-it.t-g .ci-ih svg.i { color: var(--ci-for) }
+.ci-it.t-b .ci-ih svg.i { color: var(--ci-ag) }
+.ci-it p { margin: 0; font-size: 13.5px; line-height: 1.65; color: var(--mut); text-wrap: pretty }
+.ci-top .ci-it { padding: 16px 18px }
+.ci-top .ci-ih b { font-size: 16px }
+.ci-new { font-style: normal; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(var(--acc-rgb), .14); color: var(--acc); flex: none; margin-inline-start: auto }
+
+/* مسار المقارنة بالدوري */
+.ci-tr { position: relative; height: 6px; margin: 6px 0 0; border-radius: 6px; background: var(--ci-line) }
+.ci-tr-avg { position: absolute; top: -3px; width: 2px; height: 12px; margin-left: -1px; border-radius: 2px; background: var(--txt); opacity: .55 }
+.ci-tr-me { position: absolute; top: -4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 0 3px var(--bg, #0b0f14) }
+.ci-tr-l { display: flex; justify-content: space-between; font-size: 11px; color: var(--mut); margin-top: 4px }
+
+/* الشجرة */
+.ci-tree { position: relative; display: grid; gap: 10px; padding-inline-start: 18px }
+.ci-tree::before { content: ''; position: absolute; inset-inline-start: 6px; top: 22px; bottom: 22px; width: 2px; border-radius: 2px; background: linear-gradient(var(--ci-line), var(--ci-line)) }
+.ci-br { position: relative; border-radius: 20px; background: var(--card-b, var(--s1)); border: 1px solid var(--ci-line) }
+.ci-br::before { content: ''; position: absolute; inset-inline-start: -16px; top: 26px; width: 12px; height: 2px; background: var(--ci-line) }
+.ci-br[open]::before { background: rgba(var(--acc-rgb), .5) }
+.ci-br > summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; min-height: 56px }
+.ci-br > summary::-webkit-details-marker { display: none }
+.ci-br > summary:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; border-radius: 20px }
+.ci-bi { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: rgba(var(--acc-rgb), .1); color: var(--acc); flex: none }
+.ci-bi svg.i { width: 20px; height: 20px }
+.ci-bt { display: grid; gap: 2px; min-width: 0; flex: 1 }
+.ci-bt b { font-size: 15px }
+.ci-bt small { font-size: 12.5px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.ci-bn { font-size: 12px; color: var(--mut); min-width: 22px; height: 22px; display: grid; place-items: center; border-radius: 8px; background: var(--ci-soft) }
+.ci-cv { width: 16px; height: 16px; color: var(--mut); transition: transform .2s ease; flex: none }
+.ci-br[open] .ci-cv { transform: rotate(-90deg) }
+.ci-bb { display: grid; gap: 10px; padding: 0 12px 12px }
+.ci-bb .ci-it { background: var(--ci-soft); border-color: transparent; border-radius: 14px; padding: 12px 14px }
+
+/* اللوحات البيانية */
+.ci-viz { padding: 12px 12px 10px; border-radius: 14px; background: var(--ci-soft) }
+.ci-vh { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap }
+.ci-vh b { font-size: 13.5px }
+.ci-zt { margin: 0 }
+.ci-lg { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--mut) }
+.ci-lg i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-inline-start: 6px }
+.ci-lg i.f { background: var(--ci-for) } .ci-lg i.a { background: var(--ci-ag) }
+
+.ci-pitch { width: 100%; height: auto; display: block }
+.ci-pitch .pf { fill: rgba(255, 255, 255, .025); stroke: rgba(255, 255, 255, .14); stroke-width: 1.2 }
+.ci-pitch .pl { fill: none; stroke: rgba(255, 255, 255, .14); stroke-width: 1.2 }
+.ci-pitch .pd { fill: rgba(255, 255, 255, .3) }
+.ci-pitch text { font: 700 15px Inter, sans-serif; fill: var(--txt); text-anchor: middle }
+.ci-pitch text.on { fill: #fff }
+.ci-pitch text.pk { font-size: 10px; font-weight: 600; fill: var(--mut) }
+.ci-pl { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--mut); margin-top: 6px; direction: ltr }
+
+.ci-time { width: 100%; height: auto; display: block }
+.ci-time .f { fill: var(--ci-for) } .ci-time .a { fill: var(--ci-ag) }
+.ci-time .base { stroke: rgba(255, 255, 255, .18); stroke-width: 1 }
+.ci-time .v { font: 600 10px Inter, sans-serif; fill: var(--txt); text-anchor: middle }
+.ci-time .ax { font: 500 9.5px Inter, sans-serif; fill: var(--mut); text-anchor: middle }
+
+.ci-bf { display: grid; gap: 7px }
+.ci-bfr { display: grid; grid-template-columns: 22px minmax(0, 1fr) 76px minmax(0, 1fr) 22px; align-items: center; gap: 8px; font-size: 12.5px }
+.ci-bfr .l { text-align: center; color: var(--txt) }
+.ci-bfr .n { font: 600 12px Inter, sans-serif; text-align: center }
+.ci-bfr .n.f { color: var(--ci-for) } .ci-bfr .n.a { color: var(--ci-ag) }
+.ci-bfr .b { height: 10px; border-radius: 5px; background: var(--ci-line); overflow: hidden; display: flex }
+.ci-bfr .b.f { justify-content: flex-end } .ci-bfr .b.a { justify-content: flex-start }
+.ci-bfr .b i { display: block; height: 100% }
+.ci-bfr .b.f i { background: var(--ci-for); border-radius: 5px 0 0 5px }
+.ci-bfr .b.a i { background: var(--ci-ag); border-radius: 0 5px 5px 0 }
+
+.ci-nx { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px }
+.ci-nxg { display: grid; gap: 4px; justify-items: stretch; text-align: center }
+.ci-nxg small { font-size: 11px; color: var(--mut) }
+.ci-nxg .rate { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 10px; padding: 6px 2px; font: 700 12px Inter, sans-serif; min-height: 40px }
+.ci-nxg .rate em { font-style: normal; font-size: 10px; font-weight: 500; opacity: .8 }
+.ci-bl { color: var(--mut); padding: 10px 0 }
+
+@media (prefers-reduced-motion: reduce) { .ci-cv, .ci-load i::after { transition: none } }
+.ci-time text, .ci-pitch text { direction: ltr; unicode-bidi: plaintext }
