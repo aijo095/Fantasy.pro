@@ -110,10 +110,10 @@ function seasonChart(dg) {
   const vals = evs.map((e) => { const h = e.id === G.cur ? liveHist(e.id) : histOf(e.id); return { e, me: e.id <= G.cur && h ? h.points : null, avg: e.id <= G.cur ? e.avg ?? null : null }; });
   const mx = Math.max(10, ...vals.map((v) => Math.max(v.me || 0, v.avg || 0)));
   const y = (v) => H - (v / mx) * (H - pad);
-  const bars = vals.map((v, i) => {
+  const bars = `<line x1="0" x2="${evs.length * W}" y1="${H}" y2="${H}" class="base"/>` + vals.map((v, i) => {
     const x = i * W, on = v.e.id === gwSel, cur = v.e.id === G.cur && !v.e.fin;
     let g = '';
-    if (v.me != null) { const yy = y(Math.max(0, v.me)); g += `<rect x="${x + 2}" y="${yy}" width="${W - 4}" height="${Math.max(2, H - yy)}" rx="2" class="b${on ? ' on' : ''}${cur ? ' cur' : ''}" style="--i:${i}"/>`; }
+    if (v.me != null) { const yy = y(Math.max(0, v.me)); const hh = Math.max(2, H - yy), r = Math.min(2, hh / 2), x0 = x + 2, x1 = x + W - 2; g += `<path d="M${x0} ${H}V${H - hh + r}Q${x0} ${H - hh} ${x0 + r} ${H - hh}H${x1 - r}Q${x1} ${H - hh} ${x1} ${H - hh + r}V${H}Z" class="b${on ? ' on' : ''}${cur ? ' cur' : ''}" style="--i:${i}"/>`; }
     else g += `<circle cx="${x + W / 2}" cy="${H - 2}" r="1.6" class="fut${dg[v.e.id]?.dbl.length ? ' dbl' : ''}"/>`;
     if (v.avg != null) g += `<line x1="${x + 1}" x2="${x + W - 1}" y1="${y(v.avg)}" y2="${y(v.avg)}" class="avg"/>`;
     if (on && v.me != null) g += `<text x="${x + W / 2}" y="${y(Math.max(0, v.me)) - 4}" class="lbl">${v.me}</text>`;

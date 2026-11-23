@@ -142,8 +142,8 @@ export const RATE_TXT = () => ['', tt('سهلة جداً', 'Very easy'), tt('س�
 export function spark(vals, w = 70, h = 24, col = '#34D399') {
   if (!vals || vals.length < 2) return '';
   const mx = Math.max(...vals, 1), X = (i) => i * (w - 4) / (vals.length - 1) + 2, Y = (x) => h - 3 - x / mx * (h - 6);
-  const id = 'sg' + Math.random().toString(36).slice(2, 7);
-  return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".45"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="M${X(0)},${h} ${vals.map((x, i) => `L${X(i)},${Y(x)}`).join(' ')} L${X(vals.length - 1)},${h}Z" fill="url(#${id})"/><polyline points="${vals.map((x, i) => `${X(i)},${Y(x)}`).join(' ')}" fill="none" stroke="${col}" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
+  const n = vals.length - 1;
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><polyline points="${vals.map((x, i) => `${X(i)},${Y(x)}`).join(' ')}" fill="none" stroke="${col}" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${X(n)}" cy="${Y(vals[n])}" r="2.25" fill="${col}"/></svg>`;
 }
 /** رسم خطي تفاعلي: series=[{name,color,vals:[...]}], labels=[...] ; invert للترتيب */
 export function lineChart(labels, series, { h = 170, invert = false, fmtV = (v) => v } = {}) {
