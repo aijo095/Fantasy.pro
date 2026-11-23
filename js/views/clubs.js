@@ -117,10 +117,10 @@ function zoneMap(A) {
   return `<section class="ci-viz"><header class="ci-vh"><h4>${ZM === 'F' ? tt('من وين يسجّل', 'Where he scores from') : tt('من وين تدخل عليه الأهداف', 'Where he concedes from')}</h4><div class="ci-tg" role="tablist"><button role="tab" aria-selected="${ZM === 'A'}" class="${ZM === 'A' ? 'on a' : ''}" onclick="clubZM('A')">${tt('استقبل', 'Conceded')}</button><button role="tab" aria-selected="${ZM === 'F'}" class="${ZM === 'F' ? 'on f' : ''}" onclick="clubZM('F')">${tt('سجّل', 'Scored')}</button></div></header>
   <svg class="ci-pitch" viewBox="-2 -12 304 196" dir="ltr" role="img" aria-label="${tt('خريطة الأهداف', 'Goal map')}">
     <rect x="0" y="0" width="300" height="180" rx="8" class="pf"/><path d="M60 0V90H240V0M110 0V26H190V0M120 90A30 30 0 0 0 180 90" class="pl"/><path d="M128 0V-8H172V0" class="pg"/><circle cx="150" cy="62" r="2" class="pd"/>
-    ${cells.map(([k, v, x, y, w, h], i) => `<g class="zc${ZSEL === k ? ' sel' : ''}" role="button" tabindex="0" onclick="clubZS('${k}')" style="--i:${i}"><rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" rx="6" fill="${v ? col : 'rgba(255,255,255,.02)'}" fill-opacity="${v ? (0.22 + (v / mx) * 0.7).toFixed(2) : 1}"/>${v ? `<text x="${x + w / 2}" y="${y + h / 2 + 6}">${v}</text>` : ''}</g>`).join('')}
-    ${pen ? `<g class="zc pen${ZSEL === 'pc' ? ' sel' : ''}" role="button" tabindex="0" onclick="clubZS('pc')"><circle cx="150" cy="62" r="11" fill="${col}"/><text x="150" y="66.5" class="pk">${pen}</text></g>` : ''}
+    ${cells.map(([k, v, x, y, w, h], i) => `<g class="zc${ZSEL === k ? ' sel' : ''}" role="button" tabindex="0" onclick="clubZS('${k}')" style="--i:${i}"><rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" rx="6" fill="${v ? col : 'rgba(255,255,255,.02)'}" fill-opacity="${v ? (0.22 + (v / mx) * 0.7).toFixed(2) : 1}"/>${v ? `<text x="${x + w / 2}" y="${k === 'bc' ? y + h - 12 : y + h / 2 + 6}">${v}</text>` : ''}</g>`).join('')}
   </svg>
   <div class="ci-pl"><span>${tt('يسار المهاجم', "Attacker's left")}</span><span>${tt('يمين المهاجم', "Attacker's right")}</span></div>
+  <div class="ci-zs"><span>${tt('المجموع', 'Total')} <b class="num">${tot}</b></span>${pen ? `<button class="${ZSEL === 'pc' ? 'on' : ''}" onclick="clubZS('pc')">${tt('ركلات جزاء', 'Penalties')} <b class="num">${pen}</b></button>` : ''}${ZM === 'A' && A.howA.og ? `<span>${tt('عكسية', 'Own goals')} <b class="num">${A.howA.og}</b></span>` : ZM === 'F' && A.howF.og ? `<span>${tt('عكسية لصالحه', 'Own goals for')} <b class="num">${A.howF.og}</b></span>` : ''}</div>
   <div class="ci-cap" aria-live="polite">${cap}</div></section>`;
 }
 function timeChart(A) {
@@ -155,6 +155,7 @@ function aiHTML(tid) {
   const top = [...all].sort((a, b) => score(b) - score(a)).slice(0, 4);
   if (SAVED !== tid) { SAVED = tid; M.save(top.map((x) => x.id)); }
   const chg = M.changes.filter((c) => !c.ref);
+  const lastGw = Math.max(0, ...A.res.map((x) => x.f.ev || 0)), nFresh = all.filter((x) => M.freshIds.has(x.id)).length;
   const cov = ciProg.total ? Math.round((ciProg.done / ciProg.total) * 100) : 100;
   const loading = ciProg.running && cov < 100;
   const howRows = (k) => { const F = A.howF, Ag = A.howA; return [[tt('قدم يمنى', 'Right foot'), F.r || 0, Ag.r || 0], [tt('قدم يسرى', 'Left foot'), F.l || 0, Ag.l || 0], [tt('رأسية', 'Header'), F.h || 0, Ag.h || 0], [tt('جزاء', 'Penalty'), F.p || 0, Ag.p || 0], [tt('عكسية', 'Own goal'), F.og || 0, Ag.og || 0], [tt('غيرها', 'Other'), F.o || 0, Ag.o || 0]]; };
@@ -184,10 +185,11 @@ function aiHTML(tid) {
     <div class="sec"><h2>${I('i-sparkle', 'i')}${tt('أبرز ما يميّزه', 'What stands out')}</h2></div>
     <div class="ci-top">${top.map((x) => item(x, M.freshIds.has(x.id), false)).join('')}</div>
     ${chg.length ? `<div class="sec"><h2>${I('i-refresh', 'i')}${tt('شنو تغيّر من آخر مرة', 'What changed')}</h2></div><div class="ci-top ci-chg">${chg.map((x) => item(x, false, false)).join('')}</div>` : ''}
-    <div class="sec"><h2>${I('i-layers', 'i')}${tt('الشجرة الكاملة', 'Full breakdown')}</h2></div>
+    <div class="sec"><h2>${I('i-layers', 'i')}${tt('الإحصائيات الدقيقة', 'Detailed stats')}</h2></div>
+    <div class="ci-live">${I('i-refresh', 'i')}<span>${tt(`شجرة ذكية تحدّث نفسها: محسوبة بعد الجولة ${lastGw}، من ${gamesW(A.p)}${A.ne ? ` حلّلت بيها ${goalsW(A.gf + A.ga)} و${A.shF + A.shA} تسديدة` : ''}${nFresh ? `، وبيها ${nFresh} ${nFresh === 1 ? 'ملاحظة جديدة' : nFresh === 2 ? 'ملاحظتين جديدتين' : 'ملاحظات جديدة'}` : ''}.`, `Self-updating: built after GW${lastGw} from ${A.p} matches.`)}</span></div>
     <div class="ci-fl" role="tablist">${[['all', tt('الكل', 'All')], ['g', tt('نقاط القوة', 'Strengths')], ['b', tt('نقاط الضعف', 'Weaknesses')], ['n', tt('معلومات', 'Info')]].map(([k, l]) => `<button role="tab" aria-selected="${FILT === k}" class="${FILT === k ? 'on' : ''} ${k}" onclick="clubFI('${k}')">${l}</button>`).join('')}</div>
     <div class="ci-tree">${br}</div>
-    <p class="ci-foot">${tt(`محسوبة من ${gamesW(A.p)}${A.ne ? `، منها ${A.ne} بتحليل كل هدف وتسديدة` : ''}. تتحدث وحدها بعد كل جولة.`, `Built from ${A.p} matches${A.ne ? ` (${A.ne} with shot-level data)` : ''}. Updates every gameweek.`)}</p>
+    <p class="ci-foot">${tt(`كل جولة تنضاف المباريات الجديدة وتنعاد الحسبة، والملاحظات تتبدّل حسب أرقام الفريق الجديدة${A.ne < A.p ? `. ${A.ne} من ${A.p} مباريات بيها تحليل تفصيلي لحد الآن` : ''}.`, `Built from ${A.p} matches${A.ne ? ` (${A.ne} with shot-level data)` : ''}. Updates every gameweek.`)}</p>
   </div>`;
 }
 
