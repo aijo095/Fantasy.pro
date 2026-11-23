@@ -1,0 +1,40 @@
+/* Hallmark · checked: 2026-11-23 · genre: atmospheric (inferred) · scope: app
+   built: the project · redesign: polish */
+/* waive 29 · الزجاج على الشريط السفلي والأوراق هوية التطبيق، صاحبه طلب يبقى نفس الستايل */
+/* waive 62 · تطبيق صفحة وحدة يشتغل بالسكربت أصلاً، العناصر المخفية حالات عابرة (تنبيه، سحب للتحديث) */
+/* لمسة نهائية وفق فحص Hallmark: ما تغيّر الشكل، تصلّح القراءة والحركة والوصول */
+
+/* 1) الحرف العربي ينفصل إذا انضاف تباعد حروف (سفاري يكسر الوصل) */
+:lang(ar) :is(.btn, .tag, .chip, .pill, .side .grp, .m2row h5, .cmp-sc, .cmp-gt, .pk-sec, .cz-sub h5, .pos) { letter-spacing: 0 }
+
+/* 2) الأرقام بعرض ثابت: النقاط المباشرة والترتيب ما يرجفون وكت يتحدثون */
+body { font-variant-numeric: tabular-nums }
+
+/* 3) clip بدل hidden: نفس منع التمرير الجانبي بس ما يكسر العناصر اللاصقة */
+html, body { overflow-x: hidden; overflow-x: clip }
+
+/* 4) عناوين متوازنة، ولا كلمة يتيمة بآخر سطر */
+h1, h2, h3, .h2-h { text-wrap: balance }
+p { text-wrap: pretty }
+
+/* 5) حلقة التركيز تبين فوراً على كل شي ينضغط */
+:is(.row, .card, [role=button], summary, label.switch):focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; transition: none }
+
+/* 6) الزر المعطّل يبين معطّل بأكثر من الشفافية */
+.btn:disabled, .btn[disabled], button:disabled { cursor: not-allowed }
+
+/* 7) تباين النص (WCAG 4.5:1) */
+.f4 { background: #D2383E !important }
+.pl .rk.r2 { color: #2B0B0D }
+.badge-c.locked .be, .mx td.blank, .heat3 i.bl { color: var(--mut) }
+
+/* 8) مؤشر الشريط السفلي والتبويبات ينزلق بـ transform بدل left (أنعم على الجوال) */
+html.ui2 .bnav .nav-ind { left: 0 !important; transform: translateX(var(--nx, 0)); transition: transform .16s cubic-bezier(.2,.8,.2,1), width .16s cubic-bezier(.2,.8,.2,1) }
+html.ind-sync .bnav .nav-ind { transition: none !important }
+html.ui2 .tabs2[data-fx-keep]::before, html.ui2 .mc-tabs[data-fx-keep]::before { left: 0 !important; transform: translateX(var(--ix, 0)); transition: transform .16s cubic-bezier(.2,.8,.2,1), width .16s cubic-bezier(.2,.8,.2,1) }
+html.v4 .tabs2[data-fx-keep]::before, html.v4 .mc-tabs[data-fx-keep]::before { transition: transform .35s var(--v4-ease), width .35s var(--v4-ease) }
+
+/* 9) من يطلب الجهاز حركة أقل: نطفي الحركة (ما عدا شريط تقدّم القصص لأنه يقلب البطاقات) */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.sy-prog *), *:not(.sy-prog *)::before, *:not(.sy-prog *)::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important }
+}

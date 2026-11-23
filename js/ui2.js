@@ -7,7 +7,7 @@ function navInd() {
   const nav = $('#bnav'); if (!nav || !nav.children.length) return;
   let ind = nav.querySelector('.nav-ind'); if (!ind) { ind = document.createElement('i'); ind.className = 'nav-ind'; nav.prepend(ind); }
   const on = nav.querySelector('button.on'); if (!on) { ind.style.width = '0'; return; }
-  ind.style.left = on.offsetLeft + 'px'; ind.style.width = on.offsetWidth + 'px';
+  ind.style.setProperty('--nx', on.offsetLeft + 'px'); ind.style.width = on.offsetWidth + 'px';
 }
 /* 2) مؤشر التبويبات (متغيرات CSS حتى ما ينمسح مع التحديث) */
 function tabInd(root = document) {
@@ -86,7 +86,7 @@ document.addEventListener('pointerdown', (e) => {
   eat = b; eatT = Date.now();
   if (b.parentElement.id === 'bnav') {
     const ind = b.parentElement.querySelector('.nav-ind');
-    if (ind) { ind.style.left = b.offsetLeft + 'px'; ind.style.width = b.offsetWidth + 'px'; }
+    if (ind) { ind.style.setProperty('--nx', b.offsetLeft + 'px'); ind.style.width = b.offsetWidth + 'px'; }
   }
   b.click();
 });
