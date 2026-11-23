@@ -5,6 +5,7 @@ import { esc, I, shirt, crest, posTag, fdr, spark, toast, openSheet, closeSheet,
 import { xp, xpN, fixturesFor, avail, avgFdr, canBuy } from '../engine.js';
 import * as FPL from '../fpl.js';
 import * as AU from '../auth.js';
+import { offInfo } from '../lineup-state.js';
 
 export const pShirt = (p, cls = '', num = '') => shirt(tShort(p.team), p.pos, cls, num);
 export const fxLabel = (team, gw = ST.G.next) => { const f = fixturesFor(team, gw); return f.length ? f.map((x) => `${tShort(x.opp)} (${x.home ? t('home_s') : t('away_s')})`).join(' + ') : tt('لا مباراة', 'No match'); };
@@ -149,6 +150,8 @@ window.playerGW = async (id, gw, mult = 1) => {
   } catch (e) { const b = document.getElementById('pgw'); if (b) b.outerHTML = `<p class="mut">${esc(e.message)}</p>`; return; }
   const box = document.getElementById('pgw'); if (!box) return;
   const s = el?.stats || {}, fxs = (ST.G.fx[gw] || []).filter((f) => f.h === p.team || f.a === p.team);
+  // خرج من الملعب؟ نوقف عدّاده على دقيقة خروجه ونكتبها
+  const off = offInfo(p, gw), offTxt = off ? (off.by === 'red' ? tt('طُرد', 'Sent off') : off.at ? tt(`خرج بالدقيقة ${off.at}`, `Subbed off ${off.at}′`) : tt('خرج من الملعب', 'Subbed off')) : '';
   const { provisionalBonus } = await import('../live-engine.js');
   const pb = s.bonus ? 0 : (provisionalBonus(gw)[id] || 0);
   const total = (s.total_points || 0) + pb, shown = total * Math.max(1, mult);
@@ -161,10 +164,11 @@ window.playerGW = async (id, gw, mult = 1) => {
   const X = EXPL();
   const extra = [['xG', s.expected_goals], ['xA', s.expected_assists], ['BPS', s.bps], ['ICT', s.ict_index], [tt('تأثير', 'Influence'), s.influence], [tt('صناعة الفرص', 'Creativity'), s.creativity], [tt('تهديد', 'Threat'), s.threat], [tt('دفاعية', 'Def. contrib.'), s.defensive_contribution], [tt('استرجاع', 'Recoveries'), s.recoveries], [tt('تدخلات', 'Tackles'), s.tackles]].filter(([, v]) => v != null && v !== '' && +v !== 0);
   box.outerHTML = `${fxs.length ? fxs.map(match).join('') : `<div class="note">${I('i-info', 'i', 'color:var(--info)')}<span>${tt('فريقه ما عنده مباراة بهالجولة', 'No fixture this gameweek')}</span></div>`}
+   ${off ? `<div class="pgw-off ${off.by}">${I(off.by === 'red' ? 'i-alert' : 'i-swap', 'i')}<span>${offTxt}${off.by === 'sub' && !off.fin ? ` · ${tt('نقاطه ثابتة، يبقى بس البونص', 'points are final except bonus')}` : ''}</span></div>` : ''}
    <div class="pgw-hero ${shown >= 10 ? 't3' : shown >= 6 ? 't2' : shown > 0 ? 't1' : 't0'}">
      <div class="pgw-orb"><svg class="pgw-ring" viewBox="0 0 100 100" width="96" height="96"><circle cx="50" cy="50" r="45" class="trk"/><circle cx="50" cy="50" r="45" class="arc" pathLength="100" style="--p:${Math.min(100, shown * 6)}"/></svg><div class="in"><b class="big-num count">${shown}</b><span>${tt('نقطة', 'pts')}</span></div>${mult > 1 ? `<em class="cap">${mult === 3 ? '×3' : '×2'}</em>` : ''}</div>
      <div class="pgw-tiles">
-       <div class="${s.minutes ? 'on' : ''} k-min">${ICO.minutes}<b class="num">${s.minutes || 0}′</b><small>${tt('دقائق', 'Minutes')}</small></div>
+       <div class="${s.minutes ? 'on' : ''} k-min${off ? ' k-off' : ''}">${ICO.minutes}<b class="num">${s.minutes || 0}′</b><small>${off ? (off.by === 'red' ? tt('طُرد', 'Sent off') : off.at ? tt(`خرج ${off.at}′`, `Off ${off.at}′`) : tt('خرج', 'Off')) : tt('دقائق', 'Minutes')}</small></div>
        <div class="${s.goals_scored ? 'on' : ''} k-goal">${ICO.goals_scored}<b class="num">${s.goals_scored || 0}</b><small>${tt('أهداف', 'Goals')}</small></div>
        <div class="${s.assists ? 'on' : ''} k-ast">${ICO.assists}<b class="num">${s.assists || 0}</b><small>${tt('صناعة', 'Assists')}</small></div>
        <div class="${(s.bonus || pb) ? 'on' : ''} k-bon">${ICO.bonus}<b class="num">${s.bonus || pb || 0}</b><small>${tt('بونص', 'Bonus')}</small></div>

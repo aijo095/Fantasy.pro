@@ -10,6 +10,8 @@ import { officialRank } from '../store.js';
 import { liveCalc, rankImpact } from '../live-engine.js';
 import * as FPL from '../fpl.js';
 import { basePlan } from '../app.js';
+import { stateIn, offInfo, onLineupState } from '../lineup-state.js';
+onLineupState(() => { if (ST.view === 'team') window.render(); });
 
 const FORMS = ['3-4-3', '3-5-2', '4-4-2', '4-3-3', '4-5-1', '5-3-2', '5-4-1'];
 let swapFrom = null, tab = null, chipPrev = '', liveLoading = false, teamGW = null;
@@ -435,22 +437,11 @@ window.walkAgain = () => { walkKey = ''; document.getElementById('view').dataset
 
 
 /* حالة اللاعب اللي بدت مباراته وما نزل: من التشكيلة الرسمية (ESPN) — طلب واحد لكل مباراة وينخزن */
-const LUB = {};
 function benchState(p, gw) {
   const f = (ST.G.fx[gw] || []).find((x) => (x.h === p.team || x.a === p.team) && x.started && !x.fin); if (!f) return null;
-  let c = LUB[f.id];
-  if (c?.res && !Object.keys(c.res).length && Date.now() - c.at > 120e3) { delete LUB[f.id]; c = null; } // التشكيلة ما كانت واصلة: نعيد المحاولة
-  if (!c) {
-    LUB[f.id] = { busy: true };
-    Promise.all([fetch(`/api/lineups?ko=${encodeURIComponent(f.ko)}&h=${ST.G.teams[f.h].short}&a=${ST.G.teams[f.a].short}&v=2`).then((r) => (r.ok ? r.json() : null)).catch(() => null), import('./live.js')]).then(([d, L]) => {
-      const res = {};
-      if (d?.sides) [['h', f.h], ['a', f.a]].forEach(([k, team]) => { const sd = d.sides[k]; if (!sd?.players?.length) return; const M = L.mapFPL(sd.players, team); ST.G.players.filter((x) => x.team === team).forEach((x) => (res[x.id] = 'out')); sd.players.forEach((e) => { const q = M[e.id]; if (q) res[q.id] = e.starter ? 'xi' : 'bench'; }); });
-      LUB[f.id] = { res, at: Date.now() };
-      if (ST.view === 'team') window.render();
-    });
-    return null;
-  }
-  return c.res ? c.res[p.id] || null : null;
+  const r = stateIn(f, p.id); if (!r) return null;
+  if (r.st === 'xi' || r.on != null) return 'xi';
+  return r.st === 'bench' ? 'bench' : 'out';
 }
 
 let mvpId = null;
@@ -461,6 +452,10 @@ function liveCard(r, i, gw = ST.G.cur) {
   // بدت مباراته وبعده ما نزل: نكتب حالته بدل الصفر (على الدكة / خارج القائمة / ما نزل بعد)
   // بدت مباراته ودقائقه صفر: نعتمد التشكيلة الرسمية — الأساسي يبقى طبيعي (الفانتازي يتأخر بتحديث الدقائق)،
   // البديل «ما نزل بعد»، واللي مو بالقائمة «خارج القائمة». إذا التشكيلة ما وصلت ننتظر 20 دقيقة قبل ما نكتب شي
+  // خرج من الملعب (تبديل أو طرد): الدقيقة توقف على وقت خروجه، والنبض يطفى
+  const off = (st === 'live' || st === 'done') && !GLOW_DEMO() ? offInfo(p, gw) : null;
+  const offOnly = off && st === 'live' && !(ST.G.fx[gw] || []).some((x) => (x.h === p.team || x.a === p.team) && x.started && !x.fin && x.id !== off.fid);
+  if (offOnly) { st = 'off'; stl = off.by === 'red' ? tt('طُرد', 'Sent off') : off.at ? tt(`خرج ${off.at}′`, `Off ${off.at}′`) : tt('خرج', 'Off'); }
   let ls = st === 'live' && !r.min && !r.subOut && !GLOW_DEMO() ? benchState(p, gw) : null;
   if (ls === 'xi') ls = null;
   else if (ls == null && st === 'live' && !r.min && !r.subOut && !GLOW_DEMO()) { const fm = Math.max(0, ...(ST.G.fx[gw] || []).filter((x) => (x.h === p.team || x.a === p.team) && x.started && !x.fin).map((x) => x.min || 0)); if (fm >= 20) ls = 'late'; }

@@ -12,6 +12,8 @@ import { liveCalc } from '../live-engine.js';
 import { xp } from '../engine.js';
 import { pShirt } from './common.js';
 import { pitchHTML } from './team.js';
+import { stateIn, onLineupState } from '../lineup-state.js';
+onLineupState(() => { if (ST.view === 'rivals') window.render(); });
 
 let sel = null, S = {}, busy = false, lastRefresh = 0, showAll = false, ltOfficial = false;
 const CHIP = { wildcard: tt('وايلد كارد', 'Wildcard'), freehit: tt('فري هت', 'Free Hit'), bboost: tt('بنش بوست', 'Bench Boost'), '3xc': tt('تريبل كابتن', 'Triple Captain'), manager: tt('المدرب', 'Manager') };
@@ -115,33 +117,73 @@ function remainingXP(m) {
 /* احتمال الفوز الذكي: اللاعبين المشتركين بنفس المضاعف يلغون بعض، فنحسب بس «الفرق المتبقي» —
    كل لاعب باقي يلعب: (مضاعفي − مضاعفه) × نقاطه الجاية. النقاط الجاية من نموذج: احتمال يلعب، ونقاط الظهور،
    وأهداف/صناعات بتوزيع بواسون حسب نقاطه المتوقعة ومركزه وكم باقي من مباراته. نحاكيها 4000 مرة (بذرة ثابتة حتى الرقم ما يرمش) */
+/* نسبة الفوز بالمواجهة: نحاكي 4000 مرة اللي باقي من الجولة للاعبين اللي يفرقون بس.
+   اللي خرج من الملعب أو انطرد أو مو بالقائمة نقاطه ثابتة فما يدخل بالحساب،
+   البديل اللي بعده ما نزل فرصته قليلة، واللي بالملعب نحسب له الأهداف والشباك النظيفة اللي ممكن يربحها أو يخسرها */
 function winChance(me, o, gw = S.gw) {
   const fx = ST.G.fx[gw] || [], gap = (me.calc.total || 0) - (o.calc.total || 0);
   const mul = (c, id) => { const r = c.rows.find((x) => x.id === id); return r && (r.m > 0 || r.subIn) && !r.subOut ? Math.max(1, r.m) : 0; };
   const ids = [...new Set([...me.calc.rows, ...o.calc.rows].map((r) => r.id))], P = [];
   let nMe = 0, nHim = 0;
+  const soon = (f) => !f.started && f.ko && new Date(f.ko) - Date.now() < 80 * 60e3;
   ids.forEach((id) => {
     const d = mul(me.calc, id) - mul(o.calc, id); if (!d) return;
     const p = PM(id); if (!p) return;
-    const f = fx.filter((x) => x.h === p.team || x.a === p.team), left = f.filter((x) => !x.fin); if (!left.length) return;
-    const notStarted = left.filter((x) => !x.started).length, liveFrac = left.filter((x) => x.started).reduce((a, x) => a + Math.max(0, 1 - (x.min || 0) / 95), 0);
-    const pl = (ST.live?.[id]?.minutes || 0) > 0, pp = p.st === 'a' || p.st == null ? (p.chance ?? 100) / 100 * 0.93 : (p.chance ?? 0) / 100;
+    const left = fx.filter((x) => (x.h === p.team || x.a === p.team) && !x.fin); if (!left.length) return;
     const E = Math.max(0.5, xp(p, gw) || 2); // متوقع مباراة كاملة
     const gpos = { GK: 0, DEF: 0.3, MID: 0.45, FWD: 0.62 }[p.pos] ?? 0.45, gpts = { GK: 6, DEF: 6, MID: 5, FWD: 4 }[p.pos] ?? 5;
+    const csPts = p.pos === 'GK' || p.pos === 'DEF' ? 4 : p.pos === 'MID' ? 1 : 0, gcPen = p.pos === 'GK' || p.pos === 'DEF';
     const lam90 = Math.max(0.03, (E - 2) / (gpos * gpts + (1 - gpos) * 3 || 3));
-    P.push({ d, notStarted, liveFrac: pl || left.some((x) => x.started) ? liveFrac : 0, pp: pl ? 1 : pp, lam90, gpos, gpts, cs: (p.pos === 'GK' || p.pos === 'DEF') ? 0.28 : p.pos === 'MID' ? 0.07 : 0 });
+    const base = p.st === 'a' || p.st == null ? (p.chance ?? 100) / 100 * 0.93 : (p.chance ?? 0) / 100;
+    const mNow = ST.live?.[id]?.minutes || 0;
+    const games = [];
+    left.forEach((f) => {
+      const ls = f.started || soon(f) ? stateIn(f, id) : null;
+      if (f.started) {
+        if (ls?.offBy || ls?.st === 'out') return; // خرج أو انطرد أو مو بالقائمة: خلص
+        const rem = Math.max(0, 1 - (f.min || 0) / 95); if (rem <= 0.01) return;
+        const onPitch = ls ? ls.st === 'xi' || ls.on != null : mNow > 0 || (f.min || 0) < 20;
+        const gcNow = (f.h === p.team ? f.as : f.hs) || 0;
+        if (onPitch) games.push({ kind: 'live', rem, gcNow, mNow });
+        else games.push({ kind: 'bench', rem, pOn: Math.min(0.55, rem * 0.9) }); // بديل: يمكن ينزل بآخر الوقت
+      } else {
+        // التشكيلة انعلنت قبل المباراة؟ الأساسي أكيد يلعب، البديل فرصته قليلة، واللي مو بالقائمة ما يلعب
+        const pp = ls ? (ls.st === 'xi' ? 0.99 : ls.st === 'bench' ? 0.3 : 0) : base;
+        if (pp > 0) games.push({ kind: 'pre', pp, short: ls?.st === 'bench' });
+      }
+    });
+    if (!games.length) return;
+    P.push({ d, games, lam90, gpos, gpts, csPts, gcPen, cs: csPts ? (p.pos === 'MID' ? 0.3 : 0.3) : 0 });
     if (d > 0) nMe++; else nHim++;
   });
   if (!P.length) return { pw: gap > 0 ? 100 : gap < 0 ? 0 : 50, pd: gap === 0 ? 100 : 0, nMe, nHim, gap, decided: true };
   let seed = 1234567 + gap * 97 + P.length * 13; const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
   const pois = (l) => { let k = 0, t = Math.exp(-l), q = rnd(); while (q > t && k < 8) { q *= rnd(); k++; } return k; };
+  const goals = (x, frac) => { let pts = 0; const k = pois(x.lam90 * frac); for (let j = 0; j < k; j++) pts += rnd() < x.gpos ? x.gpts : 3; return pts; };
   const N = 4000; let w = 0, dr = 0;
   for (let i = 0; i < N; i++) {
     let sum = 0;
     for (const x of P) {
       let pts = 0;
-      for (let m = 0; m < x.notStarted; m++) { if (rnd() > x.pp) continue; pts += rnd() < 0.82 ? 2 : 1; const k = pois(x.lam90); for (let j = 0; j < k; j++) pts += rnd() < x.gpos ? x.gpts : 3; if (rnd() < x.cs) pts += x.gpts === 6 ? 4 : 1; }
-      if (x.liveFrac > 0) { const k = pois(x.lam90 * x.liveFrac); for (let j = 0; j < k; j++) pts += rnd() < x.gpos ? x.gpts : 3; }
+      for (const g of x.games) {
+        if (g.kind === 'pre') {
+          if (rnd() > g.pp) continue;
+          if (g.short) { pts += 1 + goals(x, 0.3); continue; } // دخل بديل
+          pts += rnd() < 0.82 ? 2 : 1; pts += goals(x, 1);
+          if (rnd() < x.cs) pts += x.csPts;
+        } else if (g.kind === 'bench') {
+          if (rnd() > g.pOn) continue;
+          pts += 1 + goals(x, g.rem * 0.5);
+        } else {
+          pts += goals(x, g.rem);
+          // الشباك: كم هدف يستقبل فريقه باقي الوقت (معدل 1.3 بالمباراة)
+          const k = pois(1.3 * g.rem), reach60 = g.mNow + g.rem * 95 >= 60;
+          if (g.mNow < 60 && reach60 && g.mNow > 0) pts += 1; // يكمل 60 دقيقة: نقطة الظهور الثانية
+          const csNow = g.gcNow === 0 && g.mNow >= 60 ? x.csPts : 0, csEnd = g.gcNow + k === 0 && reach60 ? x.csPts : 0;
+          pts += csEnd - csNow;
+          if (x.gcPen) pts -= Math.floor((g.gcNow + k) / 2) - Math.floor(g.gcNow / 2);
+        }
+      }
       sum += x.d * pts;
     }
     const v = gap + sum; if (v > 0) w++; else if (v === 0) dr++;

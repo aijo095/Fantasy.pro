@@ -56,3 +56,10 @@ html.ui2 .bnav button svg.i, html.ui2.nav-mini .bnav button svg.i { width: 23px;
 html.ui2 .bnav button .bl { display: block; line-height: 1.2; opacity: max(0, calc(1 - var(--navp) * 2.2)); transform: translateY(calc(var(--navp) * 6px)) scale(calc(1 - var(--navp) * .3)); transition: opacity .3s ease, transform .55s cubic-bezier(.22, 1, .36, 1) }
 html.ui2 .bnav .nav-ind, html.ui2.nav-mini .bnav .nav-ind { top: 6px; bottom: 6px; border-radius: 999px }
 html.ui2 .bnav.is-mini { box-shadow: 0 1px 0 rgba(255,255,255,.2) inset, 0 0 0 1px rgba(255,255,255,.1), 0 14px 30px -10px rgba(0,0,0,.95) }
+
+/* 11) لاعب خرج من الملعب: الدقيقة توقف على وقت خروجه */
+.pst.off { color: var(--mut) }
+.pgw-tiles .k-off small { color: var(--warn) }
+.pgw-off { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .08); font-size: 13px; color: var(--txt) }
+.pgw-off svg.i { width: 16px; height: 16px; color: var(--warn); flex: none }
+.pgw-off.red svg.i { color: var(--bad) }
