@@ -216,7 +216,7 @@ function build(V, budget, mode, favF, o = {}) {
 
 /* =========================================================
    محرك الخطط الذكي — يقرا وضع الجولة ويطلع خطط تتغير كل جولة:
-   تكديس فريق جدوله سهل، خطة الدبل/البلانك، النجمين، حركة السوق،
+   تكديس فريق جدوله سهل، خطة الدبل/البلانك، المتألقين، حركة السوق،
    الجدار الدفاعي، المرشحين للتألق، الفورمة، الجدول، المفاجآت.
    كل خطة تنقيّم حسب قوتها هالجولة + ميول المدرب، ونختار أقوى 4 مع "الأفضل لك".
 ========================================================= */
@@ -241,9 +241,20 @@ function strategies(mode, st) {
   const dg = dgwBgw(gws[0], gws[gws.length - 1]); const dbl = dg.flatMap((x) => x.dbl), blk = dg.find((x) => x.blank.length >= 4);
   if (dbl.length) { const set = new Set(dbl); L.push({ id: 'dgw', sc: 1.4 + dbl.length * 0.05, label: tt('خطة الدبل', 'Double GW plan'), why: tt(`فرق تلعب مباراتين: ${[...set].slice(0, 4).map(tShort).join('، ')} — لاعبينهم ياخذون أولوية`, 'Teams with doubles get priority'), ins: tt(`جولة دبل: ${[...set].slice(0, 3).map(tShort).join('، ')}`, 'Double GW ahead'), opt: { kind: 'bal', boost: new Map([...base.keys()].filter((id) => set.has(PM(id).team)).map((id) => [id, 1.15])) } }); }
   if (blk && !fh) { const bs = new Set(blk.blank); L.push({ id: 'blank', sc: 1.1, label: tt('تفادي البلانك', 'Blank-proof'), why: tt(`الجولة ${blk.gw} بيها فرق ما تلعب — نقلل لاعبينهم`, 'Fewer players from blanking teams'), ins: tt(`بلانك بالجولة ${blk.gw}`, `Blank in GW${blk.gw}`), opt: { kind: 'bal', boost: new Map([...base.keys()].filter((id) => bs.has(PM(id).team)).map((id) => [id, 0.85])) } }); }
-  // 3) النجمين
-  const prem = [...base].filter(([id]) => PM(id).price >= 9.5).sort((a, b) => (b[1].proj + b[1].mom * 0.3) - (a[1].proj + a[1].mom * 0.3)).slice(0, 3);
-  if (prem.length >= 2) { const pk = rnd() < 0.5 ? [prem[0], prem[1]] : [prem[0], prem[2] || prem[1]]; L.push({ id: 'stars', sc: 1.0, label: tt(`النجمين: ${PM(pk[0][0]).name} و${PM(pk[1][0]).name}`, `Stars: ${PM(pk[0][0]).name} & ${PM(pk[1][0]).name}`), why: tt('نبني حول أقوى نجمين هالفترة ونوفر بباقي المراكز', 'Built around the two strongest premiums'), ins: tt(`${PM(pk[0][0]).name} بأقوى فترة`, `${PM(pk[0][0]).name} in top form`), opt: { kind: 'bal', boost: new Map(pk.map(([id]) => [id, 1.7])) } }); }
+  // 3) المتألقين: اللاعبين اللي فورمتهم عالية هسه وجدولهم الجاي يساعدهم — يتبدّلون وحدهم كل ما يتألق غيرهم
+  { const sk = `fp_stars_${ST.E?.entry?.id || 0}_${mode}`; let SH = null; try { SH = JSON.parse(localStorage.getItem(sk) || 'null'); } catch {}
+    const recent = new Set(SH && SH.gw < G.next ? SH.ids : SH?.prev || []), n3 = Math.min(3, gws.length);
+    const shine = [...base].map(([id, b]) => { const p = PM(id), ok = p.min >= 180 && (p.chance == null || p.chance >= 75) && (p.form || 0) >= 4; if (!ok) return null;
+      const ease = 3 - avgFdr(p.team, gws[0], n3), sc = (p.form || 0) * (1 + ease * 0.22) + b.proj * 0.25 + b.mom * 0.2;
+      return { id, p, ease, sc: sc * (recent.has(id) ? 0.85 : 1) }; }).filter(Boolean).sort((x, y) => y.sc - x.sc);
+    const a1 = shine[0], a2 = shine.find((x) => a1 && x.p.team !== a1.p.team);
+    if (a1 && a2) {
+      const fx = (x) => { const f = avgFdr(x.p.team, gws[0], n3); return f <= 2.4 ? tt('جدوله الجاي سهل', 'easy fixtures') : f <= 3 ? tt('جدوله الجاي متوسط', 'fair fixtures') : tt('حتى مع جدول صعب', 'despite tough fixtures'); };
+      L.push({ id: 'stars', sc: 1.0 + Math.min(0.4, (a1.p.form - 6) * 0.05), label: tt(`المتألقين: ${a1.p.name} و${a2.p.name}`, `In the spotlight: ${a1.p.name} & ${a2.p.name}`),
+        why: tt(`${a1.p.name} معدله ${a1.p.form} نقطة بآخر الجولات و${fx(a1)}، و${a2.p.name} معدله ${a2.p.form} و${fx(a2)}. نبني حولهم ونوفّر بباقي المراكز`, `${a1.p.name} (${a1.p.form}) and ${a2.p.name} (${a2.p.form}) are the form picks`),
+        ins: tt(`${a1.p.name}: ${a1.p.form} نقطة بالمعدل مؤخراً`, `${a1.p.name}: ${a1.p.form} form`), opt: { kind: 'bal', boost: new Map([[a1.id, 1.7], [a2.id, 1.6]]) } });
+      try { const cur = [a1.id, a2.id]; localStorage.setItem(sk, JSON.stringify(SH && SH.gw === G.next ? { ...SH, ids: cur } : { gw: G.next, ids: cur, prev: SH?.ids || [] })); } catch {}
+    } }
   // 4) حركة السوق
   const mk = [...base].filter(([id]) => PM(id).tin > 0).sort((a, b) => (PM(b[0]).tin - PM(b[0]).tout) - (PM(a[0]).tin - PM(a[0]).tout)).slice(0, 14);
   if (mk.length >= 6 && PM(mk[0][0]).tin > 1000) L.push({ id: 'market', sc: 0.85, label: tt('حركة السوق', 'Market movers'), why: tt('اللاعبين اللي المدربين يشترونهم هالجولة — تلحكهم قبل ما يرتفع سعرهم', 'Most-bought players before price rises'), ins: tt(`الأكثر شراء: ${PM(mk[0][0]).name}`, `Most bought: ${PM(mk[0][0]).name}`), opt: { kind: 'mom', boost: new Map(mk.map(([id]) => [id, 1.13])) } });
