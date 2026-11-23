@@ -454,7 +454,7 @@ function liveCard(r, i, gw = ST.G.cur) {
   // البديل «ما نزل بعد»، واللي مو بالقائمة «خارج القائمة». إذا التشكيلة ما وصلت ننتظر 20 دقيقة قبل ما نكتب شي
   // خرج من الملعب (تبديل أو طرد): الدقيقة توقف على وقت خروجه، والنبض يطفى
   const off = (st === 'live' || st === 'done') && !GLOW_DEMO() ? offInfo(p, gw) : null;
-  const offOnly = off && st === 'live' && !(ST.G.fx[gw] || []).some((x) => (x.h === p.team || x.a === p.team) && x.started && !x.fin && x.id !== off.fid);
+  const offOnly = off && (st === 'done' || st === 'live') && !(ST.G.fx[gw] || []).some((x) => (x.h === p.team || x.a === p.team) && x.started && !x.fin && x.id !== off.fid);
   if (offOnly) { st = 'off'; stl = off.by === 'red' ? tt('طُرد', 'Sent off') : off.at ? tt(`خرج ${off.at}′`, `Off ${off.at}′`) : tt('خرج', 'Off'); }
   let ls = st === 'live' && !r.min && !r.subOut && !GLOW_DEMO() ? benchState(p, gw) : null;
   if (ls === 'xi') ls = null;

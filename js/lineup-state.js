@@ -5,6 +5,8 @@ import { ST } from './store.js';
 
 const C = {}; // fixtureId -> { res, at, busy, fin }
 const listeners = new Set();
+// دقيقة ESPN توصل ككائن { min, add }: نحوّلها لنص مثل 68 أو 90+2
+const mins = (x) => (x == null ? null : typeof x === 'object' ? (x.min == null ? null : x.add ? `${x.min}+${x.add}` : String(x.min)) : String(x));
 export const onLineupState = (fn) => listeners.add(fn);
 
 function fetchFx(f) {
@@ -19,7 +21,7 @@ function fetchFx(f) {
     const res = {};
     if (d?.sides) {
       const outAt = {}, inAt = {};
-      (d.subs || []).forEach((s) => { if (s.out) outAt[s.out] = s.at; if (s.in) inAt[s.in] = s.at; });
+      (d.subs || []).forEach((s) => { if (s.out) outAt[s.out] = mins(s.at); if (s.in) inAt[s.in] = mins(s.at); });
       [['h', f.h], ['a', f.a]].forEach(([k, team]) => {
         const sd = d.sides[k]; if (!sd?.players?.length) return;
         const M = L.mapFPL(sd.players, team);
@@ -27,8 +29,8 @@ function fetchFx(f) {
         sd.players.forEach((e) => {
           const q = M[e.id]; if (!q) return;
           const r = { st: e.starter ? 'xi' : 'bench' };
-          if (e.subIn) r.on = inAt[e.id] ?? (e.starter ? null : e.subAt);
-          if (e.subOut) r.off = outAt[e.id] ?? (e.starter ? e.subAt : null) ?? null, r.offBy = 'sub';
+          if (e.subIn) r.on = inAt[e.id] ?? (e.starter ? null : mins(e.subAt));
+          if (e.subOut) r.off = outAt[e.id] ?? (e.starter ? mins(e.subAt) : null) ?? null, r.offBy = 'sub';
           if (e.rc) r.offBy = 'red';
           res[q.id] = r;
         });
