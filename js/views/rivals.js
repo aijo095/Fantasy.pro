@@ -13,6 +13,7 @@ import { xp } from '../engine.js';
 import { pShirt } from './common.js';
 import { pitchHTML } from './team.js';
 import { stateIn, onLineupState } from '../lineup-state.js';
+import { autoPlan } from '../autosub.js';
 onLineupState(() => { if (ST.view === 'rivals') window.render(); });
 
 let sel = null, S = {}, busy = false, lastRefresh = 0, showAll = false, ltOfficial = false;
@@ -121,8 +122,15 @@ function remainingXP(m) {
    اللي خرج من الملعب أو انطرد أو مو بالقائمة نقاطه ثابتة فما يدخل بالحساب،
    البديل اللي بعده ما نزل فرصته قليلة، واللي بالملعب نحسب له الأهداف والشباك النظيفة اللي ممكن يربحها أو يخسرها */
 function winChance(me, o, gw = S.gw) {
-  const fx = ST.G.fx[gw] || [], gap = (me.calc.total || 0) - (o.calc.total || 0);
-  const mul = (c, id) => { const r = c.rows.find((x) => x.id === id); return r && (r.m > 0 || r.subIn) && !r.subOut ? Math.max(1, r.m) : 0; };
+  const fx = ST.G.fx[gw] || [];
+  // التبديلات التلقائية المتوقعة: لاعب الدكة اللي راح يدخل بدل الغايب ينحسب، والنائب ياخذ الشارة إذا الكابتن غايب
+  const pm = autoPlan(me.calc, gw), po = autoPlan(o.calc, gw);
+  const ptsOf = (c, id) => c.rows.find((x) => x.id === id)?.pts || 0;
+  const pre = (plan, c) => plan.pending.filter((x) => x.played).reduce((a, x) => a + x.pts, 0) + (plan.capSwitch ? ptsOf(c, plan.capSwitch.vc) : 0);
+  const gap = (me.calc.total || 0) + pre(pm, me.calc) - (o.calc.total || 0) - pre(po, o.calc);
+  const extra = (plan, id) => (plan.pending.some((x) => x.in === id) ? 1 : 0) + (plan.capSwitch?.vc === id ? 1 : 0);
+  const base = (c, id) => { const r = c.rows.find((x) => x.id === id); return r && (r.m > 0 || r.subIn) && !r.subOut ? Math.max(1, r.m) : 0; };
+  const mul = (c, id) => base(c, id) + extra(c === me.calc ? pm : po, id);
   const ids = [...new Set([...me.calc.rows, ...o.calc.rows].map((r) => r.id))], P = [];
   let nMe = 0, nHim = 0;
   const soon = (f) => !f.started && f.ko && new Date(f.ko) - Date.now() < 80 * 60e3;

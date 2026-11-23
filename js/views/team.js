@@ -11,6 +11,8 @@ import { liveCalc, rankImpact } from '../live-engine.js';
 import * as FPL from '../fpl.js';
 import { basePlan } from '../app.js';
 import { stateIn, offInfo, onLineupState } from '../lineup-state.js';
+import { autoPlan } from '../autosub.js';
+import { pushNotif } from '../notify.js';
 onLineupState(() => { if (ST.view === 'team') window.render(); });
 
 const FORMS = ['3-4-3', '3-5-2', '4-4-2', '4-3-3', '4-5-1', '5-3-2', '5-4-1'];
@@ -454,8 +456,8 @@ function liveCard(r, i, gw = ST.G.cur) {
   // البديل «ما نزل بعد»، واللي مو بالقائمة «خارج القائمة». إذا التشكيلة ما وصلت ننتظر 20 دقيقة قبل ما نكتب شي
   // خرج من الملعب (تبديل أو طرد): الدقيقة توقف على وقت خروجه، والنبض يطفى
   const off = (st === 'live' || st === 'done') && !GLOW_DEMO() ? offInfo(p, gw) : null;
-  const offOnly = off && (st === 'done' || st === 'live') && !(ST.G.fx[gw] || []).some((x) => (x.h === p.team || x.a === p.team) && x.started && !x.fin && x.id !== off.fid);
-  if (offOnly) { st = 'off'; stl = off.by === 'red' ? tt('طُرد', 'Sent off') : off.at ? tt(`خرج ${off.at}′`, `Off ${off.at}′`) : tt('خرج', 'Off'); }
+  const offOnly = off && st === 'live' && !(ST.G.fx[gw] || []).some((x) => (x.h === p.team || x.a === p.team) && x.started && !x.fin && x.id !== off.fid);
+  if (offOnly) { st = 'off'; stl = off.by === 'red' ? tt('طُرد', 'Sent off') : off.at ? tt(`خرج <bdi dir="ltr">${off.at}′</bdi>`, `Off ${off.at}′`) : tt('خرج', 'Off'); }
   let ls = st === 'live' && !r.min && !r.subOut && !GLOW_DEMO() ? benchState(p, gw) : null;
   if (ls === 'xi') ls = null;
   else if (ls == null && st === 'live' && !r.min && !r.subOut && !GLOW_DEMO()) { const fm = Math.max(0, ...(ST.G.fx[gw] || []).filter((x) => (x.h === p.team || x.a === p.team) && x.started && !x.fin).map((x) => x.min || 0)); if (fm >= 20) ls = 'late'; }
@@ -491,6 +493,19 @@ function gwStrip(sel) {
   const G = ST.G, hist = ST.E.hist.current || [], chips = ST.E.hist.chips || [];
   return `<div class="gwstrip" id="tgwstrip" style="margin-top:12px">${G.events.filter((e) => e.id <= G.cur).map((e) => { const h = hist.find((x) => x.event === e.id); return `<button class="past ${e.id === G.cur ? 'cur' : ''} ${e.id === sel ? 'on' : ''}" onclick="teamGo(${e.id})" aria-label="GW${e.id}"><small>${e.id}</small><b>${h ? h.points : '—'}</b>${chips.some((c) => c.event === e.id) ? '<span class="flag"></span>' : ''}</button>`; }).join('')}</div>`;
 }
+/* التبديلات التلقائية: اللي صارت (مع نقاطها) واللي متوقعة، وتنبيه لما تخلص الجولة */
+function autoCard(c, gw) {
+  const P = autoPlan(c, gw), fin = (ST.G.fx[gw] || []).length && (ST.G.fx[gw] || []).every((f) => f.fin);
+  if (!P.done.length && !P.pending.length && !P.capSwitch && !c.capOut) return '';
+  if (fin && P.done.length && gw === ST.G.cur) pushNotif({ type: 'autosub', key: `as_${gw}_${ST.profile?.teamId || ''}`, title: tt(`التبديلات التلقائية بالجولة ${gw}`, `GW${gw} auto-subs`), body: P.done.map((x) => tt(`دخل ${PM(x.in)?.name} بدل ${PM(x.out)?.name} (+${x.pts})`, `${PM(x.in)?.name} for ${PM(x.out)?.name} (+${x.pts})`)).join('، ') });
+  const row = (a, b, sub, pts, kind) => `<div class="as-r ${kind}"><span class="as-p">${esc(PM(b)?.name || '')}<small>${kind === 'done' ? tt('دخل', 'In') : tt('يدخل', 'Comes in')}</small></span><span class="as-ar">${I('i-swap', 'i')}</span><span class="as-p out">${esc(PM(a)?.name || '')}<small>${sub}</small></span>${pts != null ? `<b class="num as-pt">${pts > 0 ? '+' : ''}${pts}</b>` : ''}</div>`;
+  return `<div class="card as-card"><div class="as-h">${I('i-bench', 'i')}<b>${fin ? tt('تبديلات الجولة التلقائية', 'Gameweek auto-subs') : tt('التبديلات التلقائية', 'Auto-subs')}</b></div>
+    ${P.done.map((x) => row(x.out, x.in, tt('ما لعب', "didn't play"), x.pts, 'done')).join('')}
+    ${P.pending.map((x) => row(x.out, x.in, x.why, x.played ? x.pts : null, 'pend')).join('')}
+    ${c.capOut ? `<div class="as-n">${I('i-crown', 'i')}<span>${tt(`الكابتن ما لعب، فـ ${esc(PM(c.rows.find((r) => r.vc)?.id)?.name || '')} أخذ النقاط مضاعفة`, 'Captain missed — vice captain doubled')}</span></div>` : ''}
+    ${P.capSwitch ? `<div class="as-n">${I('i-crown', 'i')}<span>${tt(`إذا الكابتن ما لعب، ${esc(PM(P.capSwitch.vc)?.name || '')} ياخذ النقاط مضاعفة`, 'If the captain misses, the vice doubles')}</span></div>` : ''}
+    ${P.pending.length ? `<p class="as-f">${tt('المتوقعة تتثبّت لما تخلص الجولة، وهي محسوبة بنسبة الفوز بالمواجهات.', 'Expected subs are confirmed at the end of the gameweek and already count in win chances.')}</p>` : ''}</div>`;
+}
 function liveView() {
   const G = ST.G, cur = G.cur, gw = teamGW || cur;
   let picks, liveMap = null, bonus = null;
@@ -519,6 +534,7 @@ function liveView() {
    </section>
    <button class="btn btn-g btn-b btn-sm" style="margin-top:10px" onclick="openShareCard(${gw})">${I('i-send', 'i', 'width:15px;height:15px')}${tt(`شارك بطاقة الجولة ${gw}`, `Share GW${gw} card`)}</button>
    <div class="pitch${walkPlay ? ' walk-pre' : ''}" style="margin-top:12px">${LINES}${rows.map((r) => `<div class="prow">${r.map((x) => liveCard(x, k++, gw)).join('')}</div>`).join('')}</div>
+   ${autoCard(c, gw)}
    <div class="benchbox${walkPlay ? ' walk-pre' : ''}"><div class="t"><span>${I('i-bench', 'i', 'width:16px;height:16px;vertical-align:-3px')} ${t('bench')} <span class="mut" style="font-size:12px">· ${off.reduce((a, r) => a + r.pts, 0)} ${tt('نقطة', 'pts')}</span></span></div>
     <div class="prow" dir="ltr">${off.map((r) => `<div class="slot">${liveCard(r, k++, gw)}</div>`).join('')}</div></div>
    <div class="tactions"><button class="btn btn-g" ${gw <= 1 ? 'disabled' : ''} onclick="teamGo(${gw - 1})">${I('i-back', 'i', 'width:16px;height:16px')}${t('gw')} ${gw - 1}</button><button class="btn btn-g" ${gw >= cur ? 'disabled' : ''} onclick="teamGo(${gw + 1})">${t('gw')} ${gw + 1}${I('i-chev', 'i', 'width:16px;height:16px')}</button></div>
