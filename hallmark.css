@@ -38,3 +38,21 @@ html.v4 .tabs2[data-fx-keep]::before, html.v4 .mc-tabs[data-fx-keep]::before { t
 @media (prefers-reduced-motion: reduce) {
   *:not(.sy-prog *), *:not(.sy-prog *)::before, *:not(.sy-prog *)::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important }
 }
+
+/* 10) الشريط السفلي: يصغر لكبسولة بـ transform فقط ويتبع التمرير (--navp من 0 لـ 1)
+   القياس ثابت بالحالتين، فالمؤشر يتحرك ويا الشريط تلقائياً بدون إعادة قياس */
+html.ui2 .bnav, html.ui2.nav-mini .bnav { left: 5%; right: 5%; max-width: 520px; bottom: calc(env(safe-area-inset-bottom, 0px) * .5 + 10px); padding: 6px 8px }
+html.ui2 .bnav {
+  --navp: 0;
+  transform-origin: 50% 100%;
+  transform: translateY(calc(var(--navp) * 2px)) scale(calc(1 - var(--navp) * .27));
+  transition: transform .55s cubic-bezier(.22, 1, .36, 1), box-shadow .4s ease;
+  will-change: transform;
+}
+html.ui2 .bnav.nav-drag, html.ui2 .bnav.nav-drag * { transition-duration: 0s !important }
+html.ui2 .bnav button, html.ui2.nav-mini .bnav button { min-height: 54px; font-size: 10.5px; gap: 2px; transition: color .1s }
+html.ui2 .bnav button .bi { display: block; line-height: 0; transform: translateY(calc(var(--navp) * 8px)) scale(calc(1 + var(--navp) * .26)); transition: transform .55s cubic-bezier(.22, 1, .36, 1) }
+html.ui2 .bnav button svg.i, html.ui2.nav-mini .bnav button svg.i { width: 23px; height: 23px; transition: transform .15s ease }
+html.ui2 .bnav button .bl { display: block; line-height: 1.2; opacity: max(0, calc(1 - var(--navp) * 2.2)); transform: translateY(calc(var(--navp) * 6px)) scale(calc(1 - var(--navp) * .3)); transition: opacity .3s ease, transform .55s cubic-bezier(.22, 1, .36, 1) }
+html.ui2 .bnav .nav-ind, html.ui2.nav-mini .bnav .nav-ind { top: 6px; bottom: 6px; border-radius: 999px }
+html.ui2 .bnav.is-mini { box-shadow: 0 1px 0 rgba(255,255,255,.2) inset, 0 0 0 1px rgba(255,255,255,.1), 0 14px 30px -10px rgba(0,0,0,.95) }

@@ -36,19 +36,23 @@ addEventListener('resize', tick); tick(); setTimeout(tick, 400);
 const tb = $('.topbar');
 addEventListener('scroll', () => tb?.classList.toggle('scrolled', scrollY > 8), { passive: true });
 
-/* 4ب) الشريط السفلي مثل إنستغرام: كبير وثابت، ومن تمرّر للأسفل يصغر لكبسولة عائمة، ومن ترجع للأعلى يكبر */
+/* 4ب) الشريط السفلي يصغر لكبسولة وأنت تنزل، ويتبع إصبعك خطوة بخطوة (مثل شريط سفاري)
+   الحجم الحقيقي ما يتغير أبداً: بس transform، فالحركة على كارت الشاشة وما تقطّع */
 {
-  const nav = $('.bnav'), root = document.documentElement; let lastY = scrollY, acc = 0, syncT = 0;
-  // أثناء تحوّل الشريط نعيد قياس مؤشر القسم الفعّال كل فريم حتى يتحرك وياه بالضبط
-  const sync = () => { root.classList.add('ind-sync'); const t0 = performance.now(); cancelAnimationFrame(syncT); const loop = () => { navInd(); if (performance.now() - t0 < 520) syncT = requestAnimationFrame(loop); else { navInd(); root.classList.remove('ind-sync'); } }; syncT = requestAnimationFrame(loop); };
-  const set = (v) => { if (root.classList.contains('nav-mini') === v) return; root.classList.toggle('nav-mini', v); sync(); };
+  const nav = $('.bnav'); let lastY = scrollY, p = 0, raf = 0, idleT = 0;
+  const RANGE = 90; // كم بكسل تمرير حتى يصغر بالكامل
+  const paint = () => { raf = 0; nav?.style.setProperty('--navp', p.toFixed(3)); nav?.classList.toggle('is-mini', p > 0.5); };
+  const put = (v, snap) => { p = Math.max(0, Math.min(1, v)); nav?.classList.toggle('nav-drag', !snap); if (!raf) raf = requestAnimationFrame(paint); };
+  const settle = () => put(p > 0.42 ? 1 : 0, true); // وكت يوقف التمرير: يكمل للأقرب بنعومة
   addEventListener('scroll', () => {
     const y = scrollY, d = y - lastY; lastY = y;
-    if (y < 60 || innerHeight + y >= document.documentElement.scrollHeight - 4 && d < 0) { acc = 0; set(false); return; }
-    acc = Math.sign(d) === Math.sign(acc) ? acc + d : d;
-    if (acc > 28) set(true); else if (acc < -22) set(false);
+    clearTimeout(idleT);
+    const atEnd = innerHeight + y >= document.documentElement.scrollHeight - 4;
+    if (y < 60 || (atEnd && d < 0)) { put(0, true); return; }
+    put(p + d / RANGE, false);
+    idleT = setTimeout(settle, 110);
   }, { passive: true });
-  nav?.addEventListener('click', () => set(false));
+  nav?.addEventListener('pointerdown', () => { clearTimeout(idleT); put(0, true); });
 }
 
 /* 5) سحب الورقة للأسفل للإغلاق (من المقبض، أو من أي مكان إذا الورقة بأعلاها) */
