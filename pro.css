@@ -1,0 +1,42 @@
+/* Hallmark · checked: 2026-11-23 · genre: atmospheric (inferred) · scope: app
+   built: the project · redesign: refine (icons, section heads, charts) */
+/* waive 29 · الزجاج هوية التطبيق وصاحبه طلب يبقى */
+/* طبقة التصميم الاحترافي: أيقونات مخصّصة، عناوين أقسام بلون واحد له معنى، ورسوم إحصائية أنظف */
+
+/* 1) عناوين الأقسام: لون الأيقونة كان يتبدّل حسب ترتيب القسم (أخضر، أزرق، أصفر) بدون معنى.
+   هسه كلها بلون التطبيق، والخلفية أهدأ */
+html.ui2 .sec h2 svg.i,
+html.ui2 .sec:nth-of-type(3n+2) h2 svg.i,
+html.ui2 .sec:nth-of-type(3n) h2 svg.i { color: var(--acc); background: rgba(var(--acc-rgb), .1); stroke-width: 1.75; border-radius: 9px }
+
+/* 2) مخطط آخر الجولات بالرئيسية */
+.h2-chart .bar { max-width: none; justify-content: center; box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .12) }
+.h2-chart .bar i { max-width: 22px; border-radius: 4px 4px 0 0; background: rgba(255, 255, 255, .14); transition: none; transform-origin: 50% 100% }
+.h2-chart .bar i.up { background: var(--acc) }
+.h2-chart .bar s { left: calc(50% - 15px); right: auto; width: 30px; height: 2px; background: var(--txt); opacity: .7 }
+.h2-chart .v { color: var(--mut); font-weight: 500 }
+.h2-chart button:last-child .v { color: var(--txt); font-weight: 700 }
+.h2-chart button:last-child .g { color: var(--txt) }
+.h2-chart button:focus-visible { outline: 2px solid var(--acc); outline-offset: 3px; border-radius: 8px }
+.h2-leg i { border-radius: 2px; background: rgba(255, 255, 255, .14) }
+.h2-leg s { background: var(--txt); opacity: .7 }
+@media (prefers-reduced-motion: no-preference) {
+  #view.fx-first .h2-chart .bar i { animation: proGrow .6s cubic-bezier(.22, 1, .36, 1) both }
+  #view.fx-first .h2-chart button:nth-child(2) .bar i { animation-delay: 30ms }
+  #view.fx-first .h2-chart button:nth-child(3) .bar i { animation-delay: 60ms }
+  #view.fx-first .h2-chart button:nth-child(4) .bar i { animation-delay: 90ms }
+  #view.fx-first .h2-chart button:nth-child(5) .bar i { animation-delay: 120ms }
+  #view.fx-first .h2-chart button:nth-child(6) .bar i { animation-delay: 150ms }
+  #view.fx-first .h2-chart button:nth-child(7) .bar i { animation-delay: 180ms }
+  #view.fx-first .h2-chart button:nth-child(8) .bar i { animation-delay: 210ms }
+}
+@keyframes proGrow { from { transform: scaleY(0) } to { transform: scaleY(1) } }
+
+/* 3) مخطط مسار الموسم */
+.ss-chart .b { opacity: .5 }
+.ss-chart .b.on { opacity: 1 }
+.ss-chart .base { stroke: rgba(255, 255, 255, .14); stroke-width: 1; vector-effect: non-scaling-stroke }
+.ss-chart .avg { stroke-width: 1.5; opacity: .75; vector-effect: non-scaling-stroke }
+
+/* 4) الخط الصغير بجدول اللاعبين: خط رفيع ونقطة على آخر قيمة */
+.spark { overflow: visible }
