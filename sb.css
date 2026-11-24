@@ -1,65 +1,49 @@
 /* Hallmark · checked: 2026-11-24 · genre: atmospheric (inferred) · scope: app
-   built: the project · redesign: refine (squad sandbox) */
-/* ملعب التجارب */
-.sb-kpi { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 6px 0 12px }
-.sb-k { display: grid; gap: 3px; padding: 12px 14px; border-radius: 16px; background: var(--card-a, var(--s1)); border: 1px solid rgba(255, 255, 255, .08); min-width: 0 }
-.sb-k small { font-size: 11.5px; color: var(--mut) }
-.sb-k b { font: 700 24px/1.1 Inter, sans-serif }
-.sb-k span { font-size: 11.5px; color: var(--mut) }
-.sb-k.main { grid-column: 1 / -1; background: linear-gradient(135deg, rgba(var(--acc-rgb), .14), rgba(var(--acc-rgb), .03)); border-color: rgba(var(--acc-rgb), .22) }
-.sb-k.main b { font-size: 38px }
-.sb-k.bad { border-color: rgba(229, 72, 77, .45) } .sb-k.bad b { color: #FF8A8E }
-.sb-d { font-weight: 600; font-size: 13px !important }
-.sb-d.up { color: var(--acc) !important } .sb-d.down { color: #FF8A8E !important }
-.sb-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px }
-.sb-bar .seg { flex: 1 1 auto }
-.sb-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; align-items: center }
-.sb-tools .btn svg.i, .sb-acts .btn svg.i { width: 15px; height: 15px }
-.sb-chip { flex: 1 1 100% }
-.pitch .pl.new .nm { box-shadow: inset 0 -2px 0 var(--acc) }
-.sb-fx { display: flex; gap: 2px; justify-content: center; padding: 0 !important; background: none !important }
-.sb-fx i { font-style: normal; font: 700 10px Inter, sans-serif; padding: 2px 4px; border-radius: 4px }
+   built: the project · redesign: refine (squad sandbox v2) */
+/* ملعب التجارب: يعتمد على نفس عناصر صفحة فريقي (الملعب، الدكة، الشريط)، والجديد بس اللي يحتاجه */
+.sb-hero { display: grid; gap: 10px }
+.sb-hl { display: grid; gap: 2px }
+.sb-hl small { font-size: 12.5px; color: var(--mut) }
+.sb-hl b { font: 700 40px/1.05 Inter, sans-serif; color: var(--acc); font-variant-numeric: tabular-nums; transition: color .2s ease }
+.sb-hl b.down { color: #FF8A8E }
+.sb-hl span { font-size: 12px; color: var(--mut) }
+.sb-hero .tstrip { margin-top: 0 }
+.sb-prog { height: 4px; border-radius: 4px; background: rgba(255, 255, 255, .08); overflow: hidden }
+.sb-prog i { display: block; height: 100%; background: var(--acc); transform-origin: 100% 50%; transition: transform .35s cubic-bezier(.22, 1, .36, 1) }
+.sb-tabs { margin: 12px 0 }
 
-.sb-sec { margin-top: 14px; display: grid; gap: 8px }
-.sb-sec h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px }
-.sb-sec h3 svg.i { width: 17px; height: 17px; color: var(--acc) }
-.sb-w { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 12px 14px; border-radius: 14px; background: var(--card-a, var(--s1)); border: 1px solid rgba(255, 255, 255, .07) }
-.sb-w b { font-size: 14px; grid-column: 1 } .sb-w span { font-size: 12.5px; color: var(--mut); grid-column: 1; line-height: 1.55 }
-.sb-w .btn { grid-column: 2; grid-row: 1 / span 2 }
-.sb-w.b { border-color: rgba(229, 72, 77, .3) } .sb-w.b b { color: #FFB0B3 }
-.sb-w.g { border-color: rgba(var(--acc-rgb), .22) }
-.sb-tr { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 14px; background: var(--card-a, var(--s1)); border: 1px solid rgba(255, 255, 255, .07) }
-.sb-tr > span { display: grid; gap: 1px; min-width: 0 }
-.sb-tr small { font-size: 11px; color: var(--mut) }
-.sb-tr .o s { color: var(--mut) } .sb-tr .n b { color: var(--txt) }
-.sb-tr svg.i { width: 15px; height: 15px; color: var(--mut) }
-.sb-tr .g { text-align: end; font: 700 15px Inter, sans-serif }
-.sb-tr .g.up { color: var(--acc) } .sb-tr .g.down { color: #FF8A8E }
-.sb-note { margin: 0; font-size: 12.5px } .sb-note.up { color: var(--acc) } .sb-note.down { color: #FF8A8E }
-.sb-gw { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; padding: 12px; border-radius: 14px; background: var(--card-a, var(--s1)) }
-.sb-gw .c { display: grid; justify-items: center; gap: 4px }
-.sb-gw .bars { display: flex; align-items: flex-end; gap: 3px; height: 84px }
-.sb-gw .bars i { width: 12px; height: 84px; border-radius: 4px 4px 0 0; transform-origin: 50% 100%; transform: scaleY(var(--h)) }
-.sb-gw .bars i.m { background: var(--acc) } .sb-gw .bars i.t { background: rgba(255, 255, 255, .22) }
-.sb-gw b { font-size: 13px } .sb-gw small { font-size: 11px; color: var(--mut) }
-.sb-lg { display: flex; gap: 14px; justify-content: center; font-size: 11.5px; color: var(--mut) }
-.sb-lg i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 5px; vertical-align: -1px }
-.sb-lg i.m { background: var(--acc) } .sb-lg i.t { background: rgba(255, 255, 255, .22) }
-.sb-apply { margin: 18px 0 8px; display: grid; gap: 6px; text-align: center }
-.sb-apply p { margin: 0; font-size: 12px }
-.sb-apply .btn[disabled] { opacity: .45 }
-.sb-acts { display: grid; gap: 8px; margin-top: 10px }
-.sb-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+/* المكان الفارغ بالملعب */
+.pitch .pl.sb-e { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer }
+.pitch .pl.sb-e .sh { display: grid; place-items: center; aspect-ratio: 1; border-radius: 14px; border: 1.5px dashed rgba(255, 255, 255, .38); background: rgba(255, 255, 255, .05); transition: background-color .15s ease, border-color .15s ease }
+.pitch .pl.sb-e .sh svg.i { width: 22px; height: 22px; color: rgba(255, 255, 255, .8) }
+.pitch .pl.sb-e .nm { opacity: .75 }
+.pitch .pl.sb-e:active .sh { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .6) }
+.pitch .pl.sb-e:focus-visible .sh { outline: 2px solid var(--acc); outline-offset: 2px }
+.sb-pitch .prow { gap: 4px }
+
+.sb-act { display: flex; gap: 8px; justify-content: center; margin: 12px 0 4px }
+.sb-act .btn svg.i, .sb-go svg.i, .sb-menu .btn svg.i { width: 15px; height: 15px }
+.sb-go { margin-top: 12px }
+.sb-tip { text-align: center; font-size: 12.5px; margin: 8px 0 }
+
+/* الملخص */
+.sb-sum { display: grid; gap: 2px; margin-top: 12px; padding: 14px 16px }
+.sb-row { display: grid; grid-template-columns: minmax(0, 1fr) auto 64px; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255, 255, 255, .06) }
+.sb-row span { font-size: 13.5px; color: var(--mut) }
+.sb-row b { font: 700 20px Inter, sans-serif }
+.sb-row em { font-style: normal; font: 600 13px Inter, sans-serif; text-align: end; color: var(--mut) }
+.sb-row em.up { color: var(--acc) } .sb-row em.down { color: #FF8A8E }
+.sb-foot { margin: 8px 0 10px; font-size: 11.5px; color: var(--mut) }
+.sb-notes .row b.up { color: var(--acc) }
+
+/* قائمة الاختيار */
 .sb-q { width: 100%; margin: 6px 0 8px }
 .sb-sort { margin-bottom: 8px }
-.sb-pick { display: grid; gap: 6px }
-.sb-pr { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, .07); background: var(--card-a, var(--s1)); color: var(--txt); font: inherit; text-align: start; min-height: 56px }
-.sb-pr .mini { width: 40px; height: 40px }
-.sb-pr .i { display: grid; gap: 1px; min-width: 0 } .sb-pr .i b { font-size: 14px } .sb-pr .i small { font-size: 11.5px; color: var(--mut) }
-.sb-pr .inj { font-style: normal; font-size: 10px; color: #FFB0B3 }
-.sb-pr .v { display: grid; justify-items: end } .sb-pr .v b { font-size: 15px; color: var(--acc) } .sb-pr .v small { font-size: 11px; color: var(--mut) }
-.sb-pr.dis { opacity: .45 }
-.sb-pr:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px }
-.sb-k:not(.main) b { font-size: 20px }
-.sb-k:not(.main) { padding: 11px 12px }
-.sb-tr .g small { display: block; font-size: 11px; color: var(--mut); font-weight: 500 }
+.sb-it.off .row { opacity: .45 }
+.sb-r { display: grid; justify-items: end; gap: 1px; flex: none }
+.sb-r b { font-size: 15px }
+.sb-r small { font-size: 11px; color: var(--acc) }
+.sb-r small.down { color: #FF8A8E }
+.sb-menu { display: grid; gap: 8px; margin-top: 10px }
+.sb-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+@media (prefers-reduced-motion: reduce) { .sb-prog i, .sb-hl b, .pitch .pl.sb-e .sh { transition: none } }
