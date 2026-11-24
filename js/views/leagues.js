@@ -6,6 +6,7 @@ import * as FPL from '../fpl.js';
 import * as AU from '../auth.js';
 import { PM } from '../store.js';
 import { liveCalc } from '../live-engine.js';
+import { pitchHTML } from './team.js';
 
 let h2hOpen = null, h2hData = null, h2hGW = null, h2hTab = 'table', h2hMatches = {}, h2hLive = {};
 let tab = 'fpl', appLeagues = null, open = null, lgData = null, lgPage = 1, appData = {}, lgLiveRows = null, lgLiveBusy = false;
@@ -60,15 +61,49 @@ const rvSkel = `<div class="rvsk"><div class="sk h1"></div><div class="sk h2"></
 async function rivalSheet(entry, name) {
   const gw = ST.G.cur, k = `${entry}:${gw}`, c = RVC[k], t0 = performance.now();
   openSheet(`${sheetHead(I('i-swords'), tt('إنت ضد ', 'You vs ') + esc(name))}<div id="rv">${c && Date.now() - c.at < 60e3 ? c.html : rvSkel}</div>`);
-  if (c && Date.now() - c.at < 60e3) return;
+  if (c && Date.now() - c.at < 60e3) { setTimeout(() => rvGW(entry, RVH[entry]?.g), 60); return; }
   const [ha, hb, pa, pb] = await Promise.all([FPL.fetchHistory(ST.profile.teamId), FPL.fetchHistory(entry), gw ? FPL.fetchPicks(ST.profile.teamId, gw).catch(() => null) : null, gw ? FPL.fetchPicks(entry, gw).catch(() => null) : null].map((p) => Promise.resolve(p).catch((e) => ({ __err: e }))));
   let html;
   if (ha?.__err || hb?.__err) html = `<p class="mut">${esc((ha.__err || hb.__err).message)}</p>`;
-  else html = rvMain(ha, hb, name) + rvDiff(pa, pb, name, gw);
+  else html = rvMain(ha, hb, name) + rvDiff(pa, pb, name, gw) + rvGWSec(entry, ha, hb, name);
   RVC[k] = { html, at: Date.now() };
   const el = document.getElementById('rv'); if (!el) return;
   await new Promise((r) => setTimeout(r, Math.max(0, 340 - (performance.now() - t0)))); // نخلي حركة فتح الورقة تخلص أول
-  requestAnimationFrame(() => { const e2 = document.getElementById('rv'); if (e2) { e2.innerHTML = html; e2.classList.add('rv-in'); } });
+  requestAnimationFrame(() => { const e2 = document.getElementById('rv'); if (e2) { e2.innerHTML = html; e2.classList.add('rv-in'); rvGW(entry, RVH[entry]?.g); } });
+}
+/* تشكيلة المدرب بكل جولة: ملعب بنفس تصميم فريقي، نقاطه، انتقالاته، وورقته */
+const RVH = {}, RVP = {};
+const CHIP_AR = () => ({ wildcard: tt('وايلد كارد', 'Wildcard'), freehit: tt('فري هت', 'Free Hit'), bboost: tt('بنش بوست', 'Bench Boost'), '3xc': tt('تربل كابتن', 'Triple Captain'), manager: tt('المدرب', 'Manager') });
+function rvGWSec(entry, ha, hb, name) {
+  const evs = hb.current.map((x) => x.event).filter((g) => g <= ST.G.cur), last = evs.at(-1);
+  RVH[entry] = { ha, hb, name, g: RVH[entry]?.g && evs.includes(RVH[entry].g) ? RVH[entry].g : last };
+  if (!evs.length) return '';
+  return `<div class="sec"><h2>${I('i-pitch')}${tt(`تشكيلة ${esc(name)} بكل جولة`, `${esc(name)} by gameweek`)}</h2></div>
+    <div class="rvg-chips" role="tablist">${[...evs].reverse().map((g) => `<button role="tab" data-g="${g}" class="${g === RVH[entry].g ? 'on' : ''}" onclick="rvGW(${entry},${g})">${tt(`ج${g}`, `GW${g}`)}</button>`).join('')}</div>
+    <div id="rvgBody" class="rvg-body"><div class="rvsk" style="height:420px"></div></div>`;
+}
+async function rvGW(entry, g) {
+  const H = RVH[entry]; if (!H || !g) return; H.g = g;
+  document.querySelectorAll('.rvg-chips button').forEach((b) => b.classList.toggle('on', +b.dataset.g === g));
+  const body = () => document.getElementById('rvgBody'); if (!body()) return;
+  const k = `${entry}:${g}`;
+  if (!RVP[k]) { body().innerHTML = `<div class="rvsk" style="height:420px"></div>`;
+    try {
+      const [pk, lv, tr] = await Promise.all([FPL.fetchPicks(entry, g), FPL.loadLive(g, g === ST.G.cur), RVP['tr:' + entry] || FPL.fetchTransfers(entry).catch(() => [])]);
+      RVP['tr:' + entry] = tr;
+      const L = Object.fromEntries((lv.elements || []).map((x) => [x.id, x.stats]));
+      RVP[k] = { pk, L, tr: (tr || []).filter((x) => x.event === g), at: Date.now() };
+    } catch (e) { if (H.g === g && body()) body().innerHTML = `<p class="mut" style="padding:12px">${tt('ما گدرنا نجيب تشكيلته لهالجولة', 'Could not load this gameweek')}</p>`; return; }
+  }
+  if (H.g !== g || !body()) return;
+  const D = RVP[k], c = liveCalc(D.pk, g, null, D.L), h = H.hb.current.find((x) => x.event === g) || {}, me = H.ha.current.find((x) => x.event === g);
+  const chip = (H.hb.chips || []).find((x) => x.event === g)?.name || D.pk.active_chip, cost = h.event_transfers_cost || 0;
+  const pts = g === ST.G.cur && c ? c.total : (h.points ?? c?.total ?? 0) - cost;
+  const trs = D.tr.map((x) => `<div class="rvg-tr"><span class="in">${tt('اشترى', 'In')} <b>${esc(PM(x.element_in)?.name || '?')}</b><small class="num">${(x.element_in_cost / 10).toFixed(1)}</small></span>${I('i-swap', 'i')}<span class="out">${tt('باع', 'Out')} <b>${esc(PM(x.element_out)?.name || '?')}</b><small class="num">${(x.element_out_cost / 10).toFixed(1)}</small></span></div>`).join('');
+  body().innerHTML = `<div class="kv rvg-kv"><div><b class="num">${pts}</b><span>${tt('نقاطه', 'His points')}${cost ? ` <em class="down">(−${cost})</em>` : ''}</span></div><div><b class="num">${me ? (g === ST.G.cur && ST.live ? '—' : me.points - (me.event_transfers_cost || 0)) : '—'}</b><span>${tt('نقاطك', 'Yours')}</span></div><div><b class="num">${h.rank ? fmt(h.rank) : '—'}</b><span>${tt('ترتيب الجولة', 'GW rank')}</span></div></div>
+    ${chip || h.overall_rank ? `<div class="rvg-meta">${chip ? `<span class="tag lime">${CHIP_AR()[chip] || chip}</span>` : ''}${h.overall_rank ? `<span>${tt('الترتيب العام', 'Overall')} <b class="num">${fmt(h.overall_rank)}</b></span>` : ''}${h.bank != null ? `<span>${tt('البنك', 'Bank')} <b class="num">${(h.bank / 10).toFixed(1)}</b></span>` : ''}${h.value ? `<span>${tt('القيمة', 'Value')} <b class="num">${(h.value / 10).toFixed(1)}</b></span>` : ''}</div>` : ''}
+    ${trs ? `<div class="rvg-trs"><h3>${tt(`انتقالاته بالجولة ${g}`, `GW${g} transfers`)}</h3>${trs}</div>` : `<p class="mut rvg-none">${chip === 'freehit' || chip === 'wildcard' ? tt('استخدم ورقة بهالجولة', 'Chip week') : tt('ما سوّى انتقالات بهالجولة', 'No transfers this gameweek')}</p>`}
+    ${c ? pitchHTML(c, g) : ''}`;
 }
 function rvMain(a, b, name) {
   const gws = a.current.map((x) => x.event); let w = 0, lo = 0, d = 0;
@@ -94,7 +129,7 @@ Object.assign(window, {
   lgTab: (x) => { tab = x; open = null; window.render(); },
   openLg: async (id) => { lgLiveRows = null; if (!id) { open = null; lgData = null; return window.render(); } open = id; lgPage = 1; toast(t('loading')); try { lgData = await FPL.loadLeague(id, 1); window.render(); window.scrollTo(0, 0); } catch (e) { toast(e.message); open = null; } },
   lgPg: async (d) => { lgPage += d; lgData = await FPL.loadLeague(open, lgPage); window.render(); },
-  rivalSheet,
+  rivalSheet, rvGW,
   openApp: (code) => { open = code; if (code && !appData[code]) { loadApp(code); toast(t('loading')); } window.render(); },
   newLg: () => openSheet(`${sheetHead(I('i-plus'), tt('إنشاء دوري خاص', 'Create a league'))}<div class="field"><label>${tt('اسم الدوري', 'League name')}</label><input id="lgName" maxlength="40"></div><button class="btn btn-p btn-b" id="lgGo">${tt('إنشاء', 'Create')}</button>`, () => { document.getElementById('lgGo').onclick = async () => { const n = document.getElementById('lgName').value.trim(); if (n.length < 2) return toast(tt('اكتب اسم', 'Enter a name')); try { const l = await AU.createLeague(ST.user, ST.profile, n); appLeagues = [...(appLeagues || []), l]; closeSheet(); window.render(); openSheet(`${sheetHead(I('i-check'), tt('تم إنشاء الدوري', 'League created'))}<p>${tt('شارك هذا الرمز ويا أصدقائك:', 'Share this code with friends:')}</p><div class="urlbox" onclick="copyCode('${l.code}')"><code style="font-size:24px;text-align:center">${l.code}</code>${I('i-copy')}</div>`); } catch (e) { toast(e.message); } }; }),
   joinLg: () => openSheet(`${sheetHead(I('i-users'), tt('الانضمام لدوري', 'Join a league'))}<div class="field"><label>${tt('رمز الدعوة (6 أحرف)', 'Invite code (6 chars)')}</label><input id="lgCode" dir="ltr" maxlength="6" style="text-transform:uppercase;letter-spacing:4px;font-size:20px;text-align:center"></div><button class="btn btn-p btn-b" id="lgJ">${tt('انضمام', 'Join')}</button>`, () => { document.getElementById('lgJ').onclick = async () => { try { const l = await AU.joinLeague(ST.user, ST.profile, document.getElementById('lgCode').value); appLeagues = [...(appLeagues || []).filter((x) => x.code !== l.code), l]; closeSheet(); toast(tt('تم الانضمام ✓', 'Joined ✓')); window.render(); } catch (e) { toast(e.message); } }; }),
