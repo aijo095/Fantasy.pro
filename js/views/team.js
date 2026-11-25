@@ -585,6 +585,8 @@ function doSwap(a, b) {
   else { const s = ia ? a : b, bn = ia ? b : a; P.xi = P.xi.map((x) => (x === s ? bn : x)); P.bench = P.bench.map((x) => (x === bn ? s : x)); if (P.cap === s) P.cap = bn; if (P.vc === s) P.vc = bn; }
   savePlan(); toast(tt('تم التبديل', 'Swapped'));
 }
+// للإيماءات (gestures.js): السحب والإفلات والقائمة السريعة
+window.__teamSwap = { can: (a, b) => a !== b && canSwap(a, b), swap: (a, b) => { doSwap(a, b); window.render(); }, inXI: (id) => !!ST.plan?.xi.includes(id) };
 Object.assign(window, {
   pitchTap,
   teamTab: (x) => { tab = x; window.render(); if (x === 'live') setTimeout(() => document.querySelector('#tgwstrip .on')?.scrollIntoView({ inline: 'center', block: 'nearest' }), 60); },

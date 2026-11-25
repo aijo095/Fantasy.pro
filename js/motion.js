@@ -52,7 +52,7 @@ let y0 = null, pulled = 0;
 const ind = () => document.getElementById('ptr') || Object.assign(document.body.appendChild(document.createElement('div')), { id: 'ptr', innerHTML: '<svg class="i"><use href="#i-refresh"/></svg>' });
 document.addEventListener('touchstart', (e) => { if (window.scrollY <= 0 && !document.querySelector('.ov') && window.__canPull?.()) { y0 = e.touches[0].clientY; pulled = 0; } }, { passive: true });
 document.addEventListener('touchmove', (e) => { if (y0 == null) return; pulled = Math.max(0, Math.min(110, (e.touches[0].clientY - y0) * 0.5)); const p = ind(); p.style.opacity = Math.min(1, pulled / 60); p.style.transform = `translate(-50%, ${pulled - 40}px) rotate(${pulled * 4}deg)`; p.classList.toggle('ready', pulled >= 65); }, { passive: true });
-document.addEventListener('touchend', () => { if (y0 == null) return; const p = ind(); if (pulled >= 65) { p.classList.add('go'); window.loadAll?.(true).finally(() => { p.classList.remove('go', 'ready'); p.style.opacity = 0; }); } else { p.style.opacity = 0; p.style.transform = 'translate(-50%,-40px)'; } y0 = null; pulled = 0; });
+document.addEventListener('touchend', () => { if (y0 == null) return; const p = ind(); if (pulled >= 65) { p.classList.add('go'); try { navigator.vibrate?.(10); } catch {} (window.__pullRefresh?.() || window.loadAll?.(true) || Promise.resolve()).finally(() => { p.classList.remove('go', 'ready'); p.style.opacity = 0; }); } else { p.style.opacity = 0; p.style.transform = 'translate(-50%,-40px)'; } y0 = null; pulled = 0; });
 
 
 /* =========================================================

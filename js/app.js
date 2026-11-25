@@ -311,7 +311,12 @@ let lastCount = '';
 function countUp() { const first = (lastCount !== ST.view || window.__recount) && !window.__navBack; window.__recount = false; lastCount = ST.view; const v = document.getElementById('view'); countAll(v, first); decorate(v, first); if (first) { v.classList.add('fx-first'); clearTimeout(window.__fxF); window.__fxF = setTimeout(() => v.classList.remove('fx-first'), 1500); } }
 window.__fxName = (id) => ST.G?.PM?.[id]?.name || '#' + id;
 
-window.__canPull = () => ['home', 'team', 'live', 'season', 'leagues', 'prices'].includes(ST.view);
+window.__canPull = () => ['home', 'team', 'live', 'season', 'leagues', 'prices', 'news', 'pulse', 'rivals'].includes(ST.view);
+// السحب للتحديث: كل صفحة تحدّث مصدرها الخاص فوق تحديث البيانات العامة
+window.__pullRefresh = () => {
+  const extra = ST.view === 'news' ? window.newsRefresh?.() : ST.view === 'live' ? window.lvRefresh?.() : null;
+  return Promise.all([window.loadAll?.(true), Promise.resolve(extra)]).catch(() => {});
+};
 let lastPainted = null;
 export function render() {
   if (!ST.G) return;
