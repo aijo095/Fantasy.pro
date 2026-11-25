@@ -98,7 +98,8 @@ function quickMenu(el, id) {
   let top = r.bottom + 8; if (top + mh > innerHeight - 90) top = Math.max(12, r.top - mh - 8);
   m.style.left = `${Math.min(innerWidth - mw - 10, Math.max(10, r.left + r.width / 2 - mw / 2))}px`; m.style.top = `${top}px`;
   m.style.transformOrigin = `${r.left + r.width / 2 - parseFloat(m.style.left)}px ${top > r.top ? 0 : mh}px`;
-  requestAnimationFrame(() => { m.classList.add('in'); bd.classList.add('in'); });
+  // نثبّت الحالة الأولى قبل ما نبدي الحركة (إطارين) حتى الدخول يطلع سلس دائماً
+  void m.offsetWidth; requestAnimationFrame(() => requestAnimationFrame(() => { m.classList.add('in'); bd.classList.add('in'); }));
   el.classList.add('g-focus');
   // النقرة اللي تجي مع رفع الإصبع بعد الضغط المطوّل ما تسكّر القائمة
   const t0 = Date.now(), close = () => { if (Date.now() - t0 > 450) closeMenu(); };
@@ -108,7 +109,7 @@ function quickMenu(el, id) {
 }
 function closeMenu() {
   document.querySelectorAll('.g-focus').forEach((e) => e.classList.remove('g-focus'));
-  document.querySelectorAll('.g-menu,.g-bd').forEach((e) => { e.classList.remove('in'); setTimeout(() => e.remove(), RM() ? 0 : 160); });
+  document.querySelectorAll('.g-menu,.g-bd').forEach((e) => { e.classList.remove('in'); e.classList.add('out'); setTimeout(() => e.remove(), RM() ? 0 : 200); });
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
 addEventListener('scroll', () => document.querySelector('.g-menu') && closeMenu(), { passive: true });
