@@ -21,7 +21,8 @@ const planCard = (t) => { const el = t.closest?.('.pl[data-pid]'); return el && 
 function clearG() {
   if (!G) return;
   clearTimeout(G.timer); clearTimeout(G.menuT);
-  G.ghost?.remove(); G.el.classList.remove('g-lift');
+  cancelAnimationFrame(raf); raf = 0;
+  G.ghost?.remove(); G.el.classList.remove('g-lift', 'g-src');
   document.querySelectorAll('.g-can,.g-over,.g-no').forEach((e) => e.classList.remove('g-can', 'g-over', 'g-no'));
   document.documentElement.classList.remove('g-dragging');
   G = null;
@@ -29,22 +30,26 @@ function clearG() {
 function lift() {
   if (!G) return; G.lifted = true; haptic(8);
   G.el.classList.add('g-lift'); document.documentElement.classList.add('g-dragging');
-  const S = window.__teamSwap;
-  document.querySelectorAll('#view .pl[data-pid]').forEach((e) => { const b = +e.dataset.pid; if (b !== G.id && planCard(e)) e.classList.add(S.can(G.id, b) ? 'g-can' : 'g-no'); });
+  const S = window.__teamSwap; G.T = [];
+  document.querySelectorAll('#view .pl[data-pid]').forEach((e) => { const b = +e.dataset.pid; if (b === G.id || !planCard(e)) return; const ok = S.can(G.id, b); e.classList.add(ok ? 'g-can' : 'g-no'); if (ok) G.T.push({ e, r: e.getBoundingClientRect() }); });
+  // نجهّز النسخة الطايرة من هسه حتى أول حركة تكون سلسة بدون تأخير
+  const r = G.el.getBoundingClientRect(), gh = G.el.cloneNode(true);
+  gh.removeAttribute('onclick'); gh.classList.remove('g-lift'); gh.classList.add('g-ghost');
+  gh.style.cssText = `position:fixed;left:0;top:0;width:${r.width}px;height:${r.height}px;margin:0;z-index:999;pointer-events:none;opacity:0;transform:translate3d(${r.left}px,${r.top}px,0)`;
+  G.dx = G.x0 - r.left; G.dy = G.y0 - r.top; G.ghost = gh; document.body.appendChild(gh);
   G.menuT = setTimeout(() => { if (G && !G.dragging) { const { el, id } = G; clearG(); haptic([6, 40, 10]); quickMenu(el, id); } }, MENU - LIFT);
 }
-function startDrag(x, y) {
-  G.dragging = true; clearTimeout(G.menuT);
-  const r = G.el.getBoundingClientRect(), gh = G.el.cloneNode(true);
-  gh.removeAttribute('onclick'); gh.className += ' g-ghost'; gh.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;margin:0;z-index:999;pointer-events:none`;
-  G.dx = x - r.left; G.dy = y - r.top; G.ghost = gh; document.body.appendChild(gh);
-}
-function moveDrag(x, y) {
-  G.ghost.style.transform = `translate3d(${x - G.dx - parseFloat(G.ghost.style.left)}px,${y - G.dy - parseFloat(G.ghost.style.top)}px,0) scale(1.08) rotate(-2deg)`;
-  const t = document.elementFromPoint(x, y)?.closest?.('.pl[data-pid]');
-  const ok = t && t !== G.el && t.classList.contains('g-can') ? t : null;
+function startDrag() { G.dragging = true; clearTimeout(G.menuT); G.ghost.style.opacity = '1'; G.el.classList.add('g-src'); }
+// الحركة تتحدّث مرة وحدة بكل إطار، وفحص الهدف بالحساب (بدون elementFromPoint) حتى ما يتقطّع
+let raf = 0;
+function frame() {
+  raf = 0; if (!G?.dragging) return;
+  const { x, y } = G.p;
+  G.ghost.style.transform = `translate3d(${x - G.dx}px,${y - G.dy}px,0) scale(1.08)`;
+  let ok = null; for (const t of G.T) { const r = t.r; if (x >= r.left - 6 && x <= r.right + 6 && y >= r.top - 6 && y <= r.bottom + 6) { ok = t.e; break; } }
   if (ok !== G.over) { G.over?.classList.remove('g-over'); ok?.classList.add('g-over'); if (ok) haptic(5); G.over = ok; }
 }
+function moveDrag(x, y) { G.p = { x, y }; if (!raf) raf = requestAnimationFrame(frame); }
 document.addEventListener('touchstart', (e) => {
   if (e.touches.length > 1) return clearG();
   const el = planCard(e.target); if (!el) return;
@@ -57,7 +62,7 @@ document.addEventListener('touchmove', (e) => {
   const t = e.touches[0], dx = t.clientX - G.x0, dy = t.clientY - G.y0;
   if (!G.lifted) { if (Math.hypot(dx, dy) > SLOP) clearG(); return; } // تمرير عادي
   if (e.cancelable) e.preventDefault();
-  if (!G.dragging && Math.hypot(dx, dy) > 6) startDrag(t.clientX, t.clientY);
+  if (!G.dragging && Math.hypot(dx, dy) > 4) startDrag();
   if (G.dragging) moveDrag(t.clientX, t.clientY);
 }, { passive: false });
 const endTouch = (e) => {
