@@ -158,3 +158,51 @@ html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero,.pitch) svg [stroke="#FFD66E
 /* الأرقام الكبيرة: على البطاقات البيضاء أخضر غامق، وعلى الخضراء أبيض */
 html[data-ui=mint]:root .hero .big-num{background:none!important;-webkit-text-fill-color:var(--m-deep)!important;color:var(--m-deep)!important}
 html[data-ui=mint]:root .team-hero .big-num{background:none!important;-webkit-text-fill-color:#FFFFFF!important;color:#FFFFFF!important}
+
+/* =========================================================
+   داخل البطاقات الخضراء الغامقة: مربعات زجاجية واضحة، والأحمر/الأخضر بدرجات فاتحة تنقرى
+========================================================= */
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero) :is(.live-side>div,.h2-st,.h2-stats>*,.tstrip>div,.kpis>div,.k3>div){
+  background:rgba(255,255,255,.08)!important;background-image:none!important;border:1px solid rgba(255,255,255,.1)!important;box-shadow:none!important;color:#F2F7EF!important}
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero) :is(.live-side,.h2-stats,.tstrip,.kpis) :is(small,span:not(.up):not(.down)){color:#B7C9BC!important;-webkit-text-fill-color:currentColor!important}
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero) :is(.live-side,.h2-stats,.tstrip,.kpis) b{color:#FFFFFF!important;-webkit-text-fill-color:#FFFFFF!important}
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero) .mut{color:#B7C9BC!important}
+/* صعود ونزول */
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero) :is(.down,.mv-down,.dn,.bad){color:#FFB4A8!important;-webkit-text-fill-color:#FFB4A8!important}
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero) :is(.up,.mv-up,.good){color:#D6F26A!important;-webkit-text-fill-color:#D6F26A!important}
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero) :is(em.mv-down,em.down,.lh-avg.down){background:rgba(255,140,125,.16)!important;border-radius:99px;padding-inline:8px}
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero) :is(em.mv-up,em.up,.lh-avg.up){background:rgba(214,242,106,.14)!important;border-radius:99px;padding-inline:8px}
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero) .lh-avg :is(small,span){color:inherit!important;-webkit-text-fill-color:currentColor!important;opacity:.85}
+/* الوسوم داخلها */
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero) .tag.tag{background:rgba(255,255,255,.1)!important;color:#F2F7EF!important;border:1px solid rgba(255,255,255,.12)!important}
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero) .tag svg{color:#D6F26A!important}
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero) .livebadge{background:#D6F26A!important;color:#173D2B!important}
+
+/* =========================================================
+   لمسات تطوير عامة لواجهة زمرّد
+========================================================= */
+/* أرقام ثابتة العرض ومتناسقة */
+html[data-ui=mint]:root :is(.num,.big-num,b,strong){font-variant-numeric:tabular-nums}
+html[data-ui=mint]:root .big-num{font-weight:800;letter-spacing:-.03em}
+/* العناوين: أوزن وأوضح، والخط الجانبي ليموني بحواف دائرية */
+html[data-ui=mint]:root .sec h2{font-weight:800!important;letter-spacing:-.01em}
+html[data-ui=mint]:root .sec h2::before{border-radius:99px!important;width:5px!important}
+/* الأحمر والأخضر على الأبيض: درجات واضحة ومتوازنة */
+html[data-ui=mint]:root #view :is(.down,.mv-down,.dn,.neg):not(:is(.sy,.h2-hero,.team-hero) *){color:#C8372F}
+html[data-ui=mint]:root #view :is(.up,.mv-up,.pos-v):not(:is(.sy,.h2-hero,.team-hero) *){color:#1B7A47}
+html[data-ui=mint]:root .tag.red{background:#FDECEA!important;color:#B4322B!important}
+html[data-ui=mint]:root .tag.amber{background:#FDF3DC!important;color:#94650A!important}
+html[data-ui=mint]:root .tag.cyan{background:#E6F1FB!important;color:#1E64A6!important}
+html[data-ui=mint]:root .tag.violet{background:#EFEAFB!important;color:#5A43B5!important}
+/* البطاقات: حافة ناعمة وضغطة لطيفة */
+html[data-ui=mint]:root :is(.card,.list,.row){border-radius:22px}
+html[data-ui=mint]:root :is(.card.tap,.row.tap,button.row):active{transform:scale(.985);transition:transform .12s ease}
+/* مؤشر التركيز واضح على الخلفية الفاتحة */
+html[data-ui=mint]:root :is(button,a,[tabindex]):focus-visible{outline:2px solid #1F7A4D!important;outline-offset:2px}
+/* شريط التمرير */
+html[data-ui=mint]{scrollbar-color:#C9D6CB transparent}
+/* شارات الفورمة (ف/ت/خ) بالمربع والنوادي: خلفيات واضحة */
+html[data-ui=mint]:root .sy-fm5 i.W{background:rgba(214,242,106,.22)!important;color:#D6F26A!important}
+html[data-ui=mint]:root .sy-fm5 i.L{background:rgba(255,140,125,.2)!important;color:#FFB4A8!important}
+html[data-ui=mint]:root .sy-fm5 i.D{background:rgba(255,255,255,.1)!important;color:#D5E1D8!important}
+@media (prefers-reduced-motion:reduce){html[data-ui=mint]:root :is(.card.tap,.row.tap,button.row):active{transform:none}}
