@@ -5,7 +5,8 @@
    │   ← أحداث خصمك (شكد زاد عليك ومنو) ← تشكيلتك بالملعب (لعب/يلعب/ينتظر + التبديلات)
    ├ بين الجولات (بعد ما تخلص ولحد الإغلاق الجاي)
    │   ملخص الجولة ← نصائح الجولة الجاية ← خصوم تشكيلتك (من التحليل الذكي للأندية)
-   │   ← إحصائيات الأندية (٢ تتبدّل كل جولة: مباريات الأهداف، الشباك النظيفة، فورمة الأندية، الدفاعات المنهارة)
+   │   ← اكتشافات الجولة (محرّك يطوّر نفسه: مولّدات من سياقات مختلفة + ذاكرة شنو انعرض، فكل جولة معلومات جديدة)
+   │   ← إحصائيات الأندية (٢ تتبدّل كل جولة حسب اللي غاب أطول: مباريات الأهداف، الشباك النظيفة، فورمة الأندية، الدفاعات المنهارة)
    │   ← أسعار لاعبينك ← مساهماتهم بالموسم
    └ ثابت بكل المراحل: «فقرة هالجولة» (تدور كل جولة) + أساسيات يتبدّل ترتيبها كل جولة
      (ومنها «نادي كابتنك» من التحليل الذكي)
@@ -23,6 +24,7 @@ import { liveCalc } from '../live-engine.js';
 import { pricePredict } from '../predict.js';
 import { analyse as ciAnalyse, load as ciLoad, league as ciLeague, goalsW } from '../club-intel.js';
 import { fixturesFor, xp } from '../engine.js';
+import { discover, freshest, discLi } from '../story-discover.js';
 import * as PS from '../intel/stats.js';
 
 const DUR = 7000, POLL = 120e3;
@@ -505,6 +507,14 @@ function sSoftD() {
     body: `<ul class="sy-px">${rows.map(li).join('')}</ul>` };
 }
 const CLUBS = [sGoalFx, sCSOdds, sClubForm, sSoftD];
+/* اكتشافات الجولة: من محرّك يطوّر نفسه (story-discover.js) */
+function sDisc(part) {
+  const all = discover(3), xs = all.slice(part * 3, part * 3 + 3); if (xs.length < (part ? 2 : 2)) return null;
+  const g = ST.G.next;
+  return { k: 'dsc' + part, col: part ? 'var(--c-mint)' : 'var(--c-lav)', ic: 'spark', h: part ? tt(`اكتشافات أكثر للجولة ${g}`, `More discoveries GW ${g}`) : tt(`اكتشافات الجولة ${g}`, `GW ${g} discoveries`),
+    sub: tt('معلومات من زوايا مختلفة، تتجدد كل جولة وما تتكرر', 'Fresh angles each gameweek, never repeated'), to: "go('players')", toL: tt('اللاعبين', 'Players'),
+    body: `<ul class="sy-px">${xs.map(discLi).join('')}</ul>` };
+}
 const TREE = {
   live: { lead: [sLvTotal, sLvMine, sLvRival, sLvXI], core: 1 },
   between: { lead: [sRecap, sH2H, sNext, sOpp, sPrices, sContrib], core: 3 },
@@ -517,7 +527,11 @@ function plan() {
   let wk = null; for (let i = 0; i < WEEKLY.length && !wk; i++) { wk = WEEKLY[(D.gw + i) % WEEKLY.length](D); if (wk) wk.week = true; }
   const off = D.gw % CORE.length, core = [...CORE.slice(off), ...CORE.slice(0, off)].map((f) => f(D)).filter(Boolean).slice(0, T.core);
   const out = [...lead]; if (wk) out.splice(Math.min(2, out.length), 0, wk);
-  if (!D.live) { const o = D.gw % CLUBS.length, cl = [...CLUBS.slice(o), ...CLUBS.slice(0, o)].map((f) => f(D)).filter(Boolean).slice(0, 2); const at = out.findIndex((x) => x.k === 'opp'); out.splice(at >= 0 ? at + 1 : Math.min(4, out.length), 0, ...cl); }
+  if (!D.live) {
+    const cl = freshest(CLUBS.map((f) => f(D)).filter(Boolean), 2), d0 = sDisc(0), d1 = sDisc(1);
+    const at = out.findIndex((x) => x.k === 'opp'); out.splice(at >= 0 ? at + 1 : Math.min(4, out.length), 0, ...[d0, ...cl].filter(Boolean));
+    if (d1) { const pr = out.findIndex((x) => x.k === 'pr'); out.splice(pr >= 0 ? pr + 1 : out.length, 0, d1); }
+  }
   return [...out, ...core];
 }
 

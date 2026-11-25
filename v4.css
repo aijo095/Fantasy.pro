@@ -776,3 +776,4 @@ html.ui2 #toast{bottom:calc(96px + env(safe-area-inset-bottom,0px) * .5)}
 .sy-fm5 i{font-style:normal;font-size:10px;font-weight:800;width:16px;height:16px;line-height:16px;text-align:center;border-radius:5px;background:rgba(255,255,255,.07);color:var(--v4-ink2)}
 .sy-fm5 i.W{background:color-mix(in srgb,var(--c-mint) 22%,transparent);color:var(--c-mint)}
 .sy-fm5 i.L{background:color-mix(in srgb,var(--c-coral) 22%,transparent);color:var(--c-coral)}
+.sy-new{font-style:normal;font-size:10px;font-weight:800;margin-inline-start:6px;padding:1px 6px;border-radius:6px;background:color-mix(in srgb,var(--c) 22%,transparent);color:var(--c);vertical-align:1px}
