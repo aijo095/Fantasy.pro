@@ -37,10 +37,10 @@ html[data-ui=mint]:root,html[data-ui=mint]:root #view,html[data-ui=mint]:root .t
   --ci-line:var(--m-line)!important; --ci-soft:rgba(23,61,43,.035)!important;
 }
 html[data-ui=mint]:root,html[data-ui=mint]:root body,html[data-ui=mint]:root.v4 body,html[data-ui=mint]:root.v2 body{background:var(--m-bg)!important;color:var(--m-ink)}
-html[data-ui=mint]:root body::before,html[data-ui=mint]:root .app::before,html[data-ui=mint]:root #lux-bg{display:none!important}
+html[data-ui=mint]:root #lux-bg{opacity:.7}
 
 /* ---------- الأسطح: بطاقات بيضاء ناعمة ---------- */
-html[data-ui=mint]:root .card,html[data-ui=mint]:root .list{background:var(--m-card)!important;border:1px solid var(--m-line)!important;box-shadow:var(--m-sh1)!important}
+html[data-ui=mint]:root .card,html[data-ui=mint]:root .list{background-color:var(--m-card)!important;border:1px solid var(--m-line)!important;box-shadow:var(--m-sh1)!important}
 html[data-ui=mint]:root .topbar,html[data-ui=mint]:root.v4 .topbar{background:linear-gradient(var(--m-bg) 72%,rgba(238,243,238,0))!important}
 html[data-ui=mint]:root .topbar.scrolled{background:rgba(238,243,238,.82)!important;-webkit-backdrop-filter:saturate(1.4) blur(18px);backdrop-filter:saturate(1.4) blur(18px);box-shadow:0 1px 0 var(--m-line)!important}
 html[data-ui=mint]:root .topbar .icon-btn{background:var(--m-card)!important;border:1px solid var(--m-line)!important;box-shadow:var(--m-sh1)!important;color:var(--m-ink)!important}
@@ -64,9 +64,9 @@ html[data-ui=mint]:root .sy-go{color:#F2F7EF!important;border-top-color:rgba(255
 html[data-ui=mint]:root .sy :is(.sy-prog i,.sy-bar i){background:rgba(255,255,255,.18)!important}
 html[data-ui=mint]:root .sy .sy-prog i::after,html[data-ui=mint]:root .sy .sy-bar i::after{background:#D6F26A!important}
 
-html[data-ui=mint]:root :is(.h2-hero,.team-hero)::after{display:none!important}
+html[data-ui=mint]:root :is(.h2-hero,.team-hero)::after{mix-blend-mode:screen;opacity:.5}
 html[data-ui=mint]:root :is(.hero,.ss-hero,.stadium){background:var(--m-card)!important;background-image:none!important;border:1px solid var(--m-line)!important;box-shadow:var(--m-sh1)!important}
-html[data-ui=mint]:root :is(.hero,.ss-hero,.stadium)::after{display:none!important}
+html[data-ui=mint]:root :is(.hero,.ss-hero,.stadium)::after{opacity:.35}
 /* بطاقة الجولة بالرئيسية: الرقم الكبير ليموني والمربعات زجاج فاتح */
 html[data-ui=mint]:root .h2-hero .h2-pts b{color:#FFFFFF!important}
 html[data-ui=mint]:root .h2-hero .h2-pts span,html[data-ui=mint]:root .h2-hero .h2-top{color:#B7C9BC!important}
@@ -109,7 +109,7 @@ html[data-ui=mint]:root ::placeholder{color:var(--m-ink3)!important}
 
 /* ---------- الأوراق المنبثقة ---------- */
 html[data-ui=mint]:root .sheet,html[data-ui=mint]:root .ov .sheet{background:var(--m-card)!important;color:var(--m-ink)!important}
-html[data-ui=mint]:root .ov{background:rgba(20,38,28,.32)!important}
+html[data-ui=mint]:root .ov{background-color:rgba(20,38,28,.32)}
 
 html[data-ui=mint]:root .ui-opt.on{border-color:#1F7A4D}
 html[data-ui=mint]:root .th-lock{opacity:.45;pointer-events:none}
@@ -146,7 +146,7 @@ html[data-ui=mint]:root .h2-leg s{background:var(--m-ink)!important}
 /* عنوان رحلة الموسم: تدرّج أخضر بدل الذهبي الفاتح */
 html[data-ui=mint]:root .jr-ttl b{background:linear-gradient(90deg,#1F7A4D,#173D2B)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important}
 /* شارات الإنجازات: ليموني بأيقونة خضراء غامقة بدل ألوان قوس قزح */
-html[data-ui=mint]:root .badge-c:not(.locked) .be{background:var(--m-lime)!important;color:var(--m-on-lime)!important;box-shadow:0 8px 18px -10px rgba(140,180,30,.7)!important;animation:none!important}
+html[data-ui=mint]:root .badge-c:not(.locked) .be{background:var(--m-lime)!important;color:var(--m-on-lime)!important;box-shadow:0 8px 18px -10px rgba(140,180,30,.7)!important}
 html[data-ui=mint]:root .badge-c.locked .be{background:var(--m-s3)!important;color:var(--m-ink3)!important}
 /* الخطوط البيانية الصغيرة: أخضر أغمق حتى تبين على الأبيض */
 html[data-ui=mint]:root svg.spark polyline[stroke="#34D399"],html[data-ui=mint]:root svg.spark polyline[stroke="#7FE6A6"]{stroke:#1F8A52!important}
@@ -156,8 +156,8 @@ html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero,.pitch) svg [stroke="#7FE6A6
 html[data-ui=mint]:root svg [stroke="#FFD66E"]{stroke:#C98A0B}html[data-ui=mint]:root svg [stroke="#8CC8FF"]{stroke:#2B7BC8}html[data-ui=mint]:root svg [stroke="#F472B6"]{stroke:#D0458F}
 html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero,.pitch) svg [stroke="#FFD66E"]{stroke:#FFD66E}html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero,.pitch) svg [stroke="#8CC8FF"]{stroke:#8CC8FF}
 /* الأرقام الكبيرة: على البطاقات البيضاء أخضر غامق، وعلى الخضراء أبيض */
-html[data-ui=mint]:root .hero .big-num{background:none!important;-webkit-text-fill-color:var(--m-deep)!important;color:var(--m-deep)!important}
-html[data-ui=mint]:root .team-hero .big-num{background:none!important;-webkit-text-fill-color:#FFFFFF!important;color:#FFFFFF!important}
+html[data-ui=mint]:root .hero .big-num{background-image:linear-gradient(180deg,#2F9A62 0%,#1C4532 55%,#143524 100%)!important;-webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important}
+html[data-ui=mint]:root .team-hero .big-num{background-image:linear-gradient(180deg,#FFFFFF 0%,#F2F7EF 45%,#D6F26A 100%)!important;-webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important}
 
 /* =========================================================
    داخل البطاقات الخضراء الغامقة: مربعات زجاجية واضحة، والأحمر/الأخضر بدرجات فاتحة تنقرى

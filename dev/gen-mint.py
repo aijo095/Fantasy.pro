@@ -126,10 +126,10 @@ def decls(body):
         nv = conv(prop, val) if lit else val
         if lit and nv == val and not ('var(' in val and is_col(prop)): continue
         res.append(f'{prop}:{nv.strip()}')
-    # الـ background المختصر يرجّع الـ clip للافتراضي، فنعيد كتابته (نص بتدرّج لوني)
+    # الـ background المختصر يرجّع الـ clip والحجم والموضع للافتراضي، فنعيد كتابتها (النص المتدرّج وحركات اللمعان)
     if any(r.split(':', 1)[0].strip().lower() == 'background' for r in res):
         for d in split_top(body, ';'):
-            if ':' in d and d.split(':', 1)[0].strip().lower() in ('background-clip', '-webkit-background-clip'): res.append(d.strip())
+            if ':' in d and d.split(':', 1)[0].strip().lower() in ('background-clip', '-webkit-background-clip', 'background-size', 'background-position', 'background-repeat', 'background-origin', 'background-attachment', 'background-blend-mode'): res.append(d.strip())
     return res
 
 def walk(t):
