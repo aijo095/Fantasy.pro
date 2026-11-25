@@ -13,6 +13,7 @@ import { ST, loadLocal, planKey } from './store.js';
 import { scanStatic, unreadCount, scanLineups } from './notify.js';
 import { registerSW, syncPush } from './push.js';
 import './sharecard.js';
+import './cine.js';
 import { VIEWS, AFTER, startLivePolling, freshness } from './views/index.js';
 
 document.body.insertAdjacentHTML('afterbegin', SPRITE);
