@@ -4,8 +4,10 @@
    │   نقاطك المباشرة وفرقك عن خصمك ← أحداث لاعبينك (أهداف/صناعات/بونص… بدقيقتها ونقاطها)
    │   ← أحداث خصمك (شكد زاد عليك ومنو) ← تشكيلتك بالملعب (لعب/يلعب/ينتظر + التبديلات)
    ├ بين الجولات (بعد ما تخلص ولحد الإغلاق الجاي)
-   │   ملخص الجولة ← نصائح الجولة الجاية ← أسعار لاعبينك ← مساهماتهم بالموسم
+   │   ملخص الجولة ← نصائح الجولة الجاية ← خصوم تشكيلتك (من التحليل الذكي للأندية)
+   │   ← أسعار لاعبينك ← مساهماتهم بالموسم
    └ ثابت بكل المراحل: «فقرة هالجولة» (تدور كل جولة) + أساسيات يتبدّل ترتيبها كل جولة
+     (ومنها «نادي كابتنك» من التحليل الذكي)
    الدقيقة: الفانتازي ما ينشر دقيقة الهدف — نسجّل دقيقة المباراة لحظة ما نلقط الحدث بالتحديث،
    وإذا انلقط متأخر نكتب «خلال المباراة» بدل ما نفترض رقم.
    كل الأرقام حقيقية من بيانات المدرب ولا رقم مفترض.
@@ -18,6 +20,7 @@ import * as FPL from '../fpl.js';
 import { chipStatus } from '../fpl.js';
 import { liveCalc } from '../live-engine.js';
 import { pricePredict } from '../predict.js';
+import { analyse as ciAnalyse, load as ciLoad } from '../club-intel.js';
 import { fixturesFor, xp } from '../engine.js';
 import * as PS from '../intel/stats.js';
 
@@ -31,6 +34,7 @@ const sgn = (v) => `${v > 0 ? '+' : ''}${v}`;
 
 /* ---------- أيقونات خطية (تنرسم عند ظهور الشريحة) ---------- */
 const IC = {
+  target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/>',
   cup: '<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/><path d="M12 14v4M8 20h8"/>',
   rank: '<path d="M4 18l5-6 4 3 7-9"/><path d="M15 6h5v5"/>',
   bars: '<path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/>',
@@ -418,11 +422,43 @@ async function loadCapWhy() {
 }
 
 /* ---------- الشجرة: شنو يطلع بكل مرحلة وبأي ترتيب ---------- */
+/* من التحليل الذكي للأندية: نقاط ضعف خصوم لاعبينك بالجولة الجاية، وقوة خصوم دفاعك، ونادي الكابتن */
+const CIK = {};
+const ciOf = (tid) => { const k = `${tid}:${ST.G.fxList?.filter((f) => f.fin).length || 0}`; if (!CIK[k]) { try { CIK[k] = ciAnalyse(tid); } catch { CIK[k] = null; } } return CIK[k]; };
+const ciPick = (R, brs, tone) => (R ? brs.flatMap((b) => R.branches[b] || []).filter((x) => x.tone === tone && !x.always).sort((a, b) => b.w - a.w)[0] : null);
+function sOpp() {
+  const g = ST.G.next, xi = ST.plan?.xi; if (!g || !xi?.length) return null;
+  const rows = [], seen = new Set();
+  xi.map(PM).filter(Boolean).sort((a, b) => xp(b, g) - xp(a, g)).forEach((p) => {
+    const f = fixturesFor(p.team, g)[0]; if (!f || seen.has(f.opp + p.pos)) return;
+    const R = ciOf(f.opp); if (!R) return;
+    const att = p.pos === 'MID' || p.pos === 'FWD';
+    const base = (id) => { const y = Object.values(R.branches).flat().find((z) => z.id === id); return y?.R && y.R.r > y.R.n / 2 ? y : null; }; // معدل التسجيل/الاستقبال إذا أسوأ من نص الدوري
+    const x = att ? ciPick(R, ['zone', 'def', 'time', 'set'], 'b') || base('ga') : ciPick(R, ['att', 'set', 'time'], 'g') || (() => { const y = Object.values(R.branches).flat().find((z) => z.id === 'gf'); return y?.R && y.R.r <= y.R.n / 2 ? y : null; })();
+    if (!x) return; seen.add(f.opp + p.pos);
+    rows.push({ p, f, x, att });
+  });
+  ciLoad(rows[0]?.f.opp || xi.map(PM)[0]?.team);
+  if (!rows.length) return null;
+  const good = rows.filter((r) => r.att).slice(0, 3), warn = rows.filter((r) => !r.att).slice(0, 2);
+  const li = (r, i) => `<li style="--d:${80 + i * 60}ms"><b>${esc(r.p.name)} ${tt('ضد', 'vs')} <bdi dir="ltr">${esc(tShort(r.f.opp))}</bdi></b>${r.x.big != null ? `<span class="${r.att ? 'up' : 'dn'}" dir="ltr">${esc(String(r.x.big))}</span>` : ''}<small>${esc(r.x.title)}</small></li>`;
+  return { k: 'opp', col: 'var(--c-lav)', ic: 'target', h: tt(`خصوم تشكيلتك بالجولة ${g}`, `Your opponents GW ${g}`), sub: tt('من التحليل الذكي لكل نادي', 'From each club’s smart analysis'), to: `clubAI(${rows[0].f.opp})`, toL: tt('تحليل الخصم', 'Opponent analysis'),
+    body: `${good.length ? `<p class="sy-note up">${tt('نقاط ضعف تستغلها', 'Weak spots to exploit')}</p><ul class="sy-px">${good.map(li).join('')}</ul>` : ''}${warn.length ? `<p class="sy-note dn">${tt('انتبه على دفاعك', 'Watch your defence')}</p><ul class="sy-px">${warn.map((r, i) => li(r, i + good.length)).join('')}</ul>` : ''}` };
+}
+function sCapClub() {
+  const cap = PM(ST.plan?.cap), g = ST.G.next; if (!cap || !g) return null;
+  const R = ciOf(cap.team); if (!R?.A?.p) return null;
+  const xs = Object.values(R.branches).flat().filter((x) => !x.always && x.tone === 'g').sort((a, b) => b.w - a.w).slice(0, 3);
+  const f = fixturesFor(cap.team, g)[0], O = f ? ciOf(f.opp) : null, ow = ciPick(O, ['def', 'zone', 'time'], 'b');
+  if (!xs.length && !ow) return null;
+  return { k: 'capc', col: 'var(--c-gold)', ic: 'crown', h: tt(`نادي كابتنك: ${tName(cap.team)}`, `Your captain’s club: ${tName(cap.team)}`), sub: f ? tt(`${cap.name} ضد ${tName(f.opp)} ${f.home ? 'بأرضه' : 'برا'}`, `${cap.name} vs ${tName(f.opp)}`) : '', to: `clubAI(${cap.team})`, toL: tt('تحليل النادي', 'Club analysis'),
+    body: `<ul class="sy-px">${xs.map((x, i) => `<li style="--d:${80 + i * 60}ms"><b>${esc(x.title)}</b>${x.big != null ? `<span class="up" dir="ltr">${esc(String(x.big))}</span>` : ''}<small>${esc(x.unit || '')}</small></li>`).join('')}</ul>${ow ? `<p class="sy-note up">${tt(`وخصمه: ${ow.title}`, `Opponent: ${ow.title}`)}</p>` : ''}` };
+}
 const TREE = {
   live: { lead: [sLvTotal, sLvMine, sLvRival, sLvXI], core: 1 },
-  between: { lead: [sRecap, sH2H, sNext, sPrices, sContrib], core: 3 },
+  between: { lead: [sRecap, sH2H, sNext, sOpp, sPrices, sContrib], core: 3 },
 };
-const CORE = [sRank, sLeagues, sMoves, sExtras];
+const CORE = [sRank, sLeagues, sMoves, sExtras, sCapClub];
 function plan() {
   const D = STORY; if (!D) return [];
   const T = TREE[D.live ? 'live' : 'between'];

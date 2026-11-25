@@ -72,6 +72,8 @@ Object.assign(window, {
     if (opening) { try { history.pushState({ v: 'clubs', c: id }, '', '#clubs'); } catch {} }
     paint(); window.scrollTo(0, 0);
   },
+  // من المربع المتغير: يفتح النادي على تبويب التحليل الذكي
+  clubAI: (id) => { window.go('clubs'); window.clubOpen(id); TAB = 'ai'; paint(); },
   // زر الرجوع يمر بنفس طريق سحبة الآيفون (history.back) حتى يبقى السجل مرتب
   clubBack: () => { if (history.state && history.state.c != null) history.back(); else closeClub(); },
   clubTab: (k) => { TAB = k; window.render(); },
