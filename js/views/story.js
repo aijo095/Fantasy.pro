@@ -24,11 +24,11 @@ import { liveCalc } from '../live-engine.js';
 import { pricePredict } from '../predict.js';
 import { analyse as ciAnalyse, load as ciLoad, league as ciLeague, goalsW } from '../club-intel.js';
 import { fixturesFor, xp } from '../engine.js';
-import { discover, freshest, discLi } from '../story-discover.js';
+import { discover, freshest, discLi, engage, slideK, accuracy } from '../story-discover.js';
 import * as PS from '../intel/stats.js';
 
 const DUR = 7000, POLL = 120e3;
-let SI = 0, SEL = null, HOLD = false, CS_T = 0, CAPX = null, CAPX_K = null, STORY = null, STORY_K = null, LIVE = null, TIPS = [], VIS = true, PT = 0, RIV = null, RIV_K = null;
+let SHOWN_T = 0, SI = 0, SEL = null, HOLD = false, CS_T = 0, CAPX = null, CAPX_K = null, STORY = null, STORY_K = null, LIVE = null, TIPS = [], VIS = true, PT = 0, RIV = null, RIV_K = null;
 const BOUND = new WeakSet();
 const RM = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const N = (v) => `<bdi dir="ltr" class="num">${v}</bdi>`;
@@ -543,7 +543,7 @@ function sDisc(part) {
   const all = discover(3), xs = all.slice(part * 3, part * 3 + 3); if (xs.length < (part ? 2 : 2)) return null;
   const g = ST.G.next;
   return { k: 'dsc' + part, col: part ? 'var(--c-mint)' : 'var(--c-lav)', ic: 'spark', h: part ? tt(`اكتشافات أكثر للجولة ${g}`, `More discoveries GW ${g}`) : tt(`اكتشافات الجولة ${g}`, `GW ${g} discoveries`),
-    sub: tt('معلومات من زوايا مختلفة، تتجدد كل جولة وما تتكرر', 'Fresh angles each gameweek, never repeated'), to: "go('players')", toL: tt('اللاعبين', 'Players'),
+    sub: (() => { const A = accuracy(); return A ? tt(`توقعاتنا للجولات الفاتتة صحّت ${A.h} من ${A.n}`, `Past calls: ${A.h}/${A.n} right`) : tt('معلومات من زوايا مختلفة، تتجدد كل جولة وما تتكرر', 'Fresh angles each gameweek, never repeated'); })(), to: "go('players')", toL: tt('اللاعبين', 'Players'), fams: xs.map((c) => c.fam),
     body: `<ul class="sy-px">${xs.map(discLi).join('')}</ul>` };
 }
 const TREE = {
@@ -554,7 +554,9 @@ const CORE = [sRank, sLeagues, sMoves, sExtras, sCapClub];
 function plan() {
   const D = STORY; if (!D) return [];
   const T = TREE[D.live ? 'live' : 'between'];
-  const lead = T.lead.flatMap((f) => f(D) || []).filter(Boolean);
+  const lead0 = T.lead.flatMap((f) => f(D) || []).filter(Boolean);
+  // الشرائح اللي المدرب يتجاوزها دائماً تتأخر، واللي يفتحها تتقدم شوية (الترتيب الأصلي يبقى للباقي)
+  const lead = lead0.map((x, i) => ({ x, i, w: slideK(x.k) })).sort((a, b) => (b.w >= 1.15) - (a.w >= 1.15) || (a.w < 0.8) - (b.w < 0.8) || a.i - b.i).map((o) => o.x);
   let wk = null; for (let i = 0; i < WEEKLY.length && !wk; i++) { wk = WEEKLY[(D.gw + i) % WEEKLY.length](D); if (wk) wk.week = true; }
   const off = D.gw % CORE.length, core = [...CORE.slice(off), ...CORE.slice(0, off)].map((f) => f(D)).filter(Boolean).slice(0, T.core);
   const out = [...lead]; if (wk) out.splice(Math.min(2, out.length), 0, wk);
@@ -605,6 +607,8 @@ function setSlide(i, user) {
   const S = plan(); if (!S.length) return;
   const box = document.getElementById('syBox'); if (!box) return;
   const prev = SI; SI = (i + S.length) % S.length;
+  // تفاعل المدرب: تجاوز سريع أو متابعة لحد النهاية — المربع يتعلم منه شنو يهمّه
+  { const ps = S[prev], dt = Date.now() - (SHOWN_T || Date.now()); if (ps && prev !== SI) engage(ps.k, user ? (dt < 1500 ? 'skip' : 'seen') : 'view', ps.fams || []); SHOWN_T = Date.now(); }
   if (user && S[SI].k !== 'gw') SEL = null;
   const d = SI > prev || (prev === S.length - 1 && SI === 0) ? 1 : -1;
   box.style.setProperty('--c', S[SI].col);
@@ -658,7 +662,7 @@ function bind() {
   st.addEventListener('pointercancel', () => { x0 = null; clearTimeout(lp); if (!HOLD) box.classList.remove('hold'); });
   st.addEventListener('click', (e) => {
     const pk = e.target.closest('[data-pick]'); if (pk) { e.stopPropagation(); pickGw(+pk.dataset.pick); return; }
-    const go = e.target.closest('.sy-go'); if (go) { e.stopPropagation(); run(go.closest('.sy-sl')?.dataset.to); }
+    const go = e.target.closest('.sy-go'); if (go) { e.stopPropagation(); const cur = plan()[SI]; if (cur) engage(cur.k, 'tap', cur.fams || []); run(go.closest('.sy-sl')?.dataset.to); }
   });
   countUp(box.querySelector('.sy-sl.on'));
   if (plan()[SI]?.k === 'cp') loadCapWhy();

@@ -84,7 +84,85 @@ const GEN = [
     const s = best(R, 'g'); if (s) out.push({ id: `ci:${tid}:${s.id}`, fam: 'club', sc: 0.35 + s.w / 2.5, tone: 'up', t: `${tName(tid)}: ${s.title}`, x: wu(s), big: s.big != null ? String(s.big) : null });
     const w = best(O, 'b'); if (w) out.push({ id: `cio:${f.opp}:${w.id}`, fam: 'opp', sc: 0.35 + w.w / 2.5, tone: 'up', t: tt(`خصم ${tName(tid)}: ${w.title}`, `${tName(tid)}’s opponent: ${w.title}`), x: wu(w), big: w.big != null ? String(w.big) : null });
     return out; }),
+  /* ---- من موسم المدرب نفسه: كل مدرب أرقامه تختلف ---- */
+  // نقاط ضاعت بالدكة
+  () => { const H = ST.E?.hist?.current || []; if (H.length < 4) return [];
+    const tot = H.reduce((a, h) => a + (h.points_on_bench || 0), 0), l3 = H.slice(-3).reduce((a, h) => a + (h.points_on_bench || 0), 0), avg = tot / H.length;
+    return tot >= 15 ? [{ id: `bench:${H.length}`, fam: 'bench', sc: 0.4 + Math.min(0.5, avg / 14), tone: 'dn', t: tt('نقاط ضاعت بدكتك', 'Points left on your bench'), x: tt(`${tot} نقطة بالموسم (${n1(avg)} بالجولة)، منها ${l3} بآخر 3 جولات. رتّب دكتك قبل الإغلاق ولا تخلي أساسي مضمون برا`, `${tot} pts this season`), big: String(tot) }] : []; },
+  // الخصومات
+  () => { const H = ST.E?.hist?.current || []; const c = H.reduce((a, h) => a + (h.event_transfers_cost || 0), 0), n = H.filter((h) => h.event_transfers_cost > 0).length;
+    return c >= 8 ? [{ id: `hits:${c}`, fam: 'hits', sc: 0.4 + Math.min(0.5, c / 40), tone: 'dn', t: tt('خصوماتك بالموسم', 'Your hits this season'), x: tt(`دفعت ${c} نقطة خصم بـ ${n} جولات. الخصم يستاهل بس إذا اللاعب الجديد متوقع يجيب أكثر من 4 نقاط زيادة`, `${c} pts in hits`), big: `-${c}` }] : []; },
+  // اعتمادك على لاعب واحد
+  ({ sq }) => { const tot = sq.reduce((a, p) => a + (p.total || 0), 0), top = [...sq].sort((a, b) => b.total - a.total)[0]; if (!top || tot < 100) return [];
+    const sh = top.total / tot; return sh >= 0.16 ? [{ id: `rely:${top.id}`, fam: 'rely', sc: 0.35 + sh, tone: '', t: tt(`فريقك يعتمد على ${top.name}`, `Your team leans on ${top.name}`), x: tt(`جاب ${top.total} نقطة من مجموع لاعبيك ${tot}، يعني ${Math.round(sh * 100)}%. إذا تأثر ينضرب فريقك، فخلي الكابتن البديل جاهز`, `${Math.round(sh * 100)}% of your squad points`), big: `${Math.round(sh * 100)}%` }] : []; },
+  // أضعف خط بالقيمة (فلوس مقابل نقاط)
+  ({ sq }) => { const L = ['DEF', 'MID', 'FWD'].map((pos) => { const ps = sq.filter((p) => p.pos === pos); const m = ps.reduce((a, p) => a + p.price, 0), t = ps.reduce((a, p) => a + p.total, 0); return { pos, m, t, r: m ? t / m : 0 }; }).filter((x) => x.m > 0);
+    if (L.length < 3) return []; const s = [...L].sort((a, b) => a.r - b.r), w = s[0], b = s[s.length - 1]; if (b.r < w.r * 1.35) return [];
+    const nm = { DEF: tt('دفاعك', 'Defence'), MID: tt('وسطك', 'Midfield'), FWD: tt('هجومك', 'Attack') }, nb = { DEF: tt('بالدفاع', 'in defence'), MID: tt('بالوسط', 'in midfield'), FWD: tt('بالهجوم', 'in attack') };
+    return [{ id: `value:${w.pos}`, fam: 'value', sc: 0.45, tone: 'dn', t: tt(`${nm[w.pos]} أقل قيمة مقابل فلوسه`, `${nm[w.pos]} gives least value`), x: tt(`كل مليون ${nb[w.pos]} جاب ${n1(w.r)} نقطة، مقابل ${n1(b.r)} ${nb[b.pos]}. حوّل فلوس من هنا للخط الأقوى`, `${n1(w.r)} pts per £m vs ${n1(b.r)}`), big: n1(w.r) }]; },
+  // تكديس نادي واحد
+  ({ g, sq }) => { const by = {}; sq.forEach((p) => (by[p.team] = by[p.team] || []).push(p)); return Object.entries(by).filter(([, ps]) => ps.length >= 3).map(([tid, ps]) => { const f = fixturesFor(+tid, g)[0];
+    return f ? { id: `stack:${tid}:${g}`, fam: 'stack', sc: 0.5 + (f.fdr <= 2 ? 0.25 : f.fdr >= 4 ? 0.3 : 0), tone: f.fdr <= 2 ? 'up' : f.fdr >= 4 ? 'dn' : '', t: tt(`عندك 3 من ${tName(+tid)}`, `3 players from ${tName(+tid)}`), x: tt(`${ps.map((p) => p.name).join('، ')}. والجولة الجاية ضد ${tName(f.opp)} ${f.home ? 'بأرضه' : 'برا'} وصعوبتها ${f.fdr} من 5، ${f.fdr <= 2 ? 'فرصة كبيرة لفريقك' : f.fdr >= 4 ? 'جولة صعبة على ثلث فريقك' : 'جولة متوسطة'}`, `vs ${tName(f.opp)}, FDR ${f.fdr}`), big: `${f.fdr}/5` } : null; }).filter(Boolean); },
+  // اتجاه ترتيبك
+  () => { const H = (ST.E?.hist?.current || []).filter((h) => h.overall_rank); if (H.length < 5) return []; const a = H[H.length - 5].overall_rank, b = H[H.length - 1].overall_rank, d = a - b;
+    if (Math.abs(d) < a * 0.08) return []; return [{ id: `rtrend:${H.length}`, fam: 'rtrend', sc: 0.45, tone: d > 0 ? 'up' : 'dn', t: d > 0 ? tt('ترتيبك صاعد', 'Your rank is climbing') : tt('ترتيبك نازل', 'Your rank is slipping'), x: tt(`من ${a.toLocaleString('en')} قبل 4 جولات إلى ${b.toLocaleString('en')} هسه، يعني ${d > 0 ? 'تقدمت' : 'رجعت'} ${Math.abs(d).toLocaleString('en')} مركز`, `${a} → ${b}`), big: `${d > 0 ? '▲' : '▼'}${Math.round((Math.abs(d) / a) * 100)}%` }]; },
 ];
+
+/* =========================================================
+   التعلّم: كل مدرب إله ذاكرة خاصة بجهازه
+   - نسجّل كل معلومة قابلة للتحقق (لاعب راح يسجّل، فريق راح يفوز، لاعب راح ينقعد…)
+   - بعد ما تخلص الجولة نتحقق منها من البيانات الحقيقية، ونحسب دقة كل نوع
+   - ونسجّل تفاعل المدرب ويا كل شريحة (فتحها، تجاوزها بسرعة، تابعها)
+   - الأنواع اللي تصح أكثر وتهمّ المدرب أكثر تتقدم، واللي تخطّي أو تتجاهل تتأخر
+========================================================= */
+const BK = () => `fp_sy_brain_${ST.E?.entry?.id || 0}`;
+const bLoad = () => { try { return JSON.parse(localStorage.getItem(BK())) || { claims: [], fam: {}, eng: {} }; } catch { return { claims: [], fam: {}, eng: {} }; } };
+const bSave = (b) => { try { b.claims = b.claims.slice(-80); localStorage.setItem(BK(), JSON.stringify(b)); } catch {} };
+const lastFin = () => Math.max(0, ...ST.G.events.filter((e) => e.fin).map((e) => e.id));
+// نحوّل هوية المعلومة لادعاء قابل للتحقق
+function claimOf(c, g) {
+  const [k, a] = c.id.split(':'), id = +a; const P = PM(id);
+  if (k === 'luck-' && P) return { k: 'goal', id, g, b: P.gls };
+  if (k === 'luck+' && P) return { k: 'nogoal', id, g, b: P.gls };
+  if (['gem', 'dcon', 'dcm', 'bon', 'bonm', 'pen', 'penm'].includes(k) && P) return { k: 'haul', id, g, b: P.total };
+  if (k === 'rot' && P) return { k: 'lowmin', id, g, b: P.min };
+  if (k === 'ven+') return { k: 'win', id, g };
+  if (k === 'ven-') return { k: 'nowin', id, g };
+  if (k === 'stack' && c.tone) return { k: c.tone === 'up' ? 'win' : 'nowin', id, g };
+  return null;
+}
+function judge(cl) {
+  const P = PM(cl.id), F = (ST.G.fx[cl.g] || []).filter((f) => f.fin && (f.h === cl.id || f.a === cl.id));
+  switch (cl.k) {
+    case 'goal': return P ? P.gls > cl.b : null;
+    case 'nogoal': return P ? P.gls <= cl.b : null;
+    case 'haul': return P ? P.total - cl.b >= 5 : null;
+    case 'lowmin': return P ? P.min - cl.b < 60 : null;
+    case 'win': case 'nowin': { if (!F.length) return null; const w = F.some((f) => (f.h === cl.id ? f.hs > f.as : f.as > f.hs)); return cl.k === 'win' ? w : !w; }
+  }
+  return null;
+}
+function learnStep() {
+  const b = bLoad(), lf = lastFin(); let ch = false;
+  b.claims.forEach((cl) => { if (cl.r != null || cl.g > lf) return; const r = judge(cl); if (r == null) return; cl.r = r ? 1 : 0; const f = (b.fam[cl.f] = b.fam[cl.f] || { h: 0, n: 0 }); f.h += cl.r; f.n++; ch = true; });
+  if (ch) bSave(b); return b;
+}
+// وزن مُتعلَّم لكل نوع: الدقة (مع تمهيد حتى ما تتطرف من جولة وحدة) × اهتمام المدرب
+function famK(b, fam) {
+  const f = b.fam[fam], acc = f ? (f.h + 1) / (f.n + 2) : 0.5;
+  const e = b.eng['f:' + fam] || { s: 0, t: 0, q: 0 }, eng = e.s ? Math.max(0.7, Math.min(1.35, 1 + (e.t * 1.5 - e.q * 0.6) / (e.s + 3))) : 1;
+  return Math.max(0.55, Math.min(1.5, (0.6 + acc * 0.8) * eng));
+}
+/** يسجّل تفاعل المدرب ويا شريحة: view (تابعها لحد النهاية)، skip (تجاوزها بسرعة)، tap (فتح زرها) */
+export function engage(k, type, fams = []) {
+  if (!k || !ST.E?.entry) return; const b = bLoad();
+  [k.startsWith('dsc') ? null : 'k:' + k, ...fams.map((f) => 'f:' + f)].filter(Boolean).forEach((key) => { const e = (b.eng[key] = b.eng[key] || { s: 0, t: 0, q: 0 }); e.s++; if (type === 'tap') e.t++; if (type === 'skip') e.q++; });
+  bSave(b);
+}
+/** وزن شريحة حسب تفاعل المدرب وياها */
+export function slideK(k) { const e = bLoad().eng['k:' + k]; return e && e.s ? Math.max(0.6, Math.min(1.4, 1 + (e.t * 1.5 - e.q * 0.6) / (e.s + 3))) : 1; }
+/** دقة توقعات المربع بالجولات الفاتتة */
+export function accuracy() { const b = learnStep(); const r = b.claims.filter((c) => c.r != null); return r.length >= 3 ? { h: r.reduce((a, c) => a + c.r, 0), n: r.length } : null; }
 
 /* ---------- الاختيار: جديد + متنوّع + ما يتكرر ---------- */
 let CACHE_K = '', CACHE = null;
@@ -95,18 +173,20 @@ export function discover(nPer = 3) {
   const T = league(), sq = sqIds.map(PM).filter(Boolean), own = new Set(sqIds), teams = [...new Set(sq.map((p) => p.team))];
   const ctx = { g, T, sq, own, teams };
   let C = []; GEN.forEach((f) => { try { C.push(...f(ctx)); } catch {} });
-  const S = ld(), ids = S.ids || {}, fams = S.fams || {};
+  const S = ld(), ids = S.ids || {}, fams = S.fams || {}, BR = learnStep();
   // الوزن النهائي: الأهمية × الجِدّة (المعلومة اللي انعرضت قبل جولة لجولتين تنزل، والعائلة اللي طلعت الجولة الفاتت تنزل شوية)
   C = C.map((c) => { const seenAt = ids[c.id], fa = fams[c.fam];
     const nov = seenAt == null ? 1.15 : seenAt === g ? 1 : Math.max(0.15, Math.min(1, (g - seenAt) / 4));
     const fp = fa != null && fa !== g && g - fa <= 1 ? 0.7 : 1;
-    return { ...c, isNew: seenAt == null || c.fresh || (S.first?.gw === g && S.first.ids.includes(c.id)), v: c.sc * nov * fp }; }).sort((a, b) => b.v - a.v);
+    return { ...c, isNew: seenAt == null || c.fresh || (S.first?.gw === g && S.first.ids.includes(c.id)), v: c.sc * nov * fp * famK(BR, c.fam) }; }).sort((a, b) => b.v - a.v);
   // نفس الجولة = نفس الاختيار (يثبت بين فتحة وفتحة)، والأرقام نفسها تتحدث
   const prevP = S.pick?.gw === g ? S.pick.ids : [];
   const ordered = [...C.filter((c) => prevP.includes(c.id)).sort((a, b) => prevP.indexOf(a.id) - prevP.indexOf(b.id)), ...C.filter((c) => !prevP.includes(c.id))];
   const picked = [], usedF = new Set();
   for (const c of ordered) { if (usedF.has(c.fam)) continue; picked.push(c); usedF.add(c.fam); if (picked.length >= nPer * 2) break; }
   picked.forEach((c) => { if (ids[c.id] == null || ids[c.id] < g) ids[c.id] = g; fams[c.fam] = g; });
+  // نسجّل الادعاءات القابلة للتحقق مرة وحدة لكل جولة
+  { let ch = false; picked.forEach((c) => { const cl = claimOf(c, g); if (cl && !BR.claims.some((x) => x.g === g && x.k === cl.k && x.id === cl.id)) { BR.claims.push({ ...cl, f: c.fam }); ch = true; } }); if (ch) bSave(BR); }
   // isNew يبقى صحيح طول الجولة اللي ظهرت بيها لأول مرة
   const keep = Object.fromEntries(Object.entries(ids).filter(([, w]) => g - w <= 10));
   sv({ ...S, ids: keep, fams, pick: { gw: g, ids: picked.map((c) => c.id) }, first: { ...(S.first?.gw === g ? S.first : { gw: g, ids: [] }), ids: [...new Set([...(S.first?.gw === g ? S.first.ids : []), ...picked.filter((c) => c.isNew).map((c) => c.id)])] } });
@@ -118,7 +198,7 @@ export function freshest(slides, n) {
   const g = ST.G.next || ST.G.cur, S = ld(), sl = S.sl || {};
   const prev = S.slp?.gw === g ? S.slp.ks : null;
   const out = prev ? [...slides.filter((s) => prev.includes(s.k)), ...slides.filter((s) => !prev.includes(s.k))].slice(0, n)
-    : [...slides].sort((a, b) => (sl[a.k] ?? -99) - (sl[b.k] ?? -99)).slice(0, n);
+    : [...slides].sort((a, b) => ((sl[a.k] ?? -99) - (sl[b.k] ?? -99)) || (slideK(b.k) - slideK(a.k))).slice(0, n);
   if (!prev || prev.join() !== out.map((s) => s.k).join()) { out.forEach((s) => (sl[s.k] = g)); sv({ ...ld(), sl, slp: { gw: g, ks: out.map((s) => s.k) } }); }
   return out;
 }

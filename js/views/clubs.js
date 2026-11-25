@@ -3,7 +3,8 @@
  * وصفحة لكل نادي: كل نتائجه، كل مبارياته الجاية، وكل لاعبيه
  * مرتبين بالنقاط من الأفضل للأسوأ. بيانات حقيقية فقط من FPL.
  * ============================================================ */
-import { ST, tShort, tName } from '../store.js';
+import { ST, tShort, tName, PM } from '../store.js';
+import { fixturesFor } from '../engine.js';
 import { tt } from '../i18n.js';
 import { esc, I, crest, scoreHTML, fmtTime } from '../ui.js';
 import { pShirt } from './common.js';
@@ -82,7 +83,7 @@ Object.assign(window, {
   clubZS: (k) => { ZSEL = ZSEL === k ? null : k; window.render(); },
   clubTS: (k) => { TSEL = TSEL === k ? null : k; window.render(); },
   clubFI: (k) => { FILT = k; window.render(); },
-  clubBO: (k, o) => { if (o) OPEN.add(k); else OPEN.delete(k); },
+  clubBO: (k, o) => { if (o) { OPEN.add(k); brEng(k); } else OPEN.delete(k); },
 });
 
 /* ============ التحليل الذكي: الشجرة ============ */
@@ -148,12 +149,31 @@ function nextViz(gws, tid) {
   const G = ST.G;
   return `<div class="ci-nx">${gws.map((g) => { const fs = (G.fx[g] || []).filter((f) => f.h === tid || f.a === tid); return `<div class="ci-nxg"><small>${tt(`ج${g}`, `GW${g}`)}</small>${fs.length ? fs.map((f) => { const h = f.h === tid, o = h ? f.a : f.h, d = h ? f.hd : f.ad; return `<span class="rate f${d}">${esc(tShort(o))}<em>${h ? tt('د', 'H') : tt('خ', 'A')}</em></span>`; }).join('') : `<span class="ci-bl">—</span>`}</div>`; }).join('')}</div>`;
 }
+/* الأبرز يختلف حسب المدرب: لاعبينه من هالنادي، وخصوم لاعبينه بالجولة الجاية، والفروع اللي يفتحها أكثر */
+const BRK = () => `fp_ci_eng_${ST.E?.entry?.id || 0}`;
+function brEng(k) { try { const o = JSON.parse(localStorage.getItem(BRK()) || '{}'); o[k] = (o[k] || 0) + 1; localStorage.setItem(BRK(), JSON.stringify(o)); } catch {} }
+function mgrCtx(tid) {
+  let eng = {}; try { eng = JSON.parse(localStorage.getItem(BRK()) || '{}'); } catch {}
+  const tot = Object.values(eng).reduce((a, b) => a + b, 0) || 1;
+  const sq = (ST.plan?.squad || []).map(PM).filter(Boolean), g = ST.G.next;
+  const mine = sq.filter((p) => p.team === tid), mAtt = mine.some((p) => p.pos === 'MID' || p.pos === 'FWD'), mDef = mine.some((p) => p.pos === 'DEF' || p.pos === 'GKP' || p.pos === 'GK');
+  const facing = g ? sq.filter((p) => fixturesFor(p.team, g).some((f) => f.opp === tid)) : [];
+  const fAtt = facing.some((p) => p.pos === 'MID' || p.pos === 'FWD'), fDef = facing.some((p) => p.pos !== 'MID' && p.pos !== 'FWD');
+  return (x) => { let k = 1;
+    if (mAtt && x.tone === 'g' && ['att', 'set', 'zone', 'time'].includes(x.br)) k *= 1.25;
+    if (mDef && ['def', 'disc'].includes(x.br)) k *= 1.2;
+    if (fAtt && x.tone === 'b' && ['def', 'zone', 'time', 'set'].includes(x.br)) k *= 1.35;
+    if (fDef && x.tone === 'g' && ['att', 'set'].includes(x.br)) k *= 1.3;
+    if (x.br === 'fpl' && mine.length) k *= 1.15;
+    return k * (1 + Math.min(0.3, (eng[x.br] || 0) / tot)); };
+}
 function aiHTML(tid) {
   ciLoad(tid, () => { if (ST.view === 'clubs' && SEL === tid && TAB === 'ai') window.render(); });
   const R = analyse(tid), A = R.A, M = memory(tid, R);
   if (!A.p) return `<p class="mut cl-e">${tt('ما لعب أي مباراة بعد، فماكو بيانات نحللها', 'No matches played yet')}</p>`;
   const all = Object.entries(R.branches).flatMap(([br, xs]) => xs.filter((x) => !x.always).map((x) => ({ ...x, br })));
-  const score = (x) => x.w / (1 + 0.3 * (M.seen[x.id] || 0)) + (M.freshIds.has(x.id) ? 0.45 : 0);
+  const ctxK = mgrCtx(tid);
+  const score = (x) => (x.w * ctxK(x)) / (1 + 0.3 * (M.seen[x.id] || 0)) + (M.freshIds.has(x.id) ? 0.45 : 0);
   const top = [...all].sort((a, b) => score(b) - score(a)).slice(0, 4);
   if (SAVED !== tid) { SAVED = tid; M.save(top.map((x) => x.id)); }
   const chg = M.changes.filter((c) => !c.ref);
