@@ -74,6 +74,9 @@ def conv(prop, val):
         c = parse(m.group(0)); return m.group(0) if c is None else fn(c)
     return COL.sub(rep, val)
 
+COLP = re.compile(r'^(color|background(-color|-image)?|border(-(top|right|bottom|left|inline|block)(-(start|end))?)?(-color)?|outline(-color)?|fill|stroke|box-shadow|text-shadow|-webkit-text-fill-color|caret-color|text-decoration-color)$')
+def is_col(p): return bool(COLP.match(p.strip().lower()))
+
 def scope(sel):
     out = []
     for s in split_top(sel, ','):
@@ -116,9 +119,13 @@ def decls(body):
         prop, val = d.split(':', 1)
         prop = prop.strip()
         if not prop or prop.startswith('--'): continue
-        if not COL.search(val): continue
-        nv = conv(prop, val)
-        if nv != val: res.append(f'{prop}:{nv.strip()}')
+        lit = COL.search(val)
+        # قواعد الألوان المبنية على متغيرات تنعاد كتابتها كما هي، حتى يبقى ترتيب التتالي نفسه
+        # (وإلا القاعدة الأساسية المولّدة تغلب حالات مثل .up و .on الأصلية)
+        if not lit and not ('var(' in val and is_col(prop)): continue
+        nv = conv(prop, val) if lit else val
+        if lit and nv == val and not ('var(' in val and is_col(prop)): continue
+        res.append(f'{prop}:{nv.strip()}')
     # الـ background المختصر يرجّع الـ clip للافتراضي، فنعيد كتابته (نص بتدرّج لوني)
     if any(r.split(':', 1)[0].strip().lower() == 'background' for r in res):
         for d in split_top(body, ';'):

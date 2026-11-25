@@ -26,7 +26,7 @@ html[data-ui=mint]:root,html[data-ui=mint]:root #view,html[data-ui=mint]:root .t
   --sh:var(--m-sh1)!important;
   --v4-bg:var(--m-bg)!important; --v4-s1:var(--m-card)!important; --v4-s2:var(--m-s2)!important; --v4-s3:var(--m-s3)!important;
   --v4-line:var(--m-line)!important; --v4-line2:var(--m-line2)!important;
-  --v4-ink:var(--m-ink)!important; --v4-ink2:var(--m-ink2)!important; --v4-ink3:var(--m-ink3)!important; --v4-dark:var(--m-on-lime)!important;
+  --v4-ink:var(--m-ink)!important; --v4-ink2:var(--m-ink2)!important; --v4-ink3:var(--m-ink3)!important; --v4-dark:#FFFFFF!important;
   --v4-sh1:var(--m-sh1)!important; --v4-sh2:var(--m-sh2)!important;
   --c-mint:#1F8A52!important; --c-sky:#2B7BC8!important; --c-lav:#6E55D0!important; --c-peach:#D9702A!important; --c-gold:#B57D06!important; --c-coral:#D9443F!important; --c-teal:#13917C!important;
   --fp-ink:var(--m-bg)!important; --fp-void:#E6ECE5!important; --fp-carbon:var(--m-card)!important; --fp-graphite:var(--m-s2)!important; --fp-slate:var(--m-s3)!important;
@@ -47,16 +47,16 @@ html[data-ui=mint]:root .topbar .icon-btn{background:var(--m-card)!important;bor
 html[data-ui=mint]:root .topbar .av{background:var(--m-lime)!important;color:var(--m-on-lime)!important;box-shadow:0 8px 18px -10px rgba(120,160,30,.7)!important}
 
 /* ---------- البطاقات البطولية: أخضر غامق مثل بطاقة الرصيد ---------- */
-html[data-ui=mint]:root .sy,html[data-ui=mint]:root .h2-hero,html[data-ui=mint]:root .hero,html[data-ui=mint]:root .team-hero,html[data-ui=mint]:root .ss-hero{
+html[data-ui=mint]:root .sy,html[data-ui=mint]:root .h2-hero,html[data-ui=mint]:root .team-hero{
   background:radial-gradient(120% 90% at 100% 0%,#2A5E44 0%,transparent 55%),linear-gradient(160deg,var(--m-deep),var(--m-deep2))!important;
   border:1px solid rgba(214,242,106,.14)!important;box-shadow:0 24px 48px -26px rgba(20,53,36,.7)!important;
   --v4-ink:#F2F7EF!important; --v4-ink2:#B7C9BC!important; --v4-ink3:#86A08E!important; --txt:#F2F7EF!important; --mut:#B7C9BC!important; --mut2:#86A08E!important;
   --v4-line:rgba(255,255,255,.08)!important; --v4-line2:rgba(255,255,255,.12)!important;
   --c-mint:#D6F26A!important; --c-gold:#FFD66E!important; --c-coral:#FF9C8F!important; --c-lav:#C9B6FF!important; --c-sky:#9ED2FF!important; --c-peach:#FFBE8F!important; --c-teal:#86E6D2!important;
-  --acc:#D6F26A!important; --acc-rgb:214,242,106!important; --on-acc:#173D2B!important;
+  --acc:#D6F26A!important; --acc-rgb:214,242,106!important; --on-acc:#173D2B!important; --v4-dark:#173D2B!important;
   color:#F2F7EF!important;
 }
-html[data-ui=mint]:root .sy :is(h3,b,strong),html[data-ui=mint]:root .hero :is(h1,h2,h3,b,strong),html[data-ui=mint]:root .team-hero :is(h1,h2,h3,b,strong){color:#F2F7EF}
+html[data-ui=mint]:root .sy :is(h3,b,strong),html[data-ui=mint]:root .team-hero :is(h1,h2,h3,b,strong){color:#F2F7EF}
 html[data-ui=mint]:root .sy :is(p,small,.sy-note:not(.up):not(.dn)){color:#B7C9BC}
 html[data-ui=mint]:root .sy-px li,html[data-ui=mint]:root .sy .sy-px li{background:rgba(255,255,255,.06)!important}
 html[data-ui=mint]:root .sy .up{color:#D6F26A!important}html[data-ui=mint]:root .sy .dn{color:#FF9C8F!important}
@@ -64,7 +64,9 @@ html[data-ui=mint]:root .sy-go{color:#F2F7EF!important;border-top-color:rgba(255
 html[data-ui=mint]:root .sy :is(.sy-prog i,.sy-bar i){background:rgba(255,255,255,.18)!important}
 html[data-ui=mint]:root .sy .sy-prog i::after,html[data-ui=mint]:root .sy .sy-bar i::after{background:#D6F26A!important}
 
-html[data-ui=mint]:root :is(.h2-hero,.team-hero,.hero,.ss-hero)::after{display:none!important}
+html[data-ui=mint]:root :is(.h2-hero,.team-hero)::after{display:none!important}
+html[data-ui=mint]:root :is(.hero,.ss-hero,.stadium){background:var(--m-card)!important;background-image:none!important;border:1px solid var(--m-line)!important;box-shadow:var(--m-sh1)!important}
+html[data-ui=mint]:root :is(.hero,.ss-hero,.stadium)::after{display:none!important}
 /* بطاقة الجولة بالرئيسية: الرقم الكبير ليموني والمربعات زجاج فاتح */
 html[data-ui=mint]:root .h2-hero .h2-pts b{color:#FFFFFF!important}
 html[data-ui=mint]:root .h2-hero .h2-pts span,html[data-ui=mint]:root .h2-hero .h2-top{color:#B7C9BC!important}
@@ -111,3 +113,48 @@ html[data-ui=mint]:root .ov{background:rgba(20,38,28,.32)!important}
 
 html[data-ui=mint]:root .ui-opt.on{border-color:#1F7A4D}
 html[data-ui=mint]:root .th-lock{opacity:.45;pointer-events:none}
+
+/* خطوط الشبكة والحلقات المرسومة داخل الكود (SVG): على الأبيض تصير خضراء خفيفة، وداخل البطاقات الغامقة تبقى بيضاء */
+html[data-ui=mint]:root [stroke="rgba(255,255,255,.04)"]{stroke:rgba(23,61,43,0.064)}
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero,.pitch) [stroke="rgba(255,255,255,.04)"]{stroke:rgba(255,255,255,.04)}
+html[data-ui=mint]:root [stroke="rgba(255,255,255,.07)"]{stroke:rgba(23,61,43,0.112)}
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero,.pitch) [stroke="rgba(255,255,255,.07)"]{stroke:rgba(255,255,255,.07)}
+html[data-ui=mint]:root [stroke="rgba(255,255,255,.08)"]{stroke:rgba(23,61,43,0.128)}
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero,.pitch) [stroke="rgba(255,255,255,.08)"]{stroke:rgba(255,255,255,.08)}
+html[data-ui=mint]:root [stroke="rgba(255,255,255,.13)"]{stroke:rgba(23,61,43,0.160)}
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero,.pitch) [stroke="rgba(255,255,255,.13)"]{stroke:rgba(255,255,255,.13)}
+
+/* حالات الاختيار: خلفية غامقة ونص أبيض واضح */
+html[data-ui=mint]:root :is(.seg button.on,.chips2 button.on){background:var(--m-deep)!important;color:#FFFFFF!important;border-color:var(--m-deep)!important}
+html[data-ui=mint]:root :is(.seg button.on,.chips2 button.on) *{color:#FFFFFF!important}
+html[data-ui=mint]:root .gwstrip button.on{background:var(--m-deep)!important;color:#FFFFFF!important;border-color:var(--m-deep)!important}
+html[data-ui=mint]:root .gwstrip button.on *{color:#FFFFFF!important}
+/* التبويبات الفعّالة: أخضر غامق بنص أبيض */
+html[data-ui=mint]:root :is(.tabs2,.mc-tabs) button.on,html[data-ui=mint]:root #view :is(.tabs2,.mc-tabs) button.on{background:var(--m-deep)!important;color:#FFFFFF!important;box-shadow:0 8px 18px -10px rgba(20,53,36,.6)!important}
+html[data-ui=mint]:root :is(.tabs2,.mc-tabs) button.on *,html[data-ui=mint]:root #view :is(.tabs2,.mc-tabs) button.on *{color:#FFFFFF!important}
+html[data-ui=mint]:root :is(.tabs2,.mc-tabs)[data-fx-keep]::before{background:var(--m-deep)!important}
+
+/* الرسوم البيانية: الأعمدة الرمادية أوضح، وفوق المعدل أخضر */
+html[data-ui=mint]:root .h2-chart .bar{box-shadow:inset 0 -1px 0 var(--m-line2)!important}
+html[data-ui=mint]:root .h2-chart .bar i{background:#D9E3DA!important}
+html[data-ui=mint]:root .h2-chart .bar i.up{background:linear-gradient(180deg,#2F9A62,#1F7A4D)!important}
+html[data-ui=mint]:root .h2-chart .bar s{background:var(--m-ink)!important;opacity:.55!important}
+html[data-ui=mint]:root .h2-leg i{background:#D9E3DA!important}html[data-ui=mint]:root .h2-leg i.up{background:#1F7A4D!important}
+html[data-ui=mint]:root .h2-leg s{background:var(--m-ink)!important}
+
+
+/* عنوان رحلة الموسم: تدرّج أخضر بدل الذهبي الفاتح */
+html[data-ui=mint]:root .jr-ttl b{background:linear-gradient(90deg,#1F7A4D,#173D2B)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important}
+/* شارات الإنجازات: ليموني بأيقونة خضراء غامقة بدل ألوان قوس قزح */
+html[data-ui=mint]:root .badge-c:not(.locked) .be{background:var(--m-lime)!important;color:var(--m-on-lime)!important;box-shadow:0 8px 18px -10px rgba(140,180,30,.7)!important;animation:none!important}
+html[data-ui=mint]:root .badge-c.locked .be{background:var(--m-s3)!important;color:var(--m-ink3)!important}
+/* الخطوط البيانية الصغيرة: أخضر أغمق حتى تبين على الأبيض */
+html[data-ui=mint]:root svg.spark polyline[stroke="#34D399"],html[data-ui=mint]:root svg.spark polyline[stroke="#7FE6A6"]{stroke:#1F8A52!important}
+html[data-ui=mint]:root svg [stroke="#34D399"],html[data-ui=mint]:root svg [stroke="#7FE6A6"],html[data-ui=mint]:root svg [stroke="#3CF5A0"]{stroke:#1F8A52}
+html[data-ui=mint]:root svg [fill="#34D399"],html[data-ui=mint]:root svg [fill="#7FE6A6"],html[data-ui=mint]:root svg [fill="#3CF5A0"]{fill:#2F9A62}
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero,.pitch) svg [stroke="#7FE6A6"]{stroke:#D6F26A}
+html[data-ui=mint]:root svg [stroke="#FFD66E"]{stroke:#C98A0B}html[data-ui=mint]:root svg [stroke="#8CC8FF"]{stroke:#2B7BC8}html[data-ui=mint]:root svg [stroke="#F472B6"]{stroke:#D0458F}
+html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero,.pitch) svg [stroke="#FFD66E"]{stroke:#FFD66E}html[data-ui=mint]:root :is(.sy,.h2-hero,.team-hero,.pitch) svg [stroke="#8CC8FF"]{stroke:#8CC8FF}
+/* الأرقام الكبيرة: على البطاقات البيضاء أخضر غامق، وعلى الخضراء أبيض */
+html[data-ui=mint]:root .hero .big-num{background:none!important;-webkit-text-fill-color:var(--m-deep)!important;color:var(--m-deep)!important}
+html[data-ui=mint]:root .team-hero .big-num{background:none!important;-webkit-text-fill-color:#FFFFFF!important;color:#FFFFFF!important}
