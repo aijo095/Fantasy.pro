@@ -430,32 +430,54 @@ const CIK = {};
 const ciOf = (tid) => { const k = `${tid}:${ST.G.fxList?.filter((f) => f.fin).length || 0}`; if (!CIK[k]) { try { CIK[k] = ciAnalyse(tid); } catch { CIK[k] = null; } } return CIK[k]; };
 const ciPick = (R, brs, tone) => (R ? brs.flatMap((b) => R.branches[b] || []).filter((x) => x.tone === tone && !x.always).sort((a, b) => b.w - a.w)[0] : null);
 function sOpp() {
-  const g = ST.G.next, xi = ST.plan?.xi; if (!g || !xi?.length) return null;
-  const rows = [], seen = new Set();
-  xi.map(PM).filter(Boolean).sort((a, b) => xp(b, g) - xp(a, g)).forEach((p) => {
-    const f = fixturesFor(p.team, g)[0]; if (!f || seen.has(f.opp + p.pos)) return;
-    const R = ciOf(f.opp); if (!R) return;
-    const att = p.pos === 'MID' || p.pos === 'FWD';
-    const base = (id) => { const y = Object.values(R.branches).flat().find((z) => z.id === id); return y?.R && y.R.r > y.R.n / 2 ? y : null; }; // معدل التسجيل/الاستقبال إذا أسوأ من نص الدوري
-    const x = att ? ciPick(R, ['zone', 'def', 'time', 'set'], 'b') || base('ga') : ciPick(R, ['att', 'set', 'time'], 'g') || (() => { const y = Object.values(R.branches).flat().find((z) => z.id === 'gf'); return y?.R && y.R.r <= y.R.n / 2 ? y : null; })();
-    if (!x) return; seen.add(f.opp + p.pos);
-    rows.push({ p, f, x, att });
-  });
-  ciLoad(rows[0]?.f.opp || xi.map(PM)[0]?.team);
+  const g = ST.G.next, xi = ST.plan?.xi, T = ciLeague(); if (!g || !xi?.length || !T) return null;
+  const tm = Object.values(T).filter((A) => A.p >= 3); if (tm.length < 12) return null;
+  const per = (A, k) => A[k] / A.p;
+  const rank = (tid, k, desc) => { const xs = [...tm].sort((a, b) => (desc ? per(b, k) - per(a, k) : per(a, k) - per(b, k))); return { r: xs.findIndex((A) => A.tid === tid) + 1, n: xs.length }; };
+  const OR = ['', '', 'ثاني ', 'ثالث ', 'رابع ', 'خامس '];
+  const rk = (R, best, worst) => (R.r <= 5 ? `، ${OR[R.r]}${best} بالدوري` : R.n + 1 - R.r <= 5 ? `، ${OR[R.n + 1 - R.r]}${worst} بالدوري` : '');
+  const last5 = (A, k) => A.res.slice(-5).reduce((a, r) => a + r[k], 0);
+  // نجمّع لاعبيك حسب الخصم والدور (هجوم/دفاع) حتى ما يتكرر نفس الخصم
+  const G = {};
+  xi.map(PM).filter(Boolean).forEach((p) => { const f = fixturesFor(p.team, g)[0]; if (!f || !T[f.opp]?.p) return; const att = p.pos === 'MID' || p.pos === 'FWD', k = f.opp + (att ? 'a' : 'd'); (G[k] = G[k] || { f, att, ps: [] }).ps.push(p); });
+  const rows = Object.values(G).map(({ f, att, ps }) => {
+    const O = T[f.opp], on = esc(tName(f.opp)), names = ps.sort((a, b) => xp(b, g) - xp(a, g)).slice(0, 2).map((p) => esc(p.name)).join(tt(' و', ' & '));
+    if (att) { // لاعبيك الهجوميين: شكد يستقبل الخصم
+      const R = rank(f.opp, 'ga', true), ga = per(O, 'ga'), good = R.r <= R.n / 2;
+      const x = good ? tt(`${on} يستقبل ${ga.toFixed(1)} هدف بالمباراة${rk(R, 'أضعف دفاع', 'أقوى دفاع')}، ودخل عليه ${goalsW(last5(O, 'ga'))} بآخر 5، وشباكه نظيفة بـ ${O.cs} بس من ${O.p}. فرصة أهداف وصناعات للاعبيك`, `${on} concede ${ga.toFixed(1)}/game`)
+        : tt(`${on} يستقبل ${ga.toFixed(1)} بس بالمباراة${rk(R, 'أضعف دفاع', 'أقوى دفاع')}، وشباكه نظيفة بـ ${O.cs} من ${O.p}. مباراة صعبة على لاعبيك الهجوميين`, `${on} concede only ${ga.toFixed(1)}/game`);
+      return { good, names, f, big: ga.toFixed(1), unit: tt('يستقبل', 'conc.'), x, w: Math.abs(R.r - R.n / 2) };
+    }
+    // مدافعيك وحارسك: شكد يسجّل الخصم ومنو هدّافه
+    const R = rank(f.opp, 'gf', true), gf = per(O, 'gf'), danger = R.r <= R.n / 2;
+    const top = ST.G.players.filter((p) => p.team === f.opp && p.gls > 0).sort((a, b) => b.gls - a.gls)[0];
+    const topT = top ? tt(`، وهدّافه ${esc(top.name)} سجّل ${goalsW(top.gls)}`, `, top scorer ${esc(top.name)} (${top.gls})`) : '';
+    const x = danger ? tt(`${on} يسجّل ${gf.toFixed(1)} بالمباراة${rk(R, 'أقوى هجوم', 'أضعف هجوم')}${topT}. فرصة الشباك النظيفة ضعيفة`, `${on} score ${gf.toFixed(1)}/game`)
+      : tt(`${on} يسجّل ${gf.toFixed(1)} بس بالمباراة${rk(R, 'أقوى هجوم', 'أضعف هجوم')}، وما سجّل بـ ${O.fts} من ${O.p}${topT}. فرصة شباك نظيفة لدفاعك`, `${on} score only ${gf.toFixed(1)}/game`);
+    return { good: !danger, names, f, big: gf.toFixed(1), unit: tt('يسجّل', 'scores'), x, w: Math.abs(R.r - R.n / 2) };
+  }).sort((a, b) => b.w - a.w);
+  ciLoad(rows[0]?.f.opp);
   if (!rows.length) return null;
-  const good = rows.filter((r) => r.att).slice(0, 3), warn = rows.filter((r) => !r.att).slice(0, 2);
-  const li = (r, i) => `<li style="--d:${80 + i * 60}ms"><b>${esc(r.p.name)} ${tt('ضد', 'vs')} <bdi dir="ltr">${esc(tShort(r.f.opp))}</bdi></b>${r.x.big != null ? `<span class="${r.att ? 'up' : 'dn'}" dir="ltr">${esc(String(r.x.big))}</span>` : ''}<small>${esc(r.x.title)}</small></li>`;
-  return { k: 'opp', col: 'var(--c-lav)', ic: 'target', h: tt(`خصوم تشكيلتك بالجولة ${g}`, `Your opponents GW ${g}`), sub: tt('من التحليل الذكي لكل نادي', 'From each club’s smart analysis'), to: `clubAI(${rows[0].f.opp})`, toL: tt('تحليل الخصم', 'Opponent analysis'),
-    body: `${good.length ? `<p class="sy-note up">${tt('نقاط ضعف تستغلها', 'Weak spots to exploit')}</p><ul class="sy-px">${good.map(li).join('')}</ul>` : ''}${warn.length ? `<p class="sy-note dn">${tt('انتبه على دفاعك', 'Watch your defence')}</p><ul class="sy-px">${warn.map((r, i) => li(r, i + good.length)).join('')}</ul>` : ''}` };
+  const good = rows.filter((r) => r.good).slice(0, 2), warn = rows.filter((r) => !r.good).slice(0, 2);
+  const li = (r, i) => `<li style="--d:${80 + i * 60}ms"><b>${r.names} ${tt('ضد', 'vs')} <bdi dir="ltr">${esc(tShort(r.f.opp))}</bdi></b><span class="${r.good ? 'up' : 'dn'}" dir="ltr">${r.big}</span><small>${r.x}</small></li>`;
+  return { k: 'opp', col: 'var(--c-lav)', ic: 'target', h: tt(`خصوم تشكيلتك بالجولة ${g}`, `Your opponents GW ${g}`), sub: tt('الرقم: شكد يستقبل الخصم (للمهاجمين) أو يسجّل (للمدافعين) بالمباراة', 'Opponent goals conceded/scored per game'), to: `clubAI(${rows[0].f.opp})`, toL: tt('تحليل الخصم', 'Opponent analysis'),
+    body: `${good.length ? `<p class="sy-note up">${tt('فرص لتشكيلتك', 'Opportunities')}</p><ul class="sy-px">${good.map(li).join('')}</ul>` : ''}${warn.length ? `<p class="sy-note dn">${tt('انتبه', 'Watch out')}</p><ul class="sy-px">${warn.map((r, i) => li(r, i + good.length)).join('')}</ul>` : ''}` };
 }
 function sCapClub() {
-  const cap = PM(ST.plan?.cap), g = ST.G.next; if (!cap || !g) return null;
-  const R = ciOf(cap.team); if (!R?.A?.p) return null;
-  const xs = Object.values(R.branches).flat().filter((x) => !x.always && x.tone === 'g').sort((a, b) => b.w - a.w).slice(0, 3);
-  const f = fixturesFor(cap.team, g)[0], O = f ? ciOf(f.opp) : null, ow = ciPick(O, ['def', 'zone', 'time'], 'b');
-  if (!xs.length && !ow) return null;
-  return { k: 'capc', col: 'var(--c-gold)', ic: 'crown', h: tt(`نادي كابتنك: ${tName(cap.team)}`, `Your captain’s club: ${tName(cap.team)}`), sub: f ? tt(`${cap.name} ضد ${tName(f.opp)} ${f.home ? 'بأرضه' : 'برا'}`, `${cap.name} vs ${tName(f.opp)}`) : '', to: `clubAI(${cap.team})`, toL: tt('تحليل النادي', 'Club analysis'),
-    body: `<ul class="sy-px">${xs.map((x, i) => `<li style="--d:${80 + i * 60}ms"><b>${esc(x.title)}</b>${x.big != null ? `<span class="up" dir="ltr">${esc(String(x.big))}</span>` : ''}<small>${esc(x.unit || '')}</small></li>`).join('')}</ul>${ow ? `<p class="sy-note up">${tt(`وخصمه: ${ow.title}`, `Opponent: ${ow.title}`)}</p>` : ''}` };
+  const cap = PM(ST.plan?.cap), g = ST.G.next, T = ciLeague(); if (!cap || !g || !T?.[cap.team]?.p) return null;
+  const tm = Object.values(T).filter((A) => A.p >= 3), A = T[cap.team], f = fixturesFor(cap.team, g)[0], O = f ? T[f.opp] : null;
+  const rnk = (tid, k) => [...tm].sort((a, b) => b[k] / b.p - a[k] / a.p).findIndex((x) => x.tid === tid) + 1;
+  const n = tm.length, l5 = A.res.slice(-5), p5 = l5.reduce((a, r) => a + (r.r === 'W' ? 3 : r.r === 'D' ? 1 : 0), 0);
+  const items = [
+    { t: tt(`هجوم ${tName(cap.team)}`, 'Attack'), big: (A.gf / A.p).toFixed(1), x: tt(`هدف بالمباراة، ترتيبه ${rnk(cap.team, 'gf')} من ${n} بالتسجيل`, `goals/game, ranked ${rnk(cap.team, 'gf')}/${n}`), up: rnk(cap.team, 'gf') <= n / 2 },
+    { t: tt(`${cap.name} بالموسم`, `${cap.name} this season`), big: String(cap.gls + cap.ast), x: tt(`${cap.gls + cap.ast ? `${cap.gls ? goalsW(cap.gls) : 'ولا هدف'} و${cap.ast} صناعة` : 'ما سجّل ولا صنع لحد هسه'}، وفرصه تسوى ${cap.xg.toFixed(1)} هدف متوقع${A.gf && cap.gls + cap.ast ? `. ساهم بـ ${Math.round(((cap.gls + cap.ast) / A.gf) * 100)}% من أهداف فريقه` : ''}`, `${cap.gls} G, ${cap.ast} A, ${cap.xg.toFixed(1)} xG`), up: true },
+    { t: tt('فورمة الفريق بآخر 5', 'Team form, last 5'), big: String(p5), x: tt(`نقطة من 15، سجّل ${goalsW(l5.reduce((a, r) => a + r.gf, 0))}`, `pts of 15`), up: p5 >= 8 },
+  ];
+  if (O) { const r = [...tm].sort((a, b) => b.ga / b.p - a.ga / a.p).findIndex((x) => x.tid === f.opp) + 1;
+    items.push({ t: tt(`دفاع ${tName(f.opp)}`, `${tName(f.opp)} defence`), big: (O.ga / O.p).toFixed(1), x: tt(`يستقبل بالمباراة، ${r <= n / 2 ? `من أضعف ${r <= 5 ? 5 : 10} دفاعات` : 'من الدفاعات القوية'} (ترتيبه ${n + 1 - r} من ${n})`, `conceded/game`), up: r <= n / 2 }); }
+  const good = items.filter((x) => x.up).length;
+  return { k: 'capc', col: 'var(--c-gold)', ic: 'crown', h: tt(`كابتنك ${cap.name}`, `Your captain ${cap.name}`), sub: f ? tt(`ضد ${tName(f.opp)} ${f.home ? 'بأرضه' : 'برا'}، ${good >= 3 ? 'اختيار قوي' : good === 2 ? 'اختيار متوسط' : 'فكّر ببديل'}`, `vs ${tName(f.opp)}`) : '', to: `clubAI(${cap.team})`, toL: tt('تحليل النادي', 'Club analysis'),
+    body: `<ul class="sy-px">${items.map((x, i) => `<li style="--d:${80 + i * 60}ms"><b>${esc(x.t)}</b><span class="${x.up ? 'up' : 'dn'}" dir="ltr">${x.big}</span><small>${esc(x.x)}</small></li>`).join('')}</ul>` };
 }
 
 /* ---------- إحصائيات الأندية بالمربع: تتبدّل كل جولة (٢ من ٤) وتتحدث بعد كل مباراة ---------- */

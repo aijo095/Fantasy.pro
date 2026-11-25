@@ -62,7 +62,7 @@ const GEN = [
     return p && p.b >= 0.8 ? [{ id: `bon:${p.p.id}`, fam: 'bonus', sc: 0.45 + p.b / 4, tone: 'up', t: tt(`صياد البونص: ${p.p.name}`, `Bonus magnet: ${p.p.name}`), x: tt(`ياخذ ${n1(p.b)} نقطة بونص بكل 90 دقيقة (${p.p.bonus} بالموسم)، وخصمه الجاي ${tName(nf(p.p, g).opp)}`, `${n1(p.b)} bonus per 90`), big: n1(p.b) }] : []; },
   // التحليل الذكي: أبرز نقطة قوة بأندية تشكيلتك ونقطة ضعف بخصومهم
   ({ g, teams }) => teams.flatMap((tid) => { const R = ci(tid), f = fixturesFor(tid, g)[0], O = f ? ci(f.opp) : null, out = [];
-    const best = (X, tone) => (X ? Object.values(X.branches).flat().filter((x) => x.tone === tone && !x.always && !['gf', 'ga', 'fdr', 'cs'].includes(x.id)).sort((a, b) => b.w - a.w)[0] : null);
+    const best = (X, tone) => (X ? Object.values(X.branches).flat().filter((x) => x.tone === tone && !x.always && !['gf', 'ga', 'fdr', 'cs'].includes(x.id) && /\d/.test(x.text)).sort((a, b) => b.w - a.w)[0] : null);
     const s = best(R, 'g'); if (s) out.push({ id: `ci:${tid}:${s.id}`, fam: 'club', sc: 0.35 + s.w / 2.5, tone: 'up', t: `${tName(tid)}: ${s.title}`, x: wu(s), big: s.big != null ? String(s.big) : null });
     const w = best(O, 'b'); if (w) out.push({ id: `cio:${f.opp}:${w.id}`, fam: 'opp', sc: 0.35 + w.w / 2.5, tone: 'up', t: tt(`خصم ${tName(tid)}: ${w.title}`, `${tName(tid)}’s opponent: ${w.title}`), x: wu(w), big: w.big != null ? String(w.big) : null });
     return out; }),
