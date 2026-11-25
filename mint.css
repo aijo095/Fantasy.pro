@@ -242,8 +242,6 @@ html[data-ui=mint]:root :is(.pitch,.rvp,.rv3-pitch,.lu3-pitch) svg :is(line,rect
 /* النصوص الصغيرة على العشب (الدقائق، الحالة) بيضاء واضحة */
 html[data-ui=mint]:root :is(.rvp,.pitch,.rv3-pitch) :is(.mc-min,.rvp-min,.pmin){color:#FFFFFF!important;text-shadow:0 1px 2px rgba(0,0,0,.25)}
 
-/* بطاقة اللاعب بالملعب: الاسم أبيض والنقاط رمادي، نفس بطاقات الدكة */
-html[data-ui=mint]:root .pl .nm{background:#FFFFFF!important;color:var(--m-ink)!important}
-html[data-ui=mint]:root .pl .lb:not(.fxl):not(.nx3){background:#D5DCE4!important;color:#14261C!important}
-html[data-ui=mint]:root .rvp-nm{background:#FFFFFF!important;color:var(--m-ink)!important}
-html[data-ui=mint]:root .rvp-pt:not(.cap){background:#D5DCE4!important;color:#14261C!important}
+/* بطاقة اللاعب بالملعب: ألوان النقاط حسب الأحداث تبقى، بس الخانة اللي جانت بيضاء (2-4 نقاط أو قبل المباراة) تصير رمادي مثل الدكة */
+html[data-ui=mint]:root .pl .lb.lpts:is([style*="#F1F5F9"],[style*="#E2E8F0"]){background:#CBD5E1!important}
+html[data-ui=mint]:root .rvp-pt:not(.cap):not([style*="background"]){background:#CBD5E1!important}
