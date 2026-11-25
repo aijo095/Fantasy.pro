@@ -134,6 +134,8 @@ function rankIn(all, tid, fn, desc = true, minN = 12) {
 }
 const ORD2 = ['', '', 'ثاني', 'ثالث', 'رابع', 'خامس'];
 // صياغة الترتيب: «أقوى هجوم بالدوري»، «ثالث أضعف دفاع بالدوري». الوسط ما ينكتب (الشريط يبيّنه)
+// نقاط المساهمات الدفاعية بالفانتازي: المدافع ياخذ نقطتين إذا جمع 10 تدخلات وقطع وتشتيت وصد بالمباراة
+const dcNote = (R, verb) => !R ? '' : R.r <= Math.ceil(R.n / 4) ? ` مدافعينه ${verb} كثير، فعندهم فرصة أكبر ياخذون نقطتين المساهمات الدفاعية (10 تدخلات وقطع وتشتيت بالمباراة).` : R.r > R.n - Math.ceil(R.n / 4) ? ` مدافعينه ${verb} قليل، ففرصتهم أضعف بنقاط المساهمات الدفاعية.` : '';
 const rankTxt = (R, more, less, tail = '') => { if (!R) return ''; const b = R.n + 1 - R.r; const t = R.r === 1 ? more : R.r <= 5 ? `${ORD2[R.r]} ${more}` : b === 1 ? less : b <= 5 ? `${ORD2[b]} ${less}` : ''; return t ? `${t}${tail} بالدوري` : ''; };
 const extreme = (R) => (!R ? 0 : 1 - (Math.min(R.r, R.n + 1 - R.r) - 1) / (R.n / 2));
 const SIDE = { l: tt('اليسرى', 'left'), c: tt('الوسط', 'centre'), r: tt('اليمنى', 'right') };
@@ -252,8 +254,8 @@ export function analyse(tid) {
     if (A.s.pas && A.s.pasA) { const acc = (A.s.pasA / A.s.pas) * 100, R = L((a) => (a.s.pas && a.s.pasA ? a.s.pasA / a.s.pas : null)); add('style', 'pass', tt('دقة التمرير', 'Passing accuracy'), `${Math.round(A.s.pas)} تمريرة بالمباراة${R ? `، ${rankTxt(R, 'أدق فريق', 'أقل فريق دقة')}` : ''}.`, 0.3 + extreme(R) * 0.5, 'n', { big: Math.round(acc) + '%', unit: tt('دقة', 'accuracy'), R }); }
     if (A.s.crs != null) { const R = L((a) => a.s.crs); add('style', 'crs', tt('العرضيات', 'Crossing'), `${A.s.crsA ? `${Math.round((A.s.crsA / A.s.crs) * 100)}% منها توصل لزميل` : 'يعتمد على الأطراف'}${R ? `. ${rankTxt(R, 'أكثر فريق يرفع عرضيات', 'أقل فريق يرفع عرضيات')}` : ''}.`, 0.3 + extreme(R) * 0.5, 'n', { big: n1(A.s.crs), unit: tt('عرضية بالمباراة', 'per game'), R }); }
     if (A.s.lb != null) { const R = L((a) => a.s.lb); add('style', 'lb', tt('الكرات الطويلة', 'Long balls'), `مقياس للعب المباشر${R ? `. ${rankTxt(R, 'أكثر فريق يلعب طويل', 'أقل فريق يلعب طويل')}` : ''}.`, 0.3 + extreme(R) * 0.5, 'n', { big: n1(A.s.lb), unit: tt('كرة طويلة بالمباراة', 'per game'), R }); }
-    if (A.s.tkl != null) { const v = (A.s.tkl || 0) + (A.s.int || 0), R = L((a) => (a.s.tkl != null ? (a.s.tkl || 0) + (a.s.int || 0) : null)); add('style', 'press', tt('افتكاك الكرة', 'Winning the ball'), `${n1(A.s.tkl)} تدخّل و${n1(A.s.int)} قطع بالمباراة${R ? `، ${rankTxt(R, 'أكثر فريق يفتك الكرة', 'أقل فريق يفتك الكرة')}` : ''}. هذا يرفع نقاط المساهمات الدفاعية لمدافعينه.`, 0.3 + extreme(R) * 0.5, 'n', { big: n1(v), unit: tt('بالمباراة', 'per game'), R }); }
-    if (A.s.clr != null) { const R = L((a) => a.s.clr); add('style', 'clr', tt('التشتيت', 'Clearances'), `${A.s.clr >= 25 ? 'يدافع بعمق ويتعرّض لضغط كثير' : 'قليل ما ينحصر بمنطقته'}${R ? `. ${rankTxt(R, 'أكثر فريق يشتت', 'أقل فريق يشتت')}` : ''}.`, 0.3 + extreme(R) * 0.5, 'n', { big: n1(A.s.clr), unit: tt('بالمباراة', 'per game'), R }); }
+    if (A.s.tkl != null) { const v = (A.s.tkl || 0) + (A.s.int || 0), R = L((a) => (a.s.tkl != null ? (a.s.tkl || 0) + (a.s.int || 0) : null)); add('style', 'press', tt('افتكاك الكرة', 'Winning the ball'), `بكل مباراة يسوي ${n1(A.s.tkl)} تدخّل على الخصم و${n1(A.s.int)} قطع لتمريراته${rankTxt(R, 'أكثر فريق يفتك الكرة', 'أقل فريق يفتك الكرة') ? `، وهو ${rankTxt(R, 'أكثر فريق يفتك الكرة', 'أقل فريق يفتك الكرة')}` : ''}.${dcNote(R, 'يفتكون الكرة')}`, 0.3 + extreme(R) * 0.5, 'n', { big: n1(v), unit: tt('بالمباراة', 'per game'), R }); }
+    if (A.s.clr != null) { const R = L((a) => a.s.clr); add('style', 'clr', tt('التشتيت', 'Clearances'), `${A.s.clr >= 25 ? 'يدافع بعمق ويتعرّض لضغط كثير' : 'قليل ما ينحصر بمنطقته'}${R ? `. ${rankTxt(R, 'أكثر فريق يشتت', 'أقل فريق يشتت')}` : ''}${dcNote(R, 'يشتتون الكرة')}`, 0.3 + extreme(R) * 0.5, 'n', { big: n1(A.s.clr), unit: tt('بالمباراة', 'per game'), R }); }
   }
 
   /* النتائج والشخصية */
