@@ -116,7 +116,7 @@ function renderLink(prefill = '', notice = '') {
 async function onSignedIn(u) {
   ST.user = u; splash(tt('جارِ تحميل حسابك…', 'Loading your account…'));
   try { ST.profile = await AU.loadProfile(u.uid); } catch { ST.profile = null; }
-  try { const L = ST.profile?.look; if (L && !localStorage.getItem('fp_theme')) { localStorage.setItem('fp_theme', L.th || 'def'); localStorage.setItem('fp_bg', L.bg || 'live'); const r = document.documentElement; L.th && L.th !== 'def' ? r.setAttribute('data-th', L.th) : r.removeAttribute('data-th'); L.bg && L.bg !== 'live' ? r.setAttribute('data-bg', L.bg) : r.removeAttribute('data-bg'); } } catch {} // المظهر يتبعك على أي جهاز
+  try { const L = ST.profile?.look; if (L && !localStorage.getItem('fp_theme')) { localStorage.setItem('fp_theme', L.th || 'def'); localStorage.setItem('fp_bg', L.bg || 'live'); const r = document.documentElement; L.th && L.th !== 'def' ? r.setAttribute('data-th', L.th) : r.removeAttribute('data-th'); L.bg && L.bg !== 'live' ? r.setAttribute('data-bg', L.bg) : r.removeAttribute('data-bg'); if (L.ui === 'mint') { localStorage.setItem('fp_ui', 'mint'); location.reload(); } } } catch {} // المظهر يتبعك على أي جهاز
   if (ST.profile?.banned) { splash(tt('تم إيقاف هذا الحساب من الإدارة.', 'This account was suspended by admin.') + `<br><button class="btn btn-g btn-sm" style="margin-top:12px" onclick="doLogout()">${t('logout')}</button>`); return; }
   if (ST.profile?.lang && ST.profile.lang !== lang()) setLang(ST.profile.lang);
   ST.admin = await AU.isAdmin(u);

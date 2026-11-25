@@ -1,0 +1,113 @@
+/* =========================================================
+   واجهة «زمرّد» الفاتحة — خيار ثاني من الإعدادات (html[data-ui=mint]:root)
+   الواجهة الأصلية الغامقة ما تتأثر أبد: كل شي هنا محصور تحت data-ui=mint.
+   الهوية: خلفية فاتحة مخضرّة، بطاقات بيضاء ناعمة، بطاقات بطولية بالأخضر الغامق،
+   والليموني للأفعال المهمة (الأزرار الرئيسية، المؤشر الفعّال).
+   mint-gen.css (مولّد) يحوّل ألوان كل الأقسام، وهذا الملف يضيف التوكنات والبصمة.
+========================================================= */
+html[data-ui=mint]:root{
+  --m-bg:#EEF3EE; --m-card:#FFFFFF; --m-s2:#F3F7F2; --m-s3:#E7EEE6;
+  --m-ink:#14261C; --m-ink2:#5B6B60; --m-ink3:#8A978D;
+  --m-deep:#1C4532; --m-deep2:#143524; --m-lime:#D6F26A; --m-lime-d:#C3E34F; --m-on-lime:#173D2B;
+  --m-line:rgba(23,61,43,.08); --m-line2:rgba(23,61,43,.13);
+  --m-sh1:0 1px 2px rgba(23,61,43,.04),0 10px 28px -16px rgba(23,61,43,.22);
+  --m-sh2:0 1px 2px rgba(23,61,43,.05),0 22px 48px -24px rgba(23,61,43,.32);
+  color-scheme:light;
+}
+/* التوكنات المشتركة بكل الطبقات (الأصلية، ui2، v3، v4، والألوان الملوّنة) */
+html[data-ui=mint]:root,html[data-ui=mint]:root #view,html[data-ui=mint]:root .topbar,html[data-ui=mint]:root .ov,html[data-ui=mint]:root .bnav,html[data-ui=mint]:root .sheet{
+  --bg:var(--m-bg)!important; --bg2:var(--m-s2)!important; --s1:var(--m-card)!important; --s2:var(--m-s2)!important; --s3:var(--m-s3)!important;
+  --line:var(--m-line)!important; --line2:var(--m-line2)!important;
+  --txt:var(--m-ink)!important; --mut:var(--m-ink2)!important; --mut2:var(--m-ink3)!important;
+  --acc:#1F7A4D!important; --acc-d:#17633E!important; --acc-rgb:31,122,77!important; --on-acc:#FFFFFF!important; --acc-soft:rgba(31,122,77,.1)!important;
+  --g1:#1F7A4D!important; --lime:#1F7A4D!important; --good:#1F8A52!important;
+  --bad:#D9443F!important; --warn:#C98A0B!important; --gold:#B57D06!important; --info:#2B7BC8!important;
+  --card-a:rgba(255,255,255,.92)!important; --card-b:rgba(255,255,255,.86)!important;
+  --sh:var(--m-sh1)!important;
+  --v4-bg:var(--m-bg)!important; --v4-s1:var(--m-card)!important; --v4-s2:var(--m-s2)!important; --v4-s3:var(--m-s3)!important;
+  --v4-line:var(--m-line)!important; --v4-line2:var(--m-line2)!important;
+  --v4-ink:var(--m-ink)!important; --v4-ink2:var(--m-ink2)!important; --v4-ink3:var(--m-ink3)!important; --v4-dark:var(--m-on-lime)!important;
+  --v4-sh1:var(--m-sh1)!important; --v4-sh2:var(--m-sh2)!important;
+  --c-mint:#1F8A52!important; --c-sky:#2B7BC8!important; --c-lav:#6E55D0!important; --c-peach:#D9702A!important; --c-gold:#B57D06!important; --c-coral:#D9443F!important; --c-teal:#13917C!important;
+  --fp-ink:var(--m-bg)!important; --fp-void:#E6ECE5!important; --fp-carbon:var(--m-card)!important; --fp-graphite:var(--m-s2)!important; --fp-slate:var(--m-s3)!important;
+  --fp-edge:var(--m-line)!important; --fp-edge-2:var(--m-line2)!important; --fp-edge-hi:rgba(23,61,43,.2)!important;
+  --fp-steel:var(--m-ink2)!important; --fp-titan:#3F5146!important; --fp-chrome:var(--m-ink)!important; --fp-pewter:var(--m-ink3)!important;
+  --fp-neon:#1F8A52!important; --fp-neon-d:#17633E!important; --fp-neon-rgb:31,138,82!important; --fp-on-neon:#FFFFFF!important;
+  --lift-1:var(--m-sh1)!important; --lift-2:var(--m-sh2)!important;
+  --ci-line:var(--m-line)!important; --ci-soft:rgba(23,61,43,.035)!important;
+}
+html[data-ui=mint]:root,html[data-ui=mint]:root body,html[data-ui=mint]:root.v4 body,html[data-ui=mint]:root.v2 body{background:var(--m-bg)!important;color:var(--m-ink)}
+html[data-ui=mint]:root body::before,html[data-ui=mint]:root .app::before,html[data-ui=mint]:root #lux-bg{display:none!important}
+
+/* ---------- الأسطح: بطاقات بيضاء ناعمة ---------- */
+html[data-ui=mint]:root .card,html[data-ui=mint]:root .list{background:var(--m-card)!important;border:1px solid var(--m-line)!important;box-shadow:var(--m-sh1)!important}
+html[data-ui=mint]:root .topbar,html[data-ui=mint]:root.v4 .topbar{background:linear-gradient(var(--m-bg) 72%,rgba(238,243,238,0))!important}
+html[data-ui=mint]:root .topbar.scrolled{background:rgba(238,243,238,.82)!important;-webkit-backdrop-filter:saturate(1.4) blur(18px);backdrop-filter:saturate(1.4) blur(18px);box-shadow:0 1px 0 var(--m-line)!important}
+html[data-ui=mint]:root .topbar .icon-btn{background:var(--m-card)!important;border:1px solid var(--m-line)!important;box-shadow:var(--m-sh1)!important;color:var(--m-ink)!important}
+html[data-ui=mint]:root .topbar .av{background:var(--m-lime)!important;color:var(--m-on-lime)!important;box-shadow:0 8px 18px -10px rgba(120,160,30,.7)!important}
+
+/* ---------- البطاقات البطولية: أخضر غامق مثل بطاقة الرصيد ---------- */
+html[data-ui=mint]:root .sy,html[data-ui=mint]:root .h2-hero,html[data-ui=mint]:root .hero,html[data-ui=mint]:root .team-hero,html[data-ui=mint]:root .ss-hero{
+  background:radial-gradient(120% 90% at 100% 0%,#2A5E44 0%,transparent 55%),linear-gradient(160deg,var(--m-deep),var(--m-deep2))!important;
+  border:1px solid rgba(214,242,106,.14)!important;box-shadow:0 24px 48px -26px rgba(20,53,36,.7)!important;
+  --v4-ink:#F2F7EF!important; --v4-ink2:#B7C9BC!important; --v4-ink3:#86A08E!important; --txt:#F2F7EF!important; --mut:#B7C9BC!important; --mut2:#86A08E!important;
+  --v4-line:rgba(255,255,255,.08)!important; --v4-line2:rgba(255,255,255,.12)!important;
+  --c-mint:#D6F26A!important; --c-gold:#FFD66E!important; --c-coral:#FF9C8F!important; --c-lav:#C9B6FF!important; --c-sky:#9ED2FF!important; --c-peach:#FFBE8F!important; --c-teal:#86E6D2!important;
+  --acc:#D6F26A!important; --acc-rgb:214,242,106!important; --on-acc:#173D2B!important;
+  color:#F2F7EF!important;
+}
+html[data-ui=mint]:root .sy :is(h3,b,strong),html[data-ui=mint]:root .hero :is(h1,h2,h3,b,strong),html[data-ui=mint]:root .team-hero :is(h1,h2,h3,b,strong){color:#F2F7EF}
+html[data-ui=mint]:root .sy :is(p,small,.sy-note:not(.up):not(.dn)){color:#B7C9BC}
+html[data-ui=mint]:root .sy-px li,html[data-ui=mint]:root .sy .sy-px li{background:rgba(255,255,255,.06)!important}
+html[data-ui=mint]:root .sy .up{color:#D6F26A!important}html[data-ui=mint]:root .sy .dn{color:#FF9C8F!important}
+html[data-ui=mint]:root .sy-go{color:#F2F7EF!important;border-top-color:rgba(255,255,255,.1)!important}
+html[data-ui=mint]:root .sy :is(.sy-prog i,.sy-bar i){background:rgba(255,255,255,.18)!important}
+html[data-ui=mint]:root .sy .sy-prog i::after,html[data-ui=mint]:root .sy .sy-bar i::after{background:#D6F26A!important}
+
+html[data-ui=mint]:root :is(.h2-hero,.team-hero,.hero,.ss-hero)::after{display:none!important}
+/* بطاقة الجولة بالرئيسية: الرقم الكبير ليموني والمربعات زجاج فاتح */
+html[data-ui=mint]:root .h2-hero .h2-pts b{color:#FFFFFF!important}
+html[data-ui=mint]:root .h2-hero .h2-pts span,html[data-ui=mint]:root .h2-hero .h2-top{color:#B7C9BC!important}
+html[data-ui=mint]:root .h2-hero .h2-avg.up bdi,html[data-ui=mint]:root .h2-hero .h2-avg.up{color:#D6F26A!important}
+html[data-ui=mint]:root .h2-hero .h2-avg span{color:#B7C9BC!important}
+html[data-ui=mint]:root .h2-hero .h2-stats>*{background:rgba(255,255,255,.07)!important;border:1px solid rgba(255,255,255,.08)!important;box-shadow:none!important;color:#F2F7EF!important}
+html[data-ui=mint]:root .h2-hero .h2-stats :is(span,small){color:#B7C9BC!important}
+html[data-ui=mint]:root .h2-hero .h2-stats :is(b,strong){color:#FFFFFF!important}
+html[data-ui=mint]:root .h2-hero .h2-stats em.up{color:#D6F26A!important}
+html[data-ui=mint]:root .h2-hero .h2-acts button{background:rgba(255,255,255,.1)!important;color:#F2F7EF!important;border:0!important}
+html[data-ui=mint]:root .h2-hero .gw-mark{color:rgba(255,255,255,.05)!important;-webkit-text-stroke-color:rgba(255,255,255,.08)!important}
+/* شريط الموعد النهائي: بطاقة بيضاء بأرقام واضحة */
+html[data-ui=mint]:root .h2-dl{background:var(--m-card)!important;background-image:none!important;border:1px solid var(--m-line)!important;box-shadow:var(--m-sh1)!important}
+html[data-ui=mint]:root .h2-dl::before,html[data-ui=mint]:root .h2-dl::after{display:none!important}
+html[data-ui=mint]:root .h2-cd>div{background:var(--m-s2)!important;border-radius:12px}
+html[data-ui=mint]:root .h2-cd b{color:var(--m-ink)!important}
+
+/* الملعب يبقى أخضر عشبي غامق */
+html[data-ui=mint]:root .pitch{background:linear-gradient(180deg,#1E5A3C 0%,#174A31 100%)!important;border:1px solid rgba(214,242,106,.18)!important}
+html[data-ui=mint]:root .pitch::before{background:repeating-linear-gradient(180deg,rgba(255,255,255,.035) 0 52px,transparent 52px 104px)!important}
+html[data-ui=mint]:root .pitch svg.lines{opacity:.22!important;color:#fff!important;stroke:#fff!important}
+
+/* ---------- الأفعال: ليموني بنص أخضر غامق ---------- */
+html[data-ui=mint]:root .btn-p,html[data-ui=mint]:root.v4 .btn-p{background:var(--m-lime)!important;color:var(--m-on-lime)!important;border:0!important;box-shadow:0 10px 22px -12px rgba(140,180,30,.75)!important}
+html[data-ui=mint]:root .btn-p:hover{background:var(--m-lime-d)!important}
+html[data-ui=mint]:root .btn-g{background:var(--m-card)!important;color:var(--m-ink)!important;border:1px solid var(--m-line2)!important}
+
+/* ---------- الشريط السفلي: كبسولة بيضاء والفعّال ليموني ---------- */
+html[data-ui=mint]:root .bnav,html[data-ui=mint]:root.ui2 .bnav{background:rgba(255,255,255,.9)!important;border:1px solid var(--m-line)!important;box-shadow:0 18px 40px -18px rgba(23,61,43,.35),0 2px 6px rgba(23,61,43,.05)!important}
+html[data-ui=mint]:root .bnav button{color:var(--m-ink2)!important}
+html[data-ui=mint]:root .bnav button.on,html[data-ui=mint]:root .bnav button[aria-current]{color:var(--m-on-lime)!important}
+html[data-ui=mint]:root .bnav .nav-ind,html[data-ui=mint]:root.ui2 .bnav .nav-ind,html[data-ui=mint]:root.lux .bnav .nav-ind{background:var(--m-lime)!important;box-shadow:0 8px 18px -10px rgba(140,180,30,.8)!important}
+
+/* ---------- العناوين والنصوص ---------- */
+html[data-ui=mint]:root .sec h2,html[data-ui=mint]:root.v4 .sec h2{color:var(--m-ink)!important}
+html[data-ui=mint]:root .sec h2::before{background:var(--m-lime)!important}
+html[data-ui=mint]:root .mut,html[data-ui=mint]:root.v4 .mut{color:var(--m-ink2)!important}
+html[data-ui=mint]:root input,html[data-ui=mint]:root select,html[data-ui=mint]:root textarea{background:var(--m-card)!important;color:var(--m-ink)!important;border-color:var(--m-line2)!important}
+html[data-ui=mint]:root ::placeholder{color:var(--m-ink3)!important}
+
+/* ---------- الأوراق المنبثقة ---------- */
+html[data-ui=mint]:root .sheet,html[data-ui=mint]:root .ov .sheet{background:var(--m-card)!important;color:var(--m-ink)!important}
+html[data-ui=mint]:root .ov{background:rgba(20,38,28,.32)!important}
+
+html[data-ui=mint]:root .ui-opt.on{border-color:#1F7A4D}
+html[data-ui=mint]:root .th-lock{opacity:.45;pointer-events:none}

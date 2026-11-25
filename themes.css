@@ -60,3 +60,18 @@ html[data-bg=aurora] body::before{background:
 .bg-opt i.calm{background:radial-gradient(90% 55% at 50% 0,rgba(var(--acc-rgb),.3),transparent 70%),var(--bg)}
 .bg-opt i.pitch{background:linear-gradient(rgba(255,255,255,.18),rgba(255,255,255,.18)) center/70% 1px no-repeat,radial-gradient(circle,transparent 7px,rgba(255,255,255,.18) 7.5px,transparent 8.5px) center/100% 100% no-repeat,var(--bg)}
 .bg-opt i.aurora{background:radial-gradient(60% 40% at 25% 20%,rgba(var(--acc-rgb),.35),transparent 70%),radial-gradient(55% 40% at 80% 70%,rgba(120,150,220,.3),transparent 70%),var(--bg)}
+
+/* ---------- معاينة الواجهات بالإعدادات ---------- */
+.ui-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.ui-opt{position:relative;display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:18px;background:var(--s2);border:1.5px solid transparent;color:var(--txt);text-align:start;font:inherit;cursor:pointer}
+.ui-opt.on{border-color:var(--acc)}
+.ui-opt:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.ui-opt span{font-weight:700;font-size:13.5px}.ui-opt small{font-size:11px;color:var(--mut)}
+.ui-prev{position:relative;height:92px;border-radius:13px;overflow:hidden;background:var(--pb);padding:9px;display:flex;flex-direction:column;gap:6px}
+.ui-prev i{display:block;border-radius:8px}
+.ui-prev .a{height:30px;background:var(--pc)}
+.ui-prev .b{height:14px;width:70%;background:var(--pd)}
+.ui-prev .c{position:absolute;bottom:8px;inset-inline:18px;height:16px;border-radius:99px;background:var(--pn);display:flex;align-items:center;padding:0 3px}
+.ui-prev .c::after{content:"";width:22px;height:11px;border-radius:99px;background:var(--pa)}
+.ui-opt .ui-ck{position:absolute;top:8px;inset-inline-end:8px;width:20px;height:20px;border-radius:50%;background:var(--acc);color:var(--on-acc);font-size:12px;font-style:normal;display:none;place-items:center}
+.ui-opt.on .ui-ck{display:grid}

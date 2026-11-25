@@ -68,21 +68,34 @@ const THEMES = [
 ];
 const BGS = [['live', tt('حيّة', 'Live')], ['calm', tt('هادئة', 'Calm')], ['plain', tt('سادة', 'Plain')], ['pitch', tt('ملعب', 'Pitch')], ['aurora', tt('شفق', 'Aurora')]];
 const curTh = () => { try { const t = localStorage.getItem('fp_theme') || 'def'; return THEMES.some((x) => x[0] === t) ? t : 'def'; } catch { return 'def'; } };
+const UIS = [
+  ['def', tt('الأصلية', 'Original'), tt('غامقة بالأسود والأخضر', 'Dark, black & green'), '#0B0E0C', '#151916', '#1C211D', '#151916', '#7FE6A6'],
+  ['mint', tt('زمرّد', 'Emerald'), tt('فاتحة بالأخضر الغامق والليموني', 'Light, deep green & lime'), '#EEF3EE', '#1C4532', '#FFFFFF', '#FFFFFF', '#D6F26A'],
+];
+const curUi = () => { try { return localStorage.getItem('fp_ui') === 'mint' ? 'mint' : 'def'; } catch { return 'def'; } };
+// ملفات الواجهة الفاتحة تنحمّل بس لمن يختارها، فالأصلية ما يزيد عليها شي
+const mintCss = (on) => { ['mintGen', 'mintCss'].forEach((id, i) => { let l = document.getElementById(id);
+  if (on && !l) { l = document.createElement('link'); l.rel = 'stylesheet'; l.id = id; l.href = i ? '/mint.css' : '/mint-gen.css'; document.head.appendChild(l); }
+  if (l) l.disabled = !on; }); };
 const curBg = () => { try { return localStorage.getItem('fp_bg') || 'live'; } catch { return 'live'; } };
 function appearanceHTML() {
   const th = curTh(), bg = curBg();
+  const ui = curUi();
   return `<div class="sec"><h2>${I('i-sparkle')}${tt('المظهر', 'Appearance')}</h2></div>
-   <div class="card"><div class="set-row" style="border:0;padding-bottom:4px"><span>${tt('ألوان التطبيق', 'App colours')}<br><small class="mut">${tt('كل ثيم بلون رئيسي حيوي وخلفية غامقة مريحة', 'Each theme: a vivid accent on a comfortable dark base')}</small></span></div>
+   <div class="card"><div class="set-row" style="border:0;padding-bottom:4px"><span>${tt('واجهة التطبيق', 'App interface')}<br><small class="mut">${tt('الأصلية تبقى مثل ما هي، وتكدر ترجعلها بأي وقت', 'The original stays as is; switch back anytime')}</small></span></div>
+    <div class="ui-grid">${UIS.map(([k, n, d, b, c, dd, nv, a]) => `<button class="ui-opt ${ui === k ? 'on' : ''}" type="button" onclick="setUi('${k}')" aria-pressed="${ui === k}" style="--pb:${b};--pc:${c};--pd:${dd};--pn:${nv};--pa:${a}"><div class="ui-prev"><i class="a"></i><i class="b"></i><i class="c"></i></div><span>${n}</span><small>${d}</small><i class="ui-ck">✓</i></button>`).join('')}</div></div>
+   <div class="card ${ui === 'mint' ? 'th-lock' : ''}"><div class="set-row" style="border:0;padding-bottom:4px"><span>${tt('ألوان التطبيق', 'App colours')}<br><small class="mut">${tt('كل ثيم بلون رئيسي حيوي وخلفية غامقة مريحة', 'Each theme: a vivid accent on a comfortable dark base')}</small></span></div>
     <div class="th-grid">${THEMES.map(([k, n, d, b, s2, a]) => `<button class="th-opt ${th === k ? 'on' : ''}" onclick="setTheme('${k}')" style="--pb:${b};--ps:${s2};--pa:${a}"><div class="th-prev"><i></i><i></i><b></b><em></em></div><span>${n}</span><small>${d}</small><i class="th-ck">✓</i></button>`).join('')}</div>
     <div class="set-row" style="border:0;padding:14px 0 4px"><span>${tt('الخلفية', 'Background')}<br><small class="mut">${tt('"حيّة" فيها نقاط تتحرك، والباقي ثابتة أو هادئة جداً', '"Live" has moving dots; the rest are still or very slow')}</small></span></div>
     <div class="bg-row">${BGS.map(([k, n]) => `<button class="bg-opt ${bg === k ? 'on' : ''}" onclick="setBg('${k}')"><i class="${k}"></i>${n}</button>`).join('')}</div>
    </div>`;
 }
 function applyLook() {
-  const r = document.documentElement, th = curTh(), bg = curBg();
+  const r = document.documentElement, th = curTh(), bg = curBg(), ui = curUi();
+  ui === 'mint' ? r.setAttribute('data-ui', 'mint') : r.removeAttribute('data-ui'); mintCss(ui === 'mint');
   th === 'def' ? r.removeAttribute('data-th') : r.setAttribute('data-th', th);
   bg === 'live' ? r.removeAttribute('data-bg') : r.setAttribute('data-bg', bg);
-  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', (THEMES.find((x) => x[0] === th) || THEMES[0])[3]);
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', ui === 'mint' ? '#EEF3EE' : (THEMES.find((x) => x[0] === th) || THEMES[0])[3]);
   window.dispatchEvent(new Event('fp-theme'));
 }
 applyLook();
@@ -116,8 +129,9 @@ Object.assign(window, {
   },
   setFav: (v) => { ST.profile.fav = v ? +v : null; AU.saveProfile(ST.user.uid, { fav: ST.profile.fav }).catch(() => {}); toast(tt('تم الحفظ', 'Saved')); },
   linkP: async (k) => { try { await AU.linkProvider(k); toast(tt('تم الربط', 'Linked')); window.render(); } catch (e) { toast(AU.authError(e)); } },
-  setTheme: (k) => { try { localStorage.setItem('fp_theme', k); } catch {} applyLook(); try { AU.saveProfile(ST.user.uid, { look: { th: k, bg: curBg() } }).catch(() => {}); } catch {} window.render(); },
-  setBg: (k) => { try { localStorage.setItem('fp_bg', k); } catch {} applyLook(); try { AU.saveProfile(ST.user.uid, { look: { th: curTh(), bg: k } }).catch(() => {}); } catch {} window.render(); },
+  setTheme: (k) => { try { localStorage.setItem('fp_theme', k); } catch {} applyLook(); try { AU.saveProfile(ST.user.uid, { look: { th: k, bg: curBg(), ui: curUi() } }).catch(() => {}); } catch {} window.render(); },
+  setUi: (k) => { try { localStorage.setItem('fp_ui', k); } catch {} applyLook(); try { AU.saveProfile(ST.user.uid, { look: { th: curTh(), bg: curBg(), ui: k } }).catch(() => {}); } catch {} window.render(); },
+  setBg: (k) => { try { localStorage.setItem('fp_bg', k); } catch {} applyLook(); try { AU.saveProfile(ST.user.uid, { look: { th: curTh(), bg: k, ui: curUi() } }).catch(() => {}); } catch {} window.render(); },
   clearCache: () => { Object.keys(localStorage).filter((k) => k.startsWith('fpc_')).forEach((k) => localStorage.removeItem(k)); toast(tt('تم مسح الكاش', 'Cache cleared')); },
 });
 
