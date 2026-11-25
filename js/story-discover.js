@@ -11,8 +11,9 @@
 import { ST, PM, tName, tShort } from './store.js';
 import { tt } from './i18n.js';
 import { esc } from './ui.js';
-import { fixturesFor } from './engine.js';
-import { analyse, league, memory, goalsW } from './club-intel.js';
+import { fixturesFor, xp } from './engine.js';
+import { sellPrice10 } from './solver.js';
+import { analyse, league, memory, goalsW, ptsW } from './club-intel.js';
 
 const SK = 'fp_sy_disc';
 const ld = () => { try { return JSON.parse(localStorage.getItem(SK)) || {}; } catch { return {}; } };
@@ -23,7 +24,13 @@ const B = (v) => `<bdi dir="ltr">${v}</bdi>`;
 
 const CIK = {};
 const ci = (tid) => { const k = `${tid}:${ST.G.fxList.filter((f) => f.fin).length}`; if (!(k in CIK)) { try { CIK[k] = analyse(tid); } catch { CIK[k] = null; } } return CIK[k]; };
-const wu = (x) => (x.big != null && x.unit ? `${x.big} ${x.unit}. ${x.text}` : x.text);
+const wu = (x) => (x.big != null && x.unit && !/^عن/.test(x.unit) ? `${x.big} ${x.unit}. ${x.text}` : x.text);
+// بديل من تشكيلتك نفسها: أضعف لاعب بنفس المركز، والميزانية (البنك + سعر بيعه) تكفي، وما يتجاوز 3 من نفس النادي
+const swapFor = (c, sq, g) => { const bank = ST.plan?.bank || 0;
+  const xs = sq.filter((p) => p.pos === c.pos && bank + sellPrice10(p.id) / 10 >= c.price && sq.filter((q) => q.team === c.team && q.id !== p.id).length < 3).sort((a, b) => xp(a, g) - xp(b, g));
+  const w = xs[0]; return w && xp(w, g) < xp(c, g) ? w : null; };
+const swapTxt = (w, c) => { const left = Math.round(((ST.plan?.bank || 0) + sellPrice10(w.id) / 10 - c.price) * 10) / 10;
+  return tt(`. يناسب ميزانيتك بدل ${w.name}${left > 0 ? ` ويبقى عندك £${left}` : ''}`, `. Fits your budget for ${w.name}`); };
 const nf = (p, g) => fixturesFor(p.team, g)[0];
 
 /* ---------- المولّدات: كل وحدة ترجع مرشّحين { id, fam, sc, t, x, big, tone } ---------- */
@@ -32,15 +39,22 @@ const GEN = [
   ({ sq }) => sq.filter((p) => p.min >= 450 && p.xg >= 1.5).map((p) => ({ p, d: p.gls - p.xg })).filter((o) => Math.abs(o.d) >= 2).map(({ p, d }) => d > 0
     ? { id: `luck+:${p.id}`, fam: 'luck', sc: 0.5 + d / 8, tone: 'dn', t: tt(`${p.name} يسجّل أكثر من فرصه`, `${p.name} overperforming`), x: tt(`سجّل ${goalsW(p.gls)} من فرص تسوى ${n1(p.xg)} هدف متوقع، فممكن تهدأ أهدافه قريب`, `${p.gls} goals from ${n1(p.xg)} xG, may cool off`), big: `${p.gls}/${n1(p.xg)}` }
     : { id: `luck-:${p.id}`, fam: 'luck', sc: 0.5 - d / 8, tone: 'up', t: tt(`${p.name} أهدافه جاية`, `${p.name} due a goal`), x: tt(`فرصه تسوى ${n1(p.xg)} هدف متوقع بس سجّل ${goalsW(p.gls)}، يعني يوصل للمرمى والأهداف قريبة`, `${n1(p.xg)} xG but only ${p.gls} goals`), big: `${p.gls}/${n1(p.xg)}` }),
-  // جوهرة مخفية: ملكية قليلة وفورمة عالية وخصم سهل
-  ({ g, own }) => { const p = ST.G.players.filter((p) => !own.has(p.id) && p.own < 5 && p.form >= 5 && p.min >= 270 && p.st === 'a' && (nf(p, g)?.fdr || 5) <= 2).sort((a, b) => b.form - a.form)[0];
-    return p ? [{ id: `gem:${p.id}`, fam: 'gem', sc: 0.55 + p.form / 25, tone: 'up', t: tt(`جوهرة مخفية: ${p.name}`, `Hidden gem: ${p.name}`), x: tt(`ملكيته ${p.own}% بس فورمته ${p.form}، والجولة الجاية ضد ${tName(nf(p, g).opp)}`, `${p.own}% owned, form ${p.form}, faces ${tName(nf(p, g).opp)}`), big: `£${p.price}` }] : []; },
-  // ملك المساهمات الدفاعية
-  ({ g, own }) => { const p = ST.G.players.filter((p) => p.pos === 'DEF' && !own.has(p.id) && p.min >= 450 && p.dc90 >= 10 && p.st === 'a' && (nf(p, g)?.fdr || 5) <= 3).sort((a, b) => b.dc90 - a.dc90)[0];
-    return p ? [{ id: `dcon:${p.id}`, fam: 'defcon', sc: 0.5 + (p.dc90 - 10) / 10, tone: 'up', t: tt(`ملك المساهمات الدفاعية: ${p.name}`, `Defcon king: ${p.name}`), x: tt(`يجمع ${n1(p.dc90)} تدخل وقطع وتشتيت بكل 90 دقيقة، فيوصل لنقطتين المساهمات (10 بالمباراة) أغلب الأحيان`, `${n1(p.dc90)} defensive actions per 90`), big: `£${p.price}` }] : []; },
-  // منفّذ جزاء ضد دفاع يستقبل كثير
-  ({ g, T }) => { const xs = ST.G.players.filter((p) => p.pen === 1 && p.st === 'a' && p.min >= 270).map((p) => { const f = nf(p, g), O = f && T[f.opp]; return O && O.p >= 3 ? { p, f, ga: rt(O.ga, O.p) } : null; }).filter(Boolean).sort((a, b) => b.ga - a.ga);
-    const o = xs[0]; return o && o.ga >= 1.6 ? [{ id: `pen:${o.p.id}:${g}`, fam: 'pen', sc: 0.45 + o.ga / 6, tone: 'up', t: tt(`منفّذ جزاء ضد دفاع مفتوح: ${o.p.name}`, `Pen taker vs leaky defence: ${o.p.name}`), x: tt(`أول منفّذ جزاء لـ ${tName(o.p.team)}، وخصمه ${tName(o.f.opp)} يستقبل ${n1(o.ga)} بالمباراة`, `${tName(o.f.opp)} concede ${n1(o.ga)} per game`), big: n1(o.ga) }] : []; },
+  // جوهرة مخفية: ملكية قليلة وفورمة عالية وخصم سهل، وتنشرى ببيع لاعب من تشكيلتك
+  ({ g, own, sq }) => { const p = ST.G.players.filter((p) => !own.has(p.id) && p.own < 8 && p.form >= 4.5 && p.min >= 270 && p.st === 'a' && (nf(p, g)?.fdr || 5) <= 3).sort((a, b) => b.form - a.form).find((p) => swapFor(p, sq, g));
+    if (!p) return []; const w = swapFor(p, sq, g);
+    return [{ id: `gem:${p.id}`, fam: 'gem', sc: 0.55 + p.form / 25, tone: 'up', t: tt(`جوهرة مخفية: ${p.name}`, `Hidden gem: ${p.name}`), x: tt(`ملكيته ${p.own}% بس فورمته ${p.form}، والجولة الجاية ضد ${tName(nf(p, g).opp)}`, `${p.own}% owned, form ${p.form}`) + swapTxt(w, p), big: `£${p.price}` }]; },
+  // المساهمات الدفاعية: إذا عندك مدافع يجمعها نذكره، وإلا نقترح واحد يناسب ميزانيتك
+  ({ g, own, sq }) => { const mineD = sq.filter((p) => p.pos === 'DEF' && p.min >= 450 && p.dc90 >= 9).sort((a, b) => b.dc90 - a.dc90)[0];
+    if (mineD) return [{ id: `dcm:${mineD.id}`, fam: 'defcon', sc: 0.5, tone: 'up', t: tt(`${mineD.name} يجمع المساهمات الدفاعية`, `${mineD.name} racks up defcon`), x: tt(`عنده ${mineD.dc} مساهمة بالموسم، يعني ${n1(mineD.dc90)} بكل 90 دقيقة، فقريب من نقطتين إضافيتين كل مباراة (الشرط 10)`, `${n1(mineD.dc90)} per 90`), big: n1(mineD.dc90) }];
+    const p = ST.G.players.filter((p) => p.pos === 'DEF' && !own.has(p.id) && p.min >= 450 && p.dc90 >= 10 && p.st === 'a' && (nf(p, g)?.fdr || 5) <= 3).sort((a, b) => b.dc90 - a.dc90).find((p) => swapFor(p, sq, g));
+    if (!p) return []; const w = swapFor(p, sq, g);
+    return [{ id: `dcon:${p.id}`, fam: 'defcon', sc: 0.5 + (p.dc90 - 10) / 10, tone: 'up', t: tt(`مدافع يجمع المساهمات الدفاعية: ${p.name}`, `Defcon pick: ${p.name}`), x: tt(`يجمع ${n1(p.dc90)} تدخل وقطع وتشتيت بكل 90 دقيقة، فيوصل لنقطتين المساهمات (10 بالمباراة) أغلب الأحيان`, `${n1(p.dc90)} per 90`) + swapTxt(w, p), big: `£${p.price}` }]; },
+  // منفّذ الجزاء: لاعبيك أولاً، وإلا أحسن منفّذ يواجه دفاع مفتوح ويناسب ميزانيتك
+  ({ g, T, sq, own }) => { const rows = ST.G.players.filter((p) => p.pen === 1 && p.st === 'a' && p.min >= 270).map((p) => { const f = nf(p, g), O = f && T[f.opp]; return O && O.p >= 3 ? { p, f, ga: rt(O.ga, O.p), mine: own.has(p.id) } : null; }).filter(Boolean).sort((a, b) => b.mine - a.mine || b.ga - a.ga);
+    const m = rows.find((r) => r.mine);
+    if (m) return [{ id: `penm:${m.p.id}:${g}`, fam: 'pen', sc: 0.4 + m.ga / 6, tone: m.ga >= 1.4 ? 'up' : '', t: tt(`${m.p.name} منفّذ الجزاء عندك`, `${m.p.name} is your pen taker`), x: tt(`أول منفّذ جزاء لـ ${tName(m.p.team)}، وخصمه ${tName(m.f.opp)} يستقبل ${n1(m.ga)} بالمباراة. سجّل ${goalsW(m.p.gls)} لحد هسه`, `${tName(m.f.opp)} concede ${n1(m.ga)}/game`), big: n1(m.ga) }];
+    const o = rows.find((r) => r.ga >= 1.5 && swapFor(r.p, sq, g)); if (!o) return []; const w = swapFor(o.p, sq, g);
+    return [{ id: `pen:${o.p.id}:${g}`, fam: 'pen', sc: 0.45 + o.ga / 6, tone: 'up', t: tt(`منفّذ جزاء ضد دفاع مفتوح: ${o.p.name}`, `Pen taker vs leaky defence: ${o.p.name}`), x: tt(`أول منفّذ جزاء لـ ${tName(o.p.team)}، وخصمه ${tName(o.f.opp)} يستقبل ${n1(o.ga)} بالمباراة`, `${tName(o.f.opp)} concede ${n1(o.ga)}/game`) + swapTxt(w, o.p), big: `£${o.p.price}` }]; },
   // الأرض والبرا لفرق تشكيلتك
   ({ g, T, teams }) => teams.map((tid) => { const A = T[tid], f = fixturesFor(tid, g)[0]; if (!A || !f || A.H.p < 3 || A.W.p < 3) return null; const hp = A.H.pts / A.H.p, wp = A.W.pts / A.W.p;
     if (f.home && hp - wp >= 1) return { id: `ven+:${tid}`, fam: 'venue', sc: 0.45 + (hp - wp) / 5, tone: 'up', t: tt(`${tName(tid)} وحش بأرضه`, `${tName(tid)} strong at home`), x: tt(`يجمع ${n1(hp)} نقطة بالمباراة بأرضه و${n1(wp)} برا، والجولة الجاية بأرضه ضد ${tName(f.opp)}`, `${n1(hp)} ppg home vs ${n1(wp)} away; home next`), big: n1(hp) };
@@ -57,9 +71,13 @@ const GEN = [
     return out; },
   // خطر الدوران: لاعب غالي بتشكيلتك ما يبدأ دائماً
   ({ sq, T }) => sq.filter((p) => p.starts != null && p.price >= 5.5 && p.st === 'a' && T[p.team]?.p >= 5).map((p) => ({ p, r: p.starts / T[p.team].p })).filter((o) => o.r < 0.65 && o.p.min > 0).map(({ p, r }) => ({ id: `rot:${p.id}:${T[p.team].p}`, fam: 'rot', sc: 0.5 + (0.65 - r), tone: 'dn', t: tt(`${p.name} مو أساسي دائماً`, `${p.name} rotation risk`), x: tt(`بدأ ${p.starts} من ${T[p.team].p} مباريات لفريقه، فخطر يقعد بالدكة`, `Started ${p.starts} of ${T[p.team].p}`), big: `${Math.round(r * 100)}%` })),
-  // صياد البونص
-  ({ g, own }) => { const p = ST.G.players.filter((p) => !own.has(p.id) && p.min >= 600 && p.st === 'a' && (nf(p, g)?.fdr || 5) <= 3).map((p) => ({ p, b: p.bonus / (p.min / 90) })).sort((a, b) => b.b - a.b)[0];
-    return p && p.b >= 0.8 ? [{ id: `bon:${p.p.id}`, fam: 'bonus', sc: 0.45 + p.b / 4, tone: 'up', t: tt(`صياد البونص: ${p.p.name}`, `Bonus magnet: ${p.p.name}`), x: tt(`ياخذ ${n1(p.b)} نقطة بونص بكل 90 دقيقة (${p.p.bonus} بالموسم)، وخصمه الجاي ${tName(nf(p.p, g).opp)}`, `${n1(p.b)} bonus per 90`), big: n1(p.b) }] : []; },
+  // البونص: أكثر لاعب بتشكيلتك ياخذ بونص، أو صياد بونص يناسب ميزانيتك
+  ({ g, own, sq }) => { const per = (p) => p.bonus / (p.min / 90);
+    const m = sq.filter((p) => p.min >= 450).sort((a, b) => per(b) - per(a))[0];
+    if (m && per(m) >= 0.6) return [{ id: `bonm:${m.id}:${m.bonus}`, fam: 'bonus', sc: 0.4 + per(m) / 4, tone: 'up', t: tt(`${m.name} صياد البونص بتشكيلتك`, `${m.name} your bonus magnet`), x: tt(`جمع ${ptsW(m.bonus)} بونص بالموسم، يعني ${n1(per(m))} بكل 90 دقيقة، وأكثر واحد بفريقك`, `${m.bonus} bonus, ${n1(per(m))}/90`), big: String(m.bonus) }];
+    const p = ST.G.players.filter((p) => !own.has(p.id) && p.min >= 600 && p.st === 'a' && (nf(p, g)?.fdr || 5) <= 3).sort((a, b) => per(b) - per(a)).find((p) => per(p) >= 0.8 && swapFor(p, sq, g));
+    if (!p) return []; const w = swapFor(p, sq, g);
+    return [{ id: `bon:${p.id}`, fam: 'bonus', sc: 0.45 + per(p) / 4, tone: 'up', t: tt(`صياد البونص: ${p.name}`, `Bonus magnet: ${p.name}`), x: tt(`ياخذ ${n1(per(p))} نقطة بونص بكل 90 دقيقة (${p.bonus} بالموسم)`, `${n1(per(p))} bonus per 90`) + swapTxt(w, p), big: n1(per(p)) }]; },
   // التحليل الذكي: أبرز نقطة قوة بأندية تشكيلتك ونقطة ضعف بخصومهم
   ({ g, teams }) => teams.flatMap((tid) => { const R = ci(tid), f = fixturesFor(tid, g)[0], O = f ? ci(f.opp) : null, out = [];
     const best = (X, tone) => (X ? Object.values(X.branches).flat().filter((x) => x.tone === tone && !x.always && !['gf', 'ga', 'fdr', 'cs'].includes(x.id) && /\d/.test(x.text)).sort((a, b) => b.w - a.w)[0] : null);

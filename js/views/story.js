@@ -489,44 +489,53 @@ const vsN = (h, a) => `${esc(tName(h))} ${tt('ضد', 'vs')} ${esc(tName(a))}`;
 const RES = { W: tt('ف', 'W'), D: tt('ت', 'D'), L: tt('خ', 'L') };
 const formStr = (A) => `<span class="sy-fm5">${A.res.slice(-5).map((r) => `<i class="${r.r}">${RES[r.r]}</i>`).join('')}</span>`;
 
+const nm = (ps) => ps.slice(0, 2).map((p) => esc(p.name)).join(tt(' و', ' & '));
 function sGoalFx() {
   const X = nextFx(); if (!X || X.fx.length < 3) return null;
-  const rows = X.fx.map((f) => { const H = X.T[f.h], W = X.T[f.a];
+  const all = X.fx.map((f) => { const H = X.T[f.h], W = X.T[f.a];
     const e = (rt(H.gf, H.p) + rt(W.ga, W.p)) / 2 + (rt(W.gf, W.p) + rt(H.ga, H.p)) / 2;
-    return { f, e, o: (rt(H.o25, H.p) + rt(W.o25, W.p)) / 2, own: mine(f.h, f.a).length }; }).sort((a, b) => b.e - a.e);
-  const lo = rows[rows.length - 1];
-  const li = (r, i) => `<li style="--d:${80 + i * 60}ms"><b>${vsN(r.f.h, r.f.a)}</b><span class="up" dir="ltr">${r.e.toFixed(1)}</span><small>${tt(`${Math.round(r.o * 100)}% من مبارياتهم بيها أكثر من هدفين`, `${Math.round(r.o * 100)}% of their games over 2.5`)}${r.own ? tt(`، عندك ${r.own === 1 ? 'لاعب واحد' : r.own === 2 ? 'لاعبين' : r.own + ' لاعبين'} بيها`, `, you own ${r.own}`) : ''}</small></li>`;
-  return { k: 'gfx', col: 'var(--c-coral)', ic: 'ball', h: tt(`مباريات الأهداف بالجولة ${X.g}`, `Goal-fest fixtures GW ${X.g}`), sub: tt('الرقم = أهداف متوقعة من معدل تسجيل واستقبال الفريقين', 'Expected goals from both sides’ averages'), to: "go('team')", toL: tt('فريقي', 'My team'),
-    body: `<ul class="sy-px">${rows.slice(0, 3).map(li).join('')}</ul><p class="sy-note">${tt(`أقل مباراة أهداف: ${vsN(lo.f.h, lo.f.a)} (${lo.e.toFixed(1)})`, `Lowest: ${vsN(lo.f.h, lo.f.a)} (${lo.e.toFixed(1)})`)}</p>` };
+    return { f, e, o: (rt(H.o25, H.p) + rt(W.o25, W.p)) / 2, ps: mine(f.h, f.a) }; }).sort((a, b) => b.e - a.e);
+  all.forEach((r, i) => (r.rk = i + 1));
+  // مبارياتك انت: وين لاعبيك وشكد متوقع أهداف، وترتيبها بين مباريات الجولة
+  const rows = all.filter((r) => r.ps.length).slice(0, 3); if (rows.length < 2) return null;
+  const li = (r, i) => `<li style="--d:${80 + i * 60}ms"><b>${vsN(r.f.h, r.f.a)}</b><span class="${r.rk <= all.length / 2 ? 'up' : 'dn'}" dir="ltr">${r.e.toFixed(1)}</span><small>${tt(`لاعبيك: ${nm(r.ps)}${r.ps.length > 2 ? ` و${r.ps.length - 2} غيرهم` : ''}. ترتيبها ${r.rk} من ${all.length} بالأهداف المتوقعة، و${Math.round(r.o * 100)}% من مبارياتهم بيها أكثر من هدفين`, `Your players: ${nm(r.ps)}. Ranked ${r.rk}/${all.length}`)}</small></li>`;
+  const top = all[0], topOwn = top.ps.length;
+  return { k: 'gfx', col: 'var(--c-coral)', ic: 'ball', h: tt(`أهداف مبارياتك بالجولة ${X.g}`, `Goals in your fixtures GW ${X.g}`), sub: tt('الرقم = أهداف متوقعة من معدل تسجيل واستقبال الفريقين', 'Expected goals from both sides’ averages'), to: "go('team')", toL: tt('فريقي', 'My team'),
+    body: `<ul class="sy-px">${rows.map(li).join('')}</ul>${topOwn ? '' : `<p class="sy-note">${tt(`أكثر مباراة أهداف بالجولة ${vsN(top.f.h, top.f.a)} (${top.e.toFixed(1)}) وما عندك بيها أحد`, `Top fixture ${vsN(top.f.h, top.f.a)}, you own none`)}</p>`}` };
 }
 function sCSOdds() {
   const X = nextFx(); if (!X || !X.fx.length) return null;
-  const rows = X.fx.flatMap((f) => [[f.h, f.a, 1], [f.a, f.h, 0]]).map(([t, o, home]) => { const A = X.T[t], O = X.T[o];
-    return { t, o, home, A, O, s: (rt(A.cs, A.p) + rt(O.fts, O.p)) / 2 - (rt(A.ga, A.p) + rt(O.gf, O.p)) / 10, own: mine(t).filter((p) => p.pos === 'DEF' || p.pos === 'GKP') }; }).sort((a, b) => b.s - a.s).slice(0, 4);
-  const li = (r, i) => `<li style="--d:${80 + i * 60}ms"><b>${esc(tName(r.t))} ${tt('ضد', 'vs')} <bdi dir="ltr">${esc(tShort(r.o))}</bdi> ${r.home ? tt('بأرضه', '(H)') : tt('برا', '(A)')}</b><span class="up" dir="ltr">${pct(r.A.cs, r.A.p)}</span><small>${tt(`شباكه نظيفة بـ ${r.A.cs} من ${r.A.p}، وخصمه ما سجّل بـ ${r.O.fts} من ${r.O.p}`, `${r.A.cs}/${r.A.p} clean sheets; opponent blanked ${r.O.fts}/${r.O.p}`)}${r.own.length ? tt(`. عندك: ${r.own.map((p) => esc(p.name)).join('، ')}`, `. You own: ${r.own.map((p) => esc(p.name)).join(', ')}`) : ''}</small></li>`;
-  return { k: 'csx', col: 'var(--c-mint)', ic: 'shield', h: tt(`أقرب الفرق للشباك النظيفة بالجولة ${X.g}`, `Best clean-sheet bets GW ${X.g}`), sub: tt('من شباكه النظيفة وعجز خصمه عن التسجيل', 'From clean sheets and the opponent’s blanks'), to: "go('market')", toL: tt('السوق', 'Market'),
-    body: `<ul class="sy-px">${rows.map(li).join('')}</ul>` };
+  const all = X.fx.flatMap((f) => [[f.h, f.a, 1], [f.a, f.h, 0]]).map(([t, o, home]) => { const A = X.T[t], O = X.T[o];
+    return { t, o, home, A, O, s: (rt(A.cs, A.p) + rt(O.fts, O.p)) / 2 - (rt(A.ga, A.p) + rt(O.gf, O.p)) / 10, own: mine(t).filter((p) => p.pos === 'DEF' || p.pos === 'GKP') }; }).sort((a, b) => b.s - a.s);
+  all.forEach((r, i) => (r.rk = i + 1));
+  const rows = all.filter((r) => r.own.length).slice(0, 3); if (!rows.length) return null;
+  const li = (r, i) => `<li style="--d:${80 + i * 60}ms"><b>${nm(r.own)} ${tt('ضد', 'vs')} <bdi dir="ltr">${esc(tShort(r.o))}</bdi> ${r.home ? tt('بأرضه', '(H)') : tt('برا', '(A)')}</b><span class="${r.rk <= all.length / 3 ? 'up' : r.rk > (all.length * 2) / 3 ? 'dn' : ''}" dir="ltr">${r.rk}/${all.length}</span><small>${tt(`${esc(tName(r.t))} شباكه نظيفة بـ ${r.A.cs} من ${r.A.p}، وخصمه ما سجّل بـ ${r.O.fts} من ${r.O.p}`, `${r.A.cs}/${r.A.p} CS; opp blanked ${r.O.fts}/${r.O.p}`)}</small></li>`;
+  const alt = all.find((r) => !r.own.length && !mine(r.t).length);
+  return { k: 'csx', col: 'var(--c-mint)', ic: 'shield', h: tt(`شباك دفاعك بالجولة ${X.g}`, `Your defence GW ${X.g}`), sub: tt('ترتيب كل فريق من فرق دفاعك بفرص الشباك النظيفة بهالجولة', 'Your defenders’ clean-sheet rank this GW'), to: "go('market')", toL: tt('السوق', 'Market'),
+    body: `<ul class="sy-px">${rows.map(li).join('')}</ul>${alt && alt.rk < rows[0].rk ? `<p class="sy-note up">${tt(`أعلى فرصة ما عندك منها: ${esc(tName(alt.t))} ضد ${esc(tName(alt.o))} (${alt.rk}/${all.length})`, `Best you don’t own: ${esc(tName(alt.t))}`)}</p>` : ''}` };
 }
 function sClubForm() {
   const T = ciLeague(); if (!T) return null;
-  const xs = Object.values(T).filter((A) => A.p >= 6).map((A) => { const l = A.res.slice(-5), p5 = l.reduce((a, r) => a + (r.r === 'W' ? 3 : r.r === 'D' ? 1 : 0), 0);
-    return { A, p5, d: p5 / l.length - A.pts / A.p, gf: l.reduce((a, r) => a + r.gf, 0), ga: l.reduce((a, r) => a + r.ga, 0) }; });
-  if (xs.length < 10) return null;
-  const hot = [...xs].sort((a, b) => b.p5 - a.p5 || b.d - a.d).slice(0, 2), cold = [...xs].sort((a, b) => a.p5 - b.p5 || a.d - b.d).slice(0, 2);
+  const teams = [...new Set((ST.plan?.squad || []).map(PM).filter(Boolean).map((p) => p.team))];
+  const xs = teams.map((t) => T[t]).filter((A) => A && A.p >= 5).map((A) => { const l = A.res.slice(-5), p5 = l.reduce((a, r) => a + (r.r === 'W' ? 3 : r.r === 'D' ? 1 : 0), 0);
+    return { A, p5, d: p5 / l.length - A.pts / A.p, gf: l.reduce((a, r) => a + r.gf, 0), ga: l.reduce((a, r) => a + r.ga, 0), ps: mine(A.tid) }; }).sort((a, b) => b.p5 - a.p5 || b.d - a.d);
+  if (xs.length < 3) return null;
+  const hot = xs.slice(0, 2), cold = xs.slice(-2).reverse().filter((x) => !hot.includes(x));
   const why = (x) => x.d >= 0.3 ? tt('أحسن من معدله بالموسم', 'above his season rate') : x.d <= -0.3 ? tt('أسوأ من معدله بالموسم', 'below his season rate') : tt('نفس مستواه بالموسم', 'in line with his season');
-  const li = (x, i, up) => `<li style="--d:${80 + i * 60}ms"><b>${esc(tName(x.A.tid))} ${formStr(x.A)}</b><span class="${up ? 'up' : 'dn'}" dir="ltr">${x.p5}</span><small>${tt(`نقطة من آخر 5، سجّل ${x.gf} واستقبل ${x.ga}، ${why(x)}`, `pts from last 5, ${x.gf}-${x.ga}, ${why(x)}`)}</small></li>`;
-  return { k: 'cfm', col: 'var(--c-gold)', ic: 'pulse', h: tt('فورمة الأندية بآخر 5 مباريات', 'Club form, last 5'), sub: tt('ف فوز، ت تعادل، خ خسارة', 'W win, D draw, L loss'), to: "go('clubs')", toL: tt('الأندية', 'Clubs'),
-    body: `<p class="sy-note up">${tt('الأندية الطايرة', 'Flying')}</p><ul class="sy-px">${hot.map((x, i) => li(x, i, 1)).join('')}</ul><p class="sy-note dn">${tt('الأندية المتراجعة', 'Struggling')}</p><ul class="sy-px">${cold.map((x, i) => li(x, i + 2, 0)).join('')}</ul>` };
+  const li = (x, i, up) => `<li style="--d:${80 + i * 60}ms"><b>${esc(tName(x.A.tid))} ${formStr(x.A)}</b><span class="${up ? 'up' : 'dn'}" dir="ltr">${x.p5}</span><small>${tt(`نقطة من 15، سجّل ${x.gf} واستقبل ${x.ga}، ${why(x)}. لاعبيك: ${nm(x.ps)}`, `pts of 15, ${x.gf}-${x.ga}, ${why(x)}`)}</small></li>`;
+  return { k: 'cfm', col: 'var(--c-gold)', ic: 'pulse', h: tt('فورمة أندية تشكيلتك بآخر 5', 'Your clubs’ form, last 5'), sub: tt('ف فوز، ت تعادل، خ خسارة', 'W win, D draw, L loss'), to: "go('team')", toL: tt('فريقي', 'My team'),
+    body: `<p class="sy-note up">${tt('أنديتك الطايرة', 'Flying')}</p><ul class="sy-px">${hot.map((x, i) => li(x, i, 1)).join('')}</ul>${cold.length ? `<p class="sy-note dn">${tt('أنديتك المتراجعة', 'Struggling')}</p><ul class="sy-px">${cold.map((x, i) => li(x, i + 2, 0)).join('')}</ul>` : ''}` };
 }
 function sSoftD() {
   const X = nextFx(); if (!X || !X.fx.length) return null;
-  const rows = X.fx.flatMap((f) => [[f.h, f.a], [f.a, f.h]]).map(([t, o]) => { const l = X.T[o].res.slice(-5); return { t, o, ga: l.reduce((a, r) => a + r.ga, 0), n: l.length }; })
-    .sort((a, b) => b.ga - a.ga).slice(0, 3).map((r) => ({ ...r, p: ST.G.players.filter((p) => p.team === r.t && (p.pos === 'FWD' || p.pos === 'MID') && p.st === 'a').sort((a, b) => b.form - a.form)[0] })).filter((r) => r.p && r.ga >= 6);
-  if (!rows.length) return null;
-  const own = new Set(ST.plan?.squad || []);
-  const li = (r, i) => `<li style="--d:${80 + i * 60}ms"><b>${esc(r.p.name)} ${tt('ضد', 'vs')} <bdi dir="ltr">${esc(tShort(r.o))}</bdi>${own.has(r.p.id) ? tt(' (عندك)', ' (owned)') : ''}</b><span class="dn" dir="ltr">${r.ga}</span><small>${tt(`${esc(tName(r.o))} استقبل ${goalsW(r.ga)} بآخر ${r.n} مباريات، و${esc(r.p.name)} أعلى فورمة بفريقه (${r.p.form})`, `${esc(tName(r.o))} conceded ${r.ga} in last ${r.n}; ${esc(r.p.name)} is his side’s top form (${r.p.form})`)}</small></li>`;
-  return { k: 'sfd', col: 'var(--c-coral)', ic: 'target', h: tt(`دفاعات منهارة بالجولة ${X.g}`, `Leaky defences GW ${X.g}`), sub: tt('ومنو أحسن لاعب يستغلها', 'And who can exploit them'), to: "go('market')", toL: tt('السوق', 'Market'),
-    body: `<ul class="sy-px">${rows.map(li).join('')}</ul>` };
+  const att = (ST.plan?.xi || []).map(PM).filter((p) => p && (p.pos === 'MID' || p.pos === 'FWD'));
+  const rows = att.map((p) => { const f = fixturesFor(p.team, X.g)[0], O = f && X.T[f.opp]; if (!O?.p) return null; const l = O.res.slice(-5); return { p, o: f.opp, ga: l.reduce((a, r) => a + r.ga, 0), n: l.length }; })
+    .filter(Boolean).sort((a, b) => b.ga - a.ga || xp(b.p, X.g) - xp(a.p, X.g));
+  const seen = new Set(), uniq = rows.filter((r) => (seen.has(r.o) ? false : seen.add(r.o))).slice(0, 3);
+  if (uniq.length < 2) return null;
+  const li = (r, i) => `<li style="--d:${80 + i * 60}ms"><b>${esc(r.p.name)} ${tt('ضد', 'vs')} <bdi dir="ltr">${esc(tShort(r.o))}</bdi></b><span class="${r.ga >= 8 ? 'up' : r.ga <= 4 ? 'dn' : ''}" dir="ltr">${r.ga}</span><small>${tt(`${esc(tName(r.o))} استقبل ${goalsW(r.ga)} بآخر ${r.n} مباريات. ${r.ga >= 8 ? 'دفاع منهار، فرصة كبيرة' : r.ga <= 4 ? 'دفاع متماسك، مباراة صعبة' : 'دفاع متوسط'}`, `${esc(tName(r.o))} conceded ${r.ga} in last ${r.n}`)}</small></li>`;
+  return { k: 'sfd', col: 'var(--c-coral)', ic: 'target', h: tt(`دفاعات خصوم مهاجميك بالجولة ${X.g}`, `Defences your attackers face GW ${X.g}`), sub: tt('الرقم = أهداف استقبلها الخصم بآخر 5 مباريات', 'Goals conceded by the opponent, last 5'), to: "go('team')", toL: tt('فريقي', 'My team'),
+    body: `<ul class="sy-px">${uniq.map(li).join('')}</ul>` };
 }
 const CLUBS = [sGoalFx, sCSOdds, sClubForm, sSoftD];
 /* اكتشافات الجولة: من محرّك يطوّر نفسه (story-discover.js) */
