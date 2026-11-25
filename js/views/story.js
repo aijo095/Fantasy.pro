@@ -5,6 +5,7 @@
    │   ← أحداث خصمك (شكد زاد عليك ومنو) ← تشكيلتك بالملعب (لعب/يلعب/ينتظر + التبديلات)
    ├ بين الجولات (بعد ما تخلص ولحد الإغلاق الجاي)
    │   ملخص الجولة ← نصائح الجولة الجاية ← خصوم تشكيلتك (من التحليل الذكي للأندية)
+   │   ← إحصائيات الأندية (٢ تتبدّل كل جولة: مباريات الأهداف، الشباك النظيفة، فورمة الأندية، الدفاعات المنهارة)
    │   ← أسعار لاعبينك ← مساهماتهم بالموسم
    └ ثابت بكل المراحل: «فقرة هالجولة» (تدور كل جولة) + أساسيات يتبدّل ترتيبها كل جولة
      (ومنها «نادي كابتنك» من التحليل الذكي)
@@ -20,7 +21,7 @@ import * as FPL from '../fpl.js';
 import { chipStatus } from '../fpl.js';
 import { liveCalc } from '../live-engine.js';
 import { pricePredict } from '../predict.js';
-import { analyse as ciAnalyse, load as ciLoad } from '../club-intel.js';
+import { analyse as ciAnalyse, load as ciLoad, league as ciLeague, goalsW } from '../club-intel.js';
 import { fixturesFor, xp } from '../engine.js';
 import * as PS from '../intel/stats.js';
 
@@ -454,6 +455,56 @@ function sCapClub() {
   return { k: 'capc', col: 'var(--c-gold)', ic: 'crown', h: tt(`نادي كابتنك: ${tName(cap.team)}`, `Your captain’s club: ${tName(cap.team)}`), sub: f ? tt(`${cap.name} ضد ${tName(f.opp)} ${f.home ? 'بأرضه' : 'برا'}`, `${cap.name} vs ${tName(f.opp)}`) : '', to: `clubAI(${cap.team})`, toL: tt('تحليل النادي', 'Club analysis'),
     body: `<ul class="sy-px">${xs.map((x, i) => `<li style="--d:${80 + i * 60}ms"><b>${esc(x.title)}</b>${x.big != null ? `<span class="up" dir="ltr">${esc(String(x.big))}</span>` : ''}<small>${esc(x.unit || '')}</small></li>`).join('')}</ul>${ow ? `<p class="sy-note up">${tt(`وخصمه: ${ow.title}`, `Opponent: ${ow.title}`)}</p>` : ''}` };
 }
+
+/* ---------- إحصائيات الأندية بالمربع: تتبدّل كل جولة (٢ من ٤) وتتحدث بعد كل مباراة ---------- */
+const rt = (a, b) => (b ? a / b : 0);
+const pct = (a, b) => `${Math.round(rt(a, b) * 100)}%`;
+const mine = (...tids) => (ST.plan?.squad || []).map(PM).filter((p) => p && tids.includes(p.team));
+const nextFx = () => { const g = ST.G.next; const T = ciLeague(); return g && T ? { g, T, fx: (ST.G.fx[g] || []).filter((f) => T[f.h]?.p >= 3 && T[f.a]?.p >= 3) } : null; };
+const vsN = (h, a) => `${esc(tName(h))} ${tt('ضد', 'vs')} ${esc(tName(a))}`;
+const RES = { W: tt('ف', 'W'), D: tt('ت', 'D'), L: tt('خ', 'L') };
+const formStr = (A) => `<span class="sy-fm5">${A.res.slice(-5).map((r) => `<i class="${r.r}">${RES[r.r]}</i>`).join('')}</span>`;
+
+function sGoalFx() {
+  const X = nextFx(); if (!X || X.fx.length < 3) return null;
+  const rows = X.fx.map((f) => { const H = X.T[f.h], W = X.T[f.a];
+    const e = (rt(H.gf, H.p) + rt(W.ga, W.p)) / 2 + (rt(W.gf, W.p) + rt(H.ga, H.p)) / 2;
+    return { f, e, o: (rt(H.o25, H.p) + rt(W.o25, W.p)) / 2, own: mine(f.h, f.a).length }; }).sort((a, b) => b.e - a.e);
+  const lo = rows[rows.length - 1];
+  const li = (r, i) => `<li style="--d:${80 + i * 60}ms"><b>${vsN(r.f.h, r.f.a)}</b><span class="up" dir="ltr">${r.e.toFixed(1)}</span><small>${tt(`${Math.round(r.o * 100)}% من مبارياتهم بيها أكثر من هدفين`, `${Math.round(r.o * 100)}% of their games over 2.5`)}${r.own ? tt(`، عندك ${r.own === 1 ? 'لاعب واحد' : r.own === 2 ? 'لاعبين' : r.own + ' لاعبين'} بيها`, `, you own ${r.own}`) : ''}</small></li>`;
+  return { k: 'gfx', col: 'var(--c-coral)', ic: 'ball', h: tt(`مباريات الأهداف بالجولة ${X.g}`, `Goal-fest fixtures GW ${X.g}`), sub: tt('الرقم = أهداف متوقعة من معدل تسجيل واستقبال الفريقين', 'Expected goals from both sides’ averages'), to: "go('team')", toL: tt('فريقي', 'My team'),
+    body: `<ul class="sy-px">${rows.slice(0, 3).map(li).join('')}</ul><p class="sy-note">${tt(`أقل مباراة أهداف: ${vsN(lo.f.h, lo.f.a)} (${lo.e.toFixed(1)})`, `Lowest: ${vsN(lo.f.h, lo.f.a)} (${lo.e.toFixed(1)})`)}</p>` };
+}
+function sCSOdds() {
+  const X = nextFx(); if (!X || !X.fx.length) return null;
+  const rows = X.fx.flatMap((f) => [[f.h, f.a, 1], [f.a, f.h, 0]]).map(([t, o, home]) => { const A = X.T[t], O = X.T[o];
+    return { t, o, home, A, O, s: (rt(A.cs, A.p) + rt(O.fts, O.p)) / 2 - (rt(A.ga, A.p) + rt(O.gf, O.p)) / 10, own: mine(t).filter((p) => p.pos === 'DEF' || p.pos === 'GKP') }; }).sort((a, b) => b.s - a.s).slice(0, 4);
+  const li = (r, i) => `<li style="--d:${80 + i * 60}ms"><b>${esc(tName(r.t))} ${tt('ضد', 'vs')} <bdi dir="ltr">${esc(tShort(r.o))}</bdi> ${r.home ? tt('بأرضه', '(H)') : tt('برا', '(A)')}</b><span class="up" dir="ltr">${pct(r.A.cs, r.A.p)}</span><small>${tt(`شباكه نظيفة بـ ${r.A.cs} من ${r.A.p}، وخصمه ما سجّل بـ ${r.O.fts} من ${r.O.p}`, `${r.A.cs}/${r.A.p} clean sheets; opponent blanked ${r.O.fts}/${r.O.p}`)}${r.own.length ? tt(`. عندك: ${r.own.map((p) => esc(p.name)).join('، ')}`, `. You own: ${r.own.map((p) => esc(p.name)).join(', ')}`) : ''}</small></li>`;
+  return { k: 'csx', col: 'var(--c-mint)', ic: 'shield', h: tt(`أقرب الفرق للشباك النظيفة بالجولة ${X.g}`, `Best clean-sheet bets GW ${X.g}`), sub: tt('من شباكه النظيفة وعجز خصمه عن التسجيل', 'From clean sheets and the opponent’s blanks'), to: "go('market')", toL: tt('السوق', 'Market'),
+    body: `<ul class="sy-px">${rows.map(li).join('')}</ul>` };
+}
+function sClubForm() {
+  const T = ciLeague(); if (!T) return null;
+  const xs = Object.values(T).filter((A) => A.p >= 6).map((A) => { const l = A.res.slice(-5), p5 = l.reduce((a, r) => a + (r.r === 'W' ? 3 : r.r === 'D' ? 1 : 0), 0);
+    return { A, p5, d: p5 / l.length - A.pts / A.p, gf: l.reduce((a, r) => a + r.gf, 0), ga: l.reduce((a, r) => a + r.ga, 0) }; });
+  if (xs.length < 10) return null;
+  const hot = [...xs].sort((a, b) => b.p5 - a.p5 || b.d - a.d).slice(0, 2), cold = [...xs].sort((a, b) => a.p5 - b.p5 || a.d - b.d).slice(0, 2);
+  const why = (x) => x.d >= 0.3 ? tt('أحسن من معدله بالموسم', 'above his season rate') : x.d <= -0.3 ? tt('أسوأ من معدله بالموسم', 'below his season rate') : tt('نفس مستواه بالموسم', 'in line with his season');
+  const li = (x, i, up) => `<li style="--d:${80 + i * 60}ms"><b>${esc(tName(x.A.tid))} ${formStr(x.A)}</b><span class="${up ? 'up' : 'dn'}" dir="ltr">${x.p5}</span><small>${tt(`نقطة من آخر 5، سجّل ${x.gf} واستقبل ${x.ga}، ${why(x)}`, `pts from last 5, ${x.gf}-${x.ga}, ${why(x)}`)}</small></li>`;
+  return { k: 'cfm', col: 'var(--c-gold)', ic: 'pulse', h: tt('فورمة الأندية بآخر 5 مباريات', 'Club form, last 5'), sub: tt('ف فوز، ت تعادل، خ خسارة', 'W win, D draw, L loss'), to: "go('clubs')", toL: tt('الأندية', 'Clubs'),
+    body: `<p class="sy-note up">${tt('الأندية الطايرة', 'Flying')}</p><ul class="sy-px">${hot.map((x, i) => li(x, i, 1)).join('')}</ul><p class="sy-note dn">${tt('الأندية المتراجعة', 'Struggling')}</p><ul class="sy-px">${cold.map((x, i) => li(x, i + 2, 0)).join('')}</ul>` };
+}
+function sSoftD() {
+  const X = nextFx(); if (!X || !X.fx.length) return null;
+  const rows = X.fx.flatMap((f) => [[f.h, f.a], [f.a, f.h]]).map(([t, o]) => { const l = X.T[o].res.slice(-5); return { t, o, ga: l.reduce((a, r) => a + r.ga, 0), n: l.length }; })
+    .sort((a, b) => b.ga - a.ga).slice(0, 3).map((r) => ({ ...r, p: ST.G.players.filter((p) => p.team === r.t && (p.pos === 'FWD' || p.pos === 'MID') && p.st === 'a').sort((a, b) => b.form - a.form)[0] })).filter((r) => r.p && r.ga >= 6);
+  if (!rows.length) return null;
+  const own = new Set(ST.plan?.squad || []);
+  const li = (r, i) => `<li style="--d:${80 + i * 60}ms"><b>${esc(r.p.name)} ${tt('ضد', 'vs')} <bdi dir="ltr">${esc(tShort(r.o))}</bdi>${own.has(r.p.id) ? tt(' (عندك)', ' (owned)') : ''}</b><span class="dn" dir="ltr">${r.ga}</span><small>${tt(`${esc(tName(r.o))} استقبل ${goalsW(r.ga)} بآخر ${r.n} مباريات، و${esc(r.p.name)} أعلى فورمة بفريقه (${r.p.form})`, `${esc(tName(r.o))} conceded ${r.ga} in last ${r.n}; ${esc(r.p.name)} is his side’s top form (${r.p.form})`)}</small></li>`;
+  return { k: 'sfd', col: 'var(--c-coral)', ic: 'target', h: tt(`دفاعات منهارة بالجولة ${X.g}`, `Leaky defences GW ${X.g}`), sub: tt('ومنو أحسن لاعب يستغلها', 'And who can exploit them'), to: "go('market')", toL: tt('السوق', 'Market'),
+    body: `<ul class="sy-px">${rows.map(li).join('')}</ul>` };
+}
+const CLUBS = [sGoalFx, sCSOdds, sClubForm, sSoftD];
 const TREE = {
   live: { lead: [sLvTotal, sLvMine, sLvRival, sLvXI], core: 1 },
   between: { lead: [sRecap, sH2H, sNext, sOpp, sPrices, sContrib], core: 3 },
@@ -466,6 +517,7 @@ function plan() {
   let wk = null; for (let i = 0; i < WEEKLY.length && !wk; i++) { wk = WEEKLY[(D.gw + i) % WEEKLY.length](D); if (wk) wk.week = true; }
   const off = D.gw % CORE.length, core = [...CORE.slice(off), ...CORE.slice(0, off)].map((f) => f(D)).filter(Boolean).slice(0, T.core);
   const out = [...lead]; if (wk) out.splice(Math.min(2, out.length), 0, wk);
+  if (!D.live) { const o = D.gw % CLUBS.length, cl = [...CLUBS.slice(o), ...CLUBS.slice(0, o)].map((f) => f(D)).filter(Boolean).slice(0, 2); const at = out.findIndex((x) => x.k === 'opp'); out.splice(at >= 0 ? at + 1 : Math.min(4, out.length), 0, ...cl); }
   return [...out, ...core];
 }
 

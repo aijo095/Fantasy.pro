@@ -310,6 +310,14 @@ export function analyse(tid) {
   return { A, sq, all, cover, kpi, branches: out };
 }
 
+/* ---------- جدول الدوري المجمّع (للمربع المتغير): يتحدث تلقائياً كل ما تخلص مباراة ---------- */
+let LGK = '', LGV = null;
+export function league() {
+  const k = finished().length + ':' + Object.keys(MX).length;
+  if (k !== LGK) { LGK = k; LGV = Object.fromEntries(Object.keys(ST.G.teams).map((id) => [+id, aggregate(+id)])); }
+  return LGV;
+}
+
 /* ---------- الذاكرة: شنو تغيّر وشنو شفته ---------- */
 export function memory(tid, R) {
   const k = 'fp_ci_' + tid, prev = lsGet(k) || {}, gw = ST.G.cur, A = R.A;
