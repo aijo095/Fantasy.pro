@@ -53,13 +53,25 @@ export function openPlayer(id) {
 export function gwDetail(id, gw) {
   const p = PM(id), d = sumCache.get(id); const r = d?.history?.find((x) => x.round === gw); if (!r) return;
   const SC = ST.scoring || {}; const gp = { GK: SC.goalGK ?? 10, DEF: SC.goalDEF ?? 6, MID: SC.goalMID ?? 5, FWD: SC.goalFWD ?? 4 }[p.pos];
-  const parts = []; if (r.minutes) parts.push(r.minutes >= 60 ? tt('لعب 60+ دقيقة (+2)', '60+ mins (+2)') : tt('لعب أقل من 60 (+1)', '<60 mins (+1)'));
-  if (r.goals_scored) parts.push(`${r.goals_scored} ${t('goals')} (+${r.goals_scored * gp})`); if (r.assists) parts.push(`${r.assists} ${t('assists')} (+${r.assists * 3})`);
-  if (r.clean_sheets && (p.pos === 'GK' || p.pos === 'DEF')) parts.push(`${t('cs')} (+4)`); if (r.clean_sheets && p.pos === 'MID') parts.push(`${t('cs')} (+1)`);
-  if (r.bonus) parts.push(`${t('bonus')} (+${r.bonus})`); if (r.yellow_cards) parts.push(`${t('yc')} (−1)`); if (r.red_cards) parts.push(`${t('rc')} (−3)`);
+  // تفصيل النقاط كامل حسب قواعد الفانتازي، وأي فرق باقي ينكتب «أخرى» حتى المجموع يطابق الرسمي
+  const parts = [], add = (txt, v) => { if (v) { parts.push(`${txt} (${v > 0 ? '+' : '−'}${Math.abs(v)})`); sum += v; } }; let sum = 0;
+  if (r.minutes) add(r.minutes >= 60 ? tt('لعب 60+ دقيقة', '60+ mins') : tt('لعب أقل من 60', '<60 mins'), r.minutes >= 60 ? 2 : 1);
+  if (r.goals_scored) add(`${r.goals_scored} ${t('goals')}`, r.goals_scored * gp);
+  if (r.assists) add(`${r.assists} ${t('assists')}`, r.assists * 3);
+  if (r.clean_sheets && r.minutes >= 60) add(t('cs'), p.pos === 'GK' || p.pos === 'DEF' ? 4 : p.pos === 'MID' ? 1 : 0);
+  const dc = r.defensive_contribution ?? null, dcNeed = p.pos === 'DEF' ? 10 : p.pos === 'MID' || p.pos === 'FWD' ? 12 : null;
+  if (dc != null && dcNeed && dc >= dcNeed) add(tt(`مساهمات دفاعية ${dc}`, `Defensive contributions ${dc}`), 2);
+  if (r.saves >= 3 && p.pos === 'GK') add(tt(`${r.saves} تصديات`, `${r.saves} saves`), Math.floor(r.saves / 3));
+  if (r.penalties_saved) add(tt(`صد ${r.penalties_saved} جزاء`, `${r.penalties_saved} pen saved`), r.penalties_saved * 5);
+  if ((p.pos === 'GK' || p.pos === 'DEF') && r.goals_conceded >= 2) add(tt(`استقبل ${r.goals_conceded}`, `${r.goals_conceded} conceded`), -Math.floor(r.goals_conceded / 2));
+  if (r.bonus) add(t('bonus'), r.bonus);
+  if (r.yellow_cards) add(t('yc'), -1); if (r.red_cards) add(t('rc'), -3);
+  if (r.own_goals) add(tt(`هدف بمرماه`, 'Own goal'), -2 * r.own_goals);
+  if (r.penalties_missed) add(tt('ضيّع جزاء', 'Pen missed'), -2 * r.penalties_missed);
+  if (r.minutes && r.total_points - sum) add(tt('أخرى', 'Other'), r.total_points - sum);
   openSheet(`${sheetHead(`<div style="width:46px;height:46px">${pShirt(p)}</div>`, `${esc(p.name)} · GW${gw}`, `${tt('ضد', 'vs')} ${tName(r.opponent_team)} (${r.was_home ? t('home_s') : t('away_s')})`, 'var(--glass2)', '')}
    <div style="text-align:center;margin:8px 0"><div class="pbig" style="width:86px;height:86px;font-size:38px;margin:auto;background:${r.total_points >= 8 ? '#10B981' : r.total_points >= 4 ? '#34D399' : '#EF4444'};color:#0B1222">${r.total_points}</div></div>
-   <div class="kv" style="grid-template-columns:repeat(5,1fr)"><div><b>${r.minutes}′</b><span>${t('minutes')}</span></div><div><b>${r.goals_scored}</b><span>${t('goals')}</span></div><div><b>${r.assists}</b><span>${t('assists')}</span></div><div><b>${r.clean_sheets ? '✓' : '✗'}</b><span>${t('cs')}</span></div><div><b>${r.bonus}</b><span>${t('bonus')}</span></div></div>
+   <div class="kv" style="grid-template-columns:repeat(${dc != null && dcNeed ? 3 : 5},1fr)"><div><b>${r.minutes}′</b><span>${t('minutes')}</span></div><div><b>${r.goals_scored}</b><span>${t('goals')}</span></div><div><b>${r.assists}</b><span>${t('assists')}</span></div><div><b>${r.clean_sheets ? '✓' : '✗'}</b><span>${t('cs')}</span></div><div><b>${r.bonus}</b><span>${t('bonus')}</span></div>${dc != null && dcNeed ? `<div><b class="${dc >= dcNeed ? 'up' : ''}"><bdi dir="ltr">${dc}/${dcNeed}</bdi></b><span>${tt('مساهمات دفاعية', 'Def. contrib.')}</span></div>` : ''}</div>
    <div class="note">${I('i-sparkle', 'i', 'color:#60A5FA')}<span>${parts.join('، ') || tt('ما لعب', 'Did not play')}</span></div><button class="btn btn-g btn-b" style="margin-top:10px" onclick="openPlayer(${id})">${t('back')}</button>`);
 }
 export async function toggleWatch(id) {
