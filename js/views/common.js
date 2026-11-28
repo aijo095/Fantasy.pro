@@ -72,7 +72,7 @@ export function gwDetail(id, gw) {
   openSheet(`${sheetHead(`<div style="width:46px;height:46px">${pShirt(p)}</div>`, `${esc(p.name)} · GW${gw}`, `${tt('ضد', 'vs')} ${tName(r.opponent_team)} (${r.was_home ? t('home_s') : t('away_s')})`, 'var(--glass2)', '')}
    <div style="text-align:center;margin:8px 0"><div class="pbig" style="width:86px;height:86px;font-size:38px;margin:auto;background:${r.total_points >= 8 ? '#10B981' : r.total_points >= 4 ? '#34D399' : '#EF4444'};color:#0B1222">${r.total_points}</div></div>
    <div class="kv" style="grid-template-columns:repeat(${dc != null && dcNeed ? 3 : 5},1fr)"><div><b>${r.minutes}′</b><span>${t('minutes')}</span></div><div><b>${r.goals_scored}</b><span>${t('goals')}</span></div><div><b>${r.assists}</b><span>${t('assists')}</span></div><div><b>${r.clean_sheets ? '✓' : '✗'}</b><span>${t('cs')}</span></div><div><b>${r.bonus}</b><span>${t('bonus')}</span></div>${dc != null && dcNeed ? `<div><b class="${dc >= dcNeed ? 'up' : ''}"><bdi dir="ltr">${dc}/${dcNeed}</bdi></b><span>${tt('مساهمات دفاعية', 'Def. contrib.')}</span></div>` : ''}</div>
-   <div class="note">${I('i-sparkle', 'i', 'color:#60A5FA')}<span>${parts.join('، ') || tt('ما لعب', 'Did not play')}</span></div><button class="btn btn-g btn-b" style="margin-top:10px" onclick="openPlayer(${id})">${t('back')}</button>`);
+   <div class="note">${I('i-sparkle', 'i', 'color:#60A5FA')}<span>${parts.join('، ') || tt('ما لعب', 'Did not play')}</span></div><button class="btn btn-g btn-b" style="margin-top:10px" onclick="sheetBack()">${t('back')}</button>`);
 }
 export async function toggleWatch(id) {
   ST.watch.has(id) ? ST.watch.delete(id) : ST.watch.add(id);
