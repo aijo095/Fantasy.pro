@@ -118,10 +118,17 @@ addEventListener('scroll', () => document.querySelector('.g-menu') && closeMenu(
 // يشتغل بأي صفحة بيها شريط جولات فيه زر مختار (فريقي، المباشر، الكابتن، المنافسين، الخطة)
 const STRIPS = '#tgwstrip,#lvseg,.gwstrip,.mt-gws,.mp-gws';
 const NOSWIPE = '.pitch,.rvp,.lu3-pitch,.sy,.scroll-x,.gwstrip,.mt-gws,.mp-gws,.seg,.chips2,.tabs2,.mc-tabs,input,textarea,select,.g-menu,[data-noswipe],canvas,svg.chart';
+// أي شريط يتمرر أفقياً (الدوريات، الفلاتر، الجداول…) يتمرر لوحده وما يسحب الصفحة
+function inHScroll(el) {
+  for (let n = el; n && n.id !== 'view' && n !== document.body; n = n.parentElement) {
+    if (n.scrollWidth > n.clientWidth + 2) { const ox = getComputedStyle(n).overflowX; if (ox === 'auto' || ox === 'scroll') return true; }
+  }
+  return false;
+}
 let SW = null;
 document.addEventListener('touchstart', (e) => {
   if (G || e.touches.length > 1 || document.querySelector('.ov,.g-menu')) return;
-  const t = e.target; if (!t.closest?.('#view') || t.closest(NOSWIPE)) return;
+  const t = e.target; if (!t.closest?.('#view') || t.closest(NOSWIPE) || inHScroll(t)) return;
   const strip = document.querySelector(`#view :is(${STRIPS})`); if (!strip?.querySelector('.on')) return;
   const x = e.touches[0].clientX; if (x < 18 || x > innerWidth - 18) return; // حافة الشاشة للرجوع بالمتصفح
   SW = { x0: x, y0: e.touches[0].clientY, t: Date.now(), strip, lock: null };
