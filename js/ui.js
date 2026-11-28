@@ -22,7 +22,7 @@ function lockScroll() { if (lockY != null) return; lockY = window.scrollY; const
 function unlockScroll() { if (lockY == null) return; const b = document.body.style; b.position = b.top = b.left = b.right = b.width = b.overflow = ''; window.scrollTo(0, lockY); lockY = null; }
 function renderSheet(html, y = 0) {
   const back = sheetStack.length ? `<button class="sh-back" onclick="sheetBack()" aria-label="back"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg><span>${tt('رجوع', 'Back')}</span></button>` : '';
-  $('#sheetRoot').innerHTML = `<div class="ov" onclick="if(event.target===this)closeSheet(true)"><div class="sheet"><div class="grab"></div>${back}<div class="sh-body">${html}</div></div></div>`;
+  $('#sheetRoot').innerHTML = `<div class="ov" onclick="if(event.target===this)dismissSheet()"><div class="sheet"><div class="grab"></div>${back}<div class="sh-body">${html}</div></div></div>`;
   if (y) { const sh = $('#sheetRoot .sheet'); if (sh) sh.scrollTop = y; }
   lockScroll();
   import('./motion.js').then((m) => { const b = $('#sheetRoot .sh-body'); if (b) { m.decorate(b, true); m.countAll(b, true); } }).catch(() => {});
@@ -34,8 +34,15 @@ export function openSheet(html, after) {
   const open = !!$('#sheetRoot .sh-body');
   if (!open) { if (pendingBack && Date.now() - pendingBack.t < 900) sheetStack = [...pendingBack.stack, pendingBack.snap]; else sheetStack = []; }
   pendingBack = null;
+  // ورقة جديدة فوق ورقة مفتوحة (مثل إحصائيات لاعب من تشكيلة الخصم): نحفظ السابقة حتى الرجوع يوصلك لها
+  // أما إذا نفس الورقة تتحدّث (نفس العنوان) فنبدّلها بمكانها بدون ما نكدّس
+  if (open) { const cur = curSnap(), ttl = (h) => { const m = /class="sh-head"[\s\S]*?<(?:h3|b)[^>]*>([\s\S]*?)<\/(?:h3|b)>/.exec(h || ''); return m ? m[1].replace(/<[^>]+>/g, '').trim() : null; };
+    const a = ttl(cur?.html), b = ttl(html); if (cur && !(a && b && a === b)) { sheetStack.push(cur); if (sheetStack.length > 8) sheetStack.shift(); } }
   renderSheet(html); after && after();
 }
+/** إغلاق من المستخدم (زر الإغلاق أو الخلفية): يرجع للورقة السابقة إذا أكو، وإلا يسكّر */
+export function dismissSheet() { if (sheetStack.length) sheetBack(); else closeSheet(true); }
+window.dismissSheet = dismissSheet;
 export function closeSheet(hard = false) {
   const snap = curSnap();
   pendingBack = !hard && snap ? { snap, stack: sheetStack, t: Date.now() } : null;
@@ -52,7 +59,7 @@ function exitClone() {
 }
 export function sheetBack() { const prev = sheetStack.pop(); if (!prev) return closeSheet(true); renderSheet(prev.html, prev.y); }
 window.sheetBack = sheetBack;
-export const sheetHead = (icon, title, sub = '', bg = 'var(--g1)', fg = '#052E1F') => `<div class="sh-head"><div style="width:46px;height:46px;border-radius:15px;background:${bg};display:grid;place-items:center;color:${fg};flex-shrink:0">${icon}</div><div style="flex:1;min-width:0"><h3>${title}</h3>${sub ? `<div class="mut" style="font-size:12.5px">${sub}</div>` : ''}</div><button class="icon-btn" onclick="closeSheet()">${I('i-x')}</button></div>`;
+export const sheetHead = (icon, title, sub = '', bg = 'var(--g1)', fg = '#052E1F') => `<div class="sh-head"><div style="width:46px;height:46px;border-radius:15px;background:${bg};display:grid;place-items:center;color:${fg};flex-shrink:0">${icon}</div><div style="flex:1;min-width:0"><h3>${title}</h3>${sub ? `<div class="mut" style="font-size:12.5px">${sub}</div>` : ''}</div><button class="icon-btn" onclick="dismissSheet()">${I('i-x')}</button></div>`;
 export const header = (title, sub = '', right = '') => `<div class="sec" style="margin-top:4px"><div><h2 style="font-size:20px">${title}</h2>${sub ? `<div class="mut" style="font-size:12.5px">${sub}</div>` : ''}</div>${right}</div>`;
 
 /* ---------- الأندية: أسماء عربية وألوان ---------- */
